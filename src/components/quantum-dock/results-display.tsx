@@ -24,6 +24,10 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
     return <Badge variant="destructive">Low</Badge>;
   }
 
+  const handleExport = (format: 'pdf' | 'docx') => {
+    alert(`Exporting as ${format.toUpperCase()} is not yet implemented.`);
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -40,8 +44,8 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem disabled>Export as PDF</DropdownMenuItem>
-            <DropdownMenuItem disabled>Export as DOCX</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
