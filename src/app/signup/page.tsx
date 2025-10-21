@@ -58,11 +58,19 @@ export default function SignupPage() {
       router.push('/');
     } catch (error: any) {
       console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: error.message,
-      });
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+          variant: 'destructive',
+          title: 'Email Already in Use',
+          description: 'This email address is already associated with an account. Please try logging in.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: error.message,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
