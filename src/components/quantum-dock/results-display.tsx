@@ -18,16 +18,6 @@ interface ResultsDisplayProps {
 
 export function ResultsDisplay({ results }: ResultsDisplayProps) {
 
-  const handleExportJson = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "quantum_dock_results.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-  
   const getAffinityBadge = (affinity: number) => {
     if (affinity < 10) return <Badge variant="default" className='bg-green-500'>High</Badge>;
     if (affinity < 100) return <Badge variant="secondary" className='bg-yellow-500 text-black'>Moderate</Badge>;
@@ -50,7 +40,6 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={handleExportJson}>Export as JSON</DropdownMenuItem>
             <DropdownMenuItem disabled>Export as PDF</DropdownMenuItem>
             <DropdownMenuItem disabled>Export as DOCX</DropdownMenuItem>
           </DropdownMenuContent>
