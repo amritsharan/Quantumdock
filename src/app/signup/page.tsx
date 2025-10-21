@@ -57,7 +57,6 @@ export default function SignupPage() {
       });
       router.push('/');
     } catch (error: any) {
-      console.error(error);
       if (error.code === 'auth/email-already-in-use') {
         toast({
           variant: 'destructive',
@@ -65,6 +64,7 @@ export default function SignupPage() {
           description: 'This email address is already associated with an account. Please try logging in.',
         });
       } else {
+        console.error(error);
         toast({
           variant: 'destructive',
           title: 'Sign Up Failed',
