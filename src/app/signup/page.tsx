@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import app from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,7 +17,10 @@ import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Loader2 } from 'lucide-react';
 
 export default function SignupPage() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -24,10 +28,29 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Too Short',
+        description: 'Your password must be at least 6 characters long.',
+      });
+      return;
+    }
     setIsLoading(true);
     const auth = getAuth(app);
+    const db = getFirestore(app);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Save additional user information to Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+      });
+      
       toast({
         title: 'Account Created',
         description: "You've been successfully signed up! Redirecting...",
@@ -53,10 +76,32 @@ export default function SignupPage() {
             <QuantumDockLogo className="h-12 w-12 text-primary" />
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
-          <CardDescription>Enter your email below to create your account.</CardDescription>
+          <CardDescription>Enter your details below to create your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp} className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="first-name">First Name</Label>
+                  <Input
+                    id="first-name"
+                    placeholder="Max"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="last-name">Last Name</Label>
+                  <Input
+                    id="last-name"
+                    placeholder="Robinson"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -66,6 +111,16 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+             <div className="grid gap-2">
+              <Label htmlFor="phone-number">Phone Number</Label>
+              <Input
+                id="phone-number"
+                type="tel"
+                placeholder="(123) 456-7890"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
