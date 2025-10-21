@@ -2,9 +2,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Info, CheckCircle, TrendingUp } from 'lucide-react';
+import { Download, Info, CheckCircle, TrendingUp, ChevronDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { DockingResults } from '@/lib/schema';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface ResultsDisplayProps {
   results: DockingResults;
@@ -12,7 +18,7 @@ interface ResultsDisplayProps {
 
 export function ResultsDisplay({ results }: ResultsDisplayProps) {
 
-  const handleExport = () => {
+  const handleExportJson = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
@@ -35,10 +41,20 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           <CardTitle>Prediction Results</CardTitle>
           <CardDescription>Binding affinity predicted by the AI model.</CardDescription>
         </div>
-        <Button onClick={handleExport} variant="outline" size="sm">
-          <Download className="mr-2 h-4 w-4" />
-          Export
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={handleExportJson}>Export as JSON</DropdownMenuItem>
+            <DropdownMenuItem disabled>Export as PDF</DropdownMenuItem>
+            <DropdownMenuItem disabled>Export as DOCX</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardHeader>
       <CardContent className="grid gap-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
