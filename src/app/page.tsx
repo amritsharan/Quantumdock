@@ -26,6 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, signOut } from 'firebase/auth';
 import { useUser } from '@/firebase/auth/use-user';
+import { withAuth } from '@/components/with-auth';
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -63,7 +64,7 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
 };
 
-export default function Home() {
+function Home() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults | null>(null);
   const [isDocked, setIsDocked] = useState(false);
@@ -140,7 +141,7 @@ export default function Home() {
               >
                 <Avatar>
                   <AvatarImage src={`https://avatar.vercel.sh/${email || ''}.png`} alt="User" />
-                  <AvatarFallback>U</AvatarFallback>
+                  <AvatarFallback>{email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -178,7 +179,7 @@ export default function Home() {
                 <MoleculeViewer isDocked={isDocked} />
               </CardContent>
 
-              {step !== 'idle' && step !== 'done' && step !== 'error' && (
+              {(step === 'classical' || step === 'quantum' || step === 'predicting') && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
                   {currentStepInfo.icon}
                   <div className="text-center">
@@ -198,3 +199,6 @@ export default function Home() {
     </div>
   );
 }
+
+
+export default withAuth(Home);
