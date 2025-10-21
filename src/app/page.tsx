@@ -58,7 +58,7 @@ export default function Home() {
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
     defaultValues: {
-      smiles: 'c1ccccc1',
+      smiles: 'CC(=O)Oc1ccccc1C(=O)O', // Aspirin
       proteinTarget: '',
       diseaseKeyword: '',
     },

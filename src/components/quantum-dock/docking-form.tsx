@@ -20,6 +20,15 @@ const defaultTargets = [
   'BRD4',
 ];
 
+const moleculeOptions = [
+    { name: 'Aspirin', smiles: 'CC(=O)Oc1ccccc1C(=O)O' },
+    { name: 'Ibuprofen', smiles: 'CC(C)CC1=CC=C(C=C1)C(C)C(=O)O' },
+    { name: 'Paracetamol', smiles: 'CC(=O)NC1=CC=C(O)C=C1' },
+    { name: 'Caffeine', smiles: 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C' },
+    { name: 'Metformin', smiles: 'CN(C)C(=N)N=C(N)N' },
+    { name: 'Benzene', smiles: 'c1ccccc1' },
+];
+
 const diseaseOptions = [
   "Alzheimer's Disease",
   'Cancer',
@@ -76,11 +85,24 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
           name="smiles"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Molecule (SMILES)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., c1ccccc1" {...field} />
-              </FormControl>
-              <FormDescription>Enter the SMILES string of the ligand.</FormDescription>
+              <FormLabel>Molecule</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a molecule" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <ScrollArea className="h-48">
+                            {moleculeOptions.map((mol) => (
+                                <SelectItem key={mol.name} value={mol.smiles}>
+                                    {mol.name}
+                                </SelectItem>
+                            ))}
+                        </ScrollArea>
+                    </SelectContent>
+                </Select>
+              <FormDescription>Select a common molecule to begin.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
