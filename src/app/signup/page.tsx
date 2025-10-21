@@ -15,6 +15,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -23,6 +34,7 @@ export default function SignupPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailInUseDialog, setShowEmailInUseDialog] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -58,11 +70,7 @@ export default function SignupPage() {
       router.push('/');
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
-        toast({
-          variant: 'destructive',
-          title: 'Email Already in Use',
-          description: 'This email address is already associated with an account. Please try logging in.',
-        });
+        setShowEmailInUseDialog(true);
       } else {
         console.error(error);
         toast({
@@ -78,6 +86,20 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <AlertDialog open={showEmailInUseDialog} onOpenChange={setShowEmailInUseDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Email Already In Use</AlertDialogTitle>
+            <AlertDialogDescription>
+              This email address is already associated with an account. Would you like to log in instead?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/login')}>Continue to Login</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
