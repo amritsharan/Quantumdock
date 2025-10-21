@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import jsPDF from 'jspdf';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { saveAs } from 'file-saver';
 
 interface ResultsDisplayProps {
   results: DockingResults;
@@ -49,7 +51,46 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
       doc.save("QuantumDock_Results.pdf");
 
     } else if (format === 'docx') {
-      alert(`Exporting as ${format.toUpperCase()} is not yet implemented.`);
+       const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: "QuantumDock Simulation Results",
+              heading: HeadingLevel.TITLE,
+            }),
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+            new Paragraph({
+              text: "Prediction Summary",
+              heading: HeadingLevel.HEADING_1,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "Binding Affinity (nM): ", bold: true }),
+                new TextRun(results.bindingAffinity.toFixed(2)),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "Confidence Score: ", bold: true }),
+                new TextRun(`${(results.confidenceScore * 100).toFixed(0)}%`),
+              ],
+            }),
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+            new Paragraph({
+              text: "AI Rationale",
+              heading: HeadingLevel.HEADING_1,
+            }),
+            new Paragraph({
+              children: [new TextRun(results.rationale)],
+            }),
+          ],
+        }],
+      });
+
+      Packer.toBlob(doc).then(blob => {
+        saveAs(blob, "QuantumDock_Results.docx");
+      });
     }
   }
 
@@ -70,7 +111,7 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport('docx')} disabled>Export as DOCX</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
