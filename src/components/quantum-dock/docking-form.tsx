@@ -11,12 +11,7 @@ import { Loader2, Search } from 'lucide-react';
 import { getProteinSuggestions } from '@/app/actions';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
-
-export const dockingSchema = z.object({
-  smiles: z.string().min(1, 'SMILES string is required.'),
-  proteinTarget: z.string().min(1, 'Protein target is required.'),
-  diseaseKeyword: z.string().optional(),
-});
+import { dockingSchema } from '@/lib/schema';
 
 const defaultTargets = [
   'Thrombin',

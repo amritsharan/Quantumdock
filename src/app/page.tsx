@@ -5,19 +5,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DockingForm, dockingSchema } from '@/components/quantum-dock/docking-form';
+import { DockingForm } from '@/components/quantum-dock/docking-form';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
-import { ResultsDisplay, type DockingResults } from '@/components/quantum-dock/results-display';
+import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Cubes, Dna, FlaskConical, Loader2 } from 'lucide-react';
+import { BrainCircuit, Box, Dna, FlaskConical, Loader2 } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import { dockingSchema, type DockingResults } from '@/lib/schema';
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
 
 const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: string; description: string }> = {
   idle: {
-    icon: <Cubes className="h-12 w-12 text-muted-foreground" />,
+    icon: <Box className="h-12 w-12 text-muted-foreground" />,
     title: 'Ready for Docking',
     description: 'Enter molecular data and select a target to begin the simulation.',
   },
@@ -37,12 +38,12 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
     description: 'Analyzing quantum-refined energies to predict binding strength.',
   },
   done: {
-    icon: <Cubes className="h-12 w-12 text-accent" />,
+    icon: <Box className="h-12 w-12 text-accent" />,
     title: 'Docking Complete',
     description: 'Results are displayed below. You can now export the data or start a new simulation.',
   },
   error: {
-    icon: <Cubes className="h-12 w-12 text-destructive" />,
+    icon: <Box className="h-12 w-12 text-destructive" />,
     title: 'An Error Occurred',
     description: 'Something went wrong during the process. Please check your inputs or try again later.',
   },

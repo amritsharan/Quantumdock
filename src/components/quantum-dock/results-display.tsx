@@ -4,9 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Download, Info, CheckCircle, TrendingUp } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import type { PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
-
-export type DockingResults = PredictBindingAffinitiesOutput;
+import type { DockingResults } from '@/lib/schema';
 
 interface ResultsDisplayProps {
   results: DockingResults;
