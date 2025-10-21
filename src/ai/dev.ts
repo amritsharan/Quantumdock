@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/suggest-target-proteins.ts';
+import '@/ai/flows/predict-binding-affinities.ts';
+import '@/ai/flows/refine-docking-poses-with-vqe.ts';

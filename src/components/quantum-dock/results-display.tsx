@@ -1,0 +1,86 @@
+'use client';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Download, Info, CheckCircle, TrendingUp } from 'lucide-react';
+import { Badge } from '../ui/badge';
+import type { PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
+
+export type DockingResults = PredictBindingAffinitiesOutput;
+
+interface ResultsDisplayProps {
+  results: DockingResults;
+}
+
+export function ResultsDisplay({ results }: ResultsDisplayProps) {
+
+  const handleExport = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "quantum_dock_results.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+  
+  const getAffinityBadge = (affinity: number) => {
+    if (affinity < 10) return <Badge variant="default" className='bg-green-500'>High</Badge>;
+    if (affinity < 100) return <Badge variant="secondary" className='bg-yellow-500 text-black'>Moderate</Badge>;
+    return <Badge variant="destructive">Low</Badge>;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className='space-y-1.5'>
+          <CardTitle>Prediction Results</CardTitle>
+          <CardDescription>Binding affinity predicted by the AI model.</CardDescription>
+        </div>
+        <Button onClick={handleExport} variant="outline" size="sm">
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
+      </CardHeader>
+      <CardContent className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Binding Affinity (nM)</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold">{results.bindingAffinity.toFixed(2)}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {getAffinityBadge(results.bindingAffinity)} affinity
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Confidence Score</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold">
+                {(results.confidenceScore * 100).toFixed(0)}%
+              </div>
+               <p className="text-xs text-muted-foreground mt-1">Model confidence in this prediction</p>
+            </CardContent>
+          </Card>
+        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center space-x-2 space-y-0 pb-2">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">AI Rationale</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {results.rationale}
+            </p>
+          </CardContent>
+        </Card>
+      </CardContent>
+    </Card>
+  );
+}
