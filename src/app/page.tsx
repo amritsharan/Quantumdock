@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -10,9 +11,22 @@ import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Box, Dna, FlaskConical, Loader2 } from 'lucide-react';
+import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAuth, signOut } from 'firebase/auth';
+import { useUser } from '@/firebase/auth/use-user';
+
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
 
@@ -54,6 +68,14 @@ export default function Home() {
   const [results, setResults] = useState<DockingResults | null>(null);
   const [isDocked, setIsDocked] = useState(false);
   const { toast } = useToast();
+  const { user } = useUser();
+  const email = user?.email;
+
+  const handleSignOut = () => {
+    const auth = getAuth();
+    signOut(auth);
+    // The withAuth HOC will handle the redirect to the login page.
+  };
 
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
@@ -104,11 +126,33 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
         <div className="flex items-center gap-2">
           <QuantumDockLogo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="overflow-hidden rounded-full"
+              >
+                <Avatar>
+                  <AvatarImage src={`https://avatar.vercel.sh/${email || ''}.png`} alt="User" />
+                  <AvatarFallback>U</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+              <DropdownMenuItem disabled>Support</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
       </header>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">
