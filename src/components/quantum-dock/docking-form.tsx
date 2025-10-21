@@ -7,9 +7,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { getProteinSuggestions } from '@/app/actions';
-import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { dockingSchema } from '@/lib/schema';
 
@@ -19,6 +18,24 @@ const defaultTargets = [
   'VEGFR2',
   'EGFR',
   'BRD4',
+];
+
+const diseaseOptions = [
+  "Alzheimer's Disease",
+  'Cancer',
+  'Diabetes',
+  'Heart Disease',
+  'Hypertension',
+  'HIV/AIDS',
+  'Influenza',
+  'Malaria',
+  'Tuberculosis',
+  'Rheumatoid Arthritis',
+  'Parkinson\'s Disease',
+  'Cystic Fibrosis',
+  'Hepatitis C',
+  'Multiple Sclerosis',
+  'Asthma',
 ];
 
 interface DockingFormProps {
@@ -32,10 +49,11 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   const [suggestedTargets, setSuggestedTargets] = useState<string[]>([]);
   const diseaseKeyword = form.watch('diseaseKeyword');
 
-  const fetchSuggestions = useCallback(() => {
-    if (diseaseKeyword && diseaseKeyword.length >= 3) {
+  const fetchSuggestions = useCallback((keyword?: string) => {
+    const effectiveKeyword = keyword || diseaseKeyword;
+    if (effectiveKeyword) {
       startTransition(async () => {
-        const suggestions = await getProteinSuggestions(diseaseKeyword);
+        const suggestions = await getProteinSuggestions(effectiveKeyword);
         setSuggestedTargets(suggestions);
       });
     } else {
@@ -44,13 +62,8 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   }, [diseaseKeyword]);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      fetchSuggestions();
-    }, 500); // Debounce API calls
-
-    return () => {
-      clearTimeout(handler);
-    };
+    // This effect will run when diseaseKeyword changes, but we now trigger manually onSelect.
+    // We can keep it for any other potential updates to the keyword.
   }, [diseaseKeyword, fetchSuggestions]);
 
   const allTargets = [...new Set([...defaultTargets, ...suggestedTargets])];
@@ -73,19 +86,42 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
           )}
         />
         
-        <div className="grid gap-3">
-          <FormLabel>Find Target by Disease</FormLabel>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="e.g., Alzheimer's"
-              className="pl-8"
-              {...form.register('diseaseKeyword')} 
-            />
-            {isPending && <Loader2 className="absolute right-2.5 top-3 h-4 w-4 animate-spin" />}
-          </div>
-          <FormDescription>Get AI-powered protein target suggestions.</FormDescription>
-        </div>
+        <FormField
+          control={form.control}
+          name="diseaseKeyword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center justify-between">
+                Find Target by Disease
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              </FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  fetchSuggestions(value);
+                }} 
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a disease" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                   <ScrollArea className="h-48">
+                    {diseaseOptions.map((disease) => (
+                      <SelectItem key={disease} value={disease}>
+                        {disease}
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
+              <FormDescription>Get AI-powered protein target suggestions.</FormDescription>
+               <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
