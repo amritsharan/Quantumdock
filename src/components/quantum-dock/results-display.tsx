@@ -10,7 +10,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
+import jsPDF from 'jspdf';
 
 interface ResultsDisplayProps {
   results: DockingResults;
@@ -25,7 +26,31 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
   }
 
   const handleExport = (format: 'pdf' | 'docx') => {
-    alert(`Exporting as ${format.toUpperCase()} is not yet implemented.`);
+    if (format === 'pdf') {
+      const doc = new jsPDF();
+      
+      doc.setFontSize(22);
+      doc.text("QuantumDock Simulation Results", 20, 20);
+
+      doc.setFontSize(16);
+      doc.text("Prediction Summary", 20, 40);
+
+      doc.setFontSize(12);
+      doc.text(`Binding Affinity (nM): ${results.bindingAffinity.toFixed(2)}`, 20, 50);
+      doc.text(`Confidence Score: ${(results.confidenceScore * 100).toFixed(0)}%`, 20, 60);
+
+      doc.setFontSize(16);
+      doc.text("AI Rationale", 20, 80);
+      
+      doc.setFontSize(12);
+      const rationaleLines = doc.splitTextToSize(results.rationale, 170);
+      doc.text(rationaleLines, 20, 90);
+
+      doc.save("QuantumDock_Results.pdf");
+
+    } else if (format === 'docx') {
+      alert(`Exporting as ${format.toUpperCase()} is not yet implemented.`);
+    }
   }
 
   return (
@@ -45,7 +70,7 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('docx')} disabled>Export as DOCX</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
