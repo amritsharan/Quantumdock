@@ -32,6 +32,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [showUserNotFoundDialog, setShowUserNotFoundDialog] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -43,12 +44,16 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign In Failed',
-        description: error.message,
-      });
+      if (error.code === 'auth/user-not-found') {
+        setShowUserNotFoundDialog(true);
+      } else {
+        console.error(error);
+        toast({
+          variant: 'destructive',
+          title: 'Sign In Failed',
+          description: error.message,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -85,6 +90,21 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
+       <AlertDialog open={showUserNotFoundDialog} onOpenChange={setShowUserNotFoundDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Account Not Found</AlertDialogTitle>
+            <AlertDialogDescription>
+              No account was found with that email address. Would you like to create a new account?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/signup')}>Continue to Sign Up</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
