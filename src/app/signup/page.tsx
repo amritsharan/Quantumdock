@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -82,14 +83,16 @@ export default function SignupPage() {
     };
     const userDocRef = doc(db, 'users', user.uid);
     
-    try {
-        await setDoc(userDocRef, userProfileData);
+    // This operation now has its own dedicated error handler
+    setDoc(userDocRef, userProfileData)
+      .then(() => {
         toast({
             title: 'Account Created',
             description: "You've been successfully signed up! Redirecting...",
         });
         router.push('/');
-    } catch (serverError: any) {
+      })
+      .catch((serverError: any) => {
         // This is the contextual error handling for Firestore
         const permissionError = new FirestorePermissionError({
             path: userDocRef.path,
@@ -98,9 +101,10 @@ export default function SignupPage() {
         });
         errorEmitter.emit('permission-error', permissionError);
         // We don't toast a generic error here; the listener will throw
-    } finally {
+      })
+      .finally(() => {
         setIsLoading(false);
-    }
+      });
   };
 
   return (
