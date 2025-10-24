@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DockingForm } from '@/components/quantum-dock/docking-form';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
@@ -148,7 +149,9 @@ function Home() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/account">My Account</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem disabled>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
