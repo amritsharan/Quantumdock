@@ -29,14 +29,17 @@ function AccountPage() {
 
   useEffect(() => {
     async function fetchProfile() {
+      // If there is no user object, we shouldn't proceed.
       if (!user) {
-        // If there's no user and auth is done loading, we can stop.
+        // If auth has finished loading and there's no user, stop loading.
         if (!authLoading) {
             setLoading(false);
         }
         return;
       }
       
+      // Set loading to true when we start fetching
+      setLoading(true);
       try {
         const db = getFirestore(app);
         const userDocRef = doc(db, 'users', user.uid);
@@ -50,11 +53,12 @@ function AccountPage() {
       } catch (error) {
           console.error("Error fetching user profile:", error);
       } finally {
+          // Set loading to false once fetching is complete.
           setLoading(false);
       }
     }
 
-    // We only want to fetch the profile once the user object is available.
+    // Only fetch the profile if the auth loading is complete and we have a user.
     if (!authLoading) {
         fetchProfile();
     }
