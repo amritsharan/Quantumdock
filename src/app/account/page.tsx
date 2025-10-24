@@ -29,16 +29,18 @@ function AccountPage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      // If there is no user object, we shouldn't proceed.
-      if (!user) {
-        // If auth has finished loading and there's no user, stop loading.
-        if (!authLoading) {
-            setLoading(false);
-        }
+      // If auth is loading, don't do anything yet.
+      if (authLoading) {
         return;
       }
       
-      // Set loading to true when we start fetching
+      // If auth is done and there's no user, stop loading.
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // If we have a user, start fetching their profile.
       setLoading(true);
       try {
         const db = getFirestore(app);
@@ -49,23 +51,19 @@ function AccountPage() {
           setProfile(userDocSnap.data() as UserProfile);
         } else {
           console.log("No such document!");
+          setProfile(null);
         }
       } catch (error) {
           console.error("Error fetching user profile:", error);
+          setProfile(null);
       } finally {
           // Set loading to false once fetching is complete.
           setLoading(false);
       }
     }
 
-    // Only fetch the profile if the auth loading is complete and we have a user.
-    if (!authLoading) {
-        fetchProfile();
-    }
+    fetchProfile();
   }, [user, authLoading]);
-
-  // The page is loading if either auth is loading or the profile fetch is loading.
-  const pageLoading = authLoading || loading;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -88,7 +86,7 @@ function AccountPage() {
             <CardDescription>View and manage your personal information.</CardDescription>
           </CardHeader>
           <CardContent>
-            {pageLoading ? (
+            {loading ? (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-24" />
