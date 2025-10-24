@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword, type UserCredential } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import app from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +39,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
       toast({
@@ -52,55 +52,55 @@ export default function SignupPage() {
     setIsLoading(true);
     
     const auth = getAuth(app);
-    let userCredential: UserCredential;
+    const db = getFirestore(app);
 
     // Step 1: Create the user with Firebase Auth
-    try {
-      userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
-        setShowEmailInUseDialog(true);
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Sign Up Failed',
-          description: error.message,
-        });
-      }
-      setIsLoading(false);
-      return;
-    }
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Step 2: If user creation is successful, save their profile to Firestore
+        const user = userCredential.user;
+        const userProfileData = {
+          firstName,
+          lastName,
+          email,
+          phoneNumber,
+        };
+        const userDocRef = doc(db, 'users', user.uid);
 
-    // Step 2: Save the user's profile to Firestore
-    const user = userCredential.user;
-    const userProfileData = {
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-    };
-    const userDocRef = doc(getFirestore(app), 'users', user.uid);
-
-    // This operation now has its own error handler for permission errors.
-    setDoc(userDocRef, userProfileData)
-      .then(() => {
-        toast({
-          title: 'Account Created',
-          description: "You've been successfully signed up! Redirecting...",
-        });
-        router.push('/');
-      })
-      .catch((serverError: any) => {
-          // This is the contextual error handling for Firestore
-          const permissionError = new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'create',
-            requestResourceData: userProfileData,
+        // This Firestore write has its own dedicated error handler
+        return setDoc(userDocRef, userProfileData)
+          .then(() => {
+            toast({
+              title: 'Account Created',
+              description: "You've been successfully signed up! Redirecting...",
+            });
+            router.push('/');
+          })
+          .catch((serverError) => {
+            // This is the contextual error handling for Firestore
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: userProfileData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            // We don't toast a generic error here; the listener will throw
           });
-          errorEmitter.emit('permission-error', permissionError);
-          // We don't need a generic toast here because the listener will throw
-      }).finally(() => {
-          setIsLoading(false);
+      })
+      .catch((authError: any) => {
+        // This catch block ONLY handles authentication errors
+        if (authError.code === 'auth/email-already-in-use') {
+          setShowEmailInUseDialog(true);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Sign Up Failed',
+            description: authError.message,
+          });
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 
