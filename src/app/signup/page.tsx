@@ -25,6 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -50,37 +52,52 @@ export default function SignupPage() {
     setIsLoading(true);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
 
-      // Save additional user information to Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        firstName,
-        lastName,
-        email,
-        phoneNumber,
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        const userProfileData = {
+          firstName,
+          lastName,
+          email,
+          phoneNumber,
+        };
+        const userDocRef = doc(db, 'users', user.uid);
+
+        // Save additional user information to Firestore
+        setDoc(userDocRef, userProfileData)
+          .then(() => {
+            toast({
+              title: 'Account Created',
+              description: "You've been successfully signed up! Redirecting...",
+            });
+            router.push('/');
+          })
+          .catch(async (serverError) => {
+            // This is the new contextual error handling for Firestore
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: userProfileData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setIsLoading(false);
+          });
+      })
+      .catch((error: any) => {
+        // Handle auth-specific errors
+        console.error(error);
+        if (error.code === 'auth/email-already-in-use') {
+          setShowEmailInUseDialog(true);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Sign Up Failed',
+            description: error.message,
+          });
+        }
+        setIsLoading(false);
       });
-      
-      toast({
-        title: 'Account Created',
-        description: "You've been successfully signed up! Redirecting...",
-      });
-      router.push('/');
-    } catch (error: any) {
-      console.error(error);
-      if (error.code === 'auth/email-already-in-use') {
-        setShowEmailInUseDialog(true);
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Sign Up Failed',
-          description: error.message,
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
