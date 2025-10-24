@@ -29,30 +29,34 @@ function AccountPage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      if (authLoading) {
-        return; 
+      // We should not proceed if auth is still loading or if there's no user.
+      if (authLoading || !user) {
+        return;
       }
-      if (user) {
-        try {
-          const db = getFirestore(app);
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
+      
+      try {
+        const db = getFirestore(app);
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-          if (userDocSnap.exists()) {
-            setProfile(userDocSnap.data() as UserProfile);
-          }
-        } catch (error) {
-            console.error("Error fetching user profile:", error);
-        } finally {
-            setLoading(false);
+        if (userDocSnap.exists()) {
+          setProfile(userDocSnap.data() as UserProfile);
+        } else {
+          console.log("No such document!");
         }
-      } else {
-        setLoading(false);
+      } catch (error) {
+          console.error("Error fetching user profile:", error);
+      } finally {
+          // Only set loading to false after the fetch attempt is complete.
+          setLoading(false);
       }
     }
 
     fetchProfile();
   }, [user, authLoading]);
+
+  // Use the authLoading as the primary loading indicator
+  const pageLoading = authLoading || loading;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -75,7 +79,7 @@ function AccountPage() {
             <CardDescription>View and manage your personal information.</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {pageLoading ? (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-24" />
