@@ -29,19 +29,18 @@ function AccountPage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      // If auth is loading, don't do anything yet.
       if (authLoading) {
-        return;
-      }
-      
-      // If auth is done and there's no user, stop loading.
-      if (!user) {
-        setLoading(false);
+        // Still checking for user authentication, do nothing yet.
         return;
       }
 
-      // If we have a user, start fetching their profile.
-      setLoading(true);
+      if (!user) {
+        // No user is logged in, so stop loading.
+        setLoading(false);
+        return;
+      }
+      
+      // We have a user, now we can fetch their profile.
       try {
         const db = getFirestore(app);
         const userDocRef = doc(db, 'users', user.uid);
@@ -57,7 +56,7 @@ function AccountPage() {
           console.error("Error fetching user profile:", error);
           setProfile(null);
       } finally {
-          // Set loading to false once fetching is complete.
+          // Set loading to false once fetching is complete (or has failed).
           setLoading(false);
       }
     }
