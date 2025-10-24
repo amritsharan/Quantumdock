@@ -54,57 +54,55 @@ export default function SignupPage() {
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let user: User;
-
-    // Step 1: Create the user with Firebase Auth
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        user = userCredential.user;
-    } catch(authError: any) {
-        if (authError.code === 'auth/email-already-in-use') {
-            setShowEmailInUseDialog(true);
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Sign Up Failed',
-                description: authError.message,
-            });
-        }
-        setIsLoading(false);
-        return;
-    }
+      // Step 1: Create the user with Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    // Step 2: If user creation is successful, save their profile to Firestore
-    const userProfileData = {
-        firstName,
-        lastName,
-        email,
-        phoneNumber,
-    };
-    const userDocRef = doc(db, 'users', user.uid);
-    
-    // This operation now has its own dedicated error handler
-    setDoc(userDocRef, userProfileData)
-      .then(() => {
-        toast({
-            title: 'Account Created',
-            description: "You've been successfully signed up! Redirecting...",
+      // Step 2: If user creation is successful, try to save their profile to Firestore
+      const userProfileData = {
+          firstName,
+          lastName,
+          email,
+          phoneNumber,
+      };
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      // Use a separate .catch() for the database operation
+      setDoc(userDocRef, userProfileData)
+        .then(() => {
+          toast({
+              title: 'Account Created',
+              description: "You've been successfully signed up! Redirecting...",
+          });
+          router.push('/');
+        })
+        .catch((dbError) => {
+          // This is the contextual error handling for Firestore
+          const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: userProfileData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          // We don't toast a generic error here; the listener will throw
+          // We also don't set loading to false here, as the thrown error will interrupt execution
         });
-        router.push('/');
-      })
-      .catch((serverError: any) => {
-        // This is the contextual error handling for Firestore
-        const permissionError = new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'create',
-            requestResourceData: userProfileData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        // We don't toast a generic error here; the listener will throw
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+
+    } catch(authError: any) {
+      // This block now only catches authentication errors
+      if (authError.code === 'auth/email-already-in-use') {
+          setShowEmailInUseDialog(true);
+      } else {
+          toast({
+              variant: 'destructive',
+              title: 'Sign Up Failed',
+              description: authError.message,
+          });
+      }
+      setIsLoading(false); // Only set loading false for auth errors
+    }
+    // Do not set isLoading to false here, because the setDoc promise might still be running
   };
 
   return (

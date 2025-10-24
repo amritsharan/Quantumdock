@@ -48,7 +48,7 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Record login history in a separate operation after successful login
+      // Record login history in a separate operation with its own error handling
       const loginHistoryData = {
         userId: user.uid,
         email: user.email,
@@ -56,7 +56,7 @@ export default function LoginPage() {
       };
       const loginHistoryCollection = collection(db, 'login_history');
       
-      addDoc(loginHistoryCollection, loginHistoryData).catch(async (serverError) => {
+      addDoc(loginHistoryCollection, loginHistoryData).catch((serverError) => {
         // This is the specific error handling for Firestore permissions
         const permissionError = new FirestorePermissionError({
             path: loginHistoryCollection.path,
@@ -69,7 +69,7 @@ export default function LoginPage() {
       router.push('/');
 
     } catch (error: any) {
-      // This catch block now only handles authentication errors
+      // This catch block now primarily handles authentication errors
       if (error.code === 'auth/user-not-found') {
         setShowUserNotFoundDialog(true);
       } else if (error.code === 'auth/invalid-credential') {
@@ -79,7 +79,7 @@ export default function LoginPage() {
           description: 'Invalid credentials. Please check your email and password.',
         });
       } else {
-        // Generic auth errors can still be shown
+        // Fallback for other auth errors
         toast({
           variant: 'destructive',
           title: 'Sign In Failed',

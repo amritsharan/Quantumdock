@@ -2,7 +2,7 @@
 'use client';
 
 import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
-import { createContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useState, type ReactNode, useContext } from 'react';
 import app from './config';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
@@ -11,10 +11,7 @@ interface IFirebaseContext {
   loading: boolean;
 }
 
-export const FirebaseContext = createContext<IFirebaseContext>({
-  user: null,
-  loading: true,
-});
+export const FirebaseContext = createContext<IFirebaseContext | undefined>(undefined);
 
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -37,3 +34,11 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
     </FirebaseContext.Provider>
   );
 };
+
+export const useFirebase = () => {
+    const context = useContext(FirebaseContext);
+    if (context === undefined) {
+        throw new Error('useFirebase must be used within a FirebaseProvider');
+    }
+    return context;
+}

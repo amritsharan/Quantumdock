@@ -1,3 +1,4 @@
+
 'use client';
 
 import { FirebaseProvider } from '@/firebase/provider';
@@ -9,5 +10,8 @@ import type { ReactNode } from 'react';
  * This is the correct pattern for using client-side Firebase services in the Next.js App Router.
  */
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
+  // By rendering the FirebaseProvider inside this client component, we ensure
+  // that all its children (which depend on client-side auth state) are also
+  // treated as client components, preventing mismatches during server rendering.
   return <FirebaseProvider>{children}</FirebaseProvider>;
 }
