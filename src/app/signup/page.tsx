@@ -73,7 +73,7 @@ export default function SignupPage() {
             });
             router.push('/');
           })
-          .catch(async (serverError) => {
+          .catch((serverError) => {
             // This is the new contextual error handling for Firestore
             const permissionError = new FirestorePermissionError({
               path: userDocRef.path,
@@ -86,7 +86,6 @@ export default function SignupPage() {
       })
       .catch((error: any) => {
         // Handle auth-specific errors
-        console.error(error);
         if (error.code === 'auth/email-already-in-use') {
           setShowEmailInUseDialog(true);
         } else {
