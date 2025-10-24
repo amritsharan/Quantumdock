@@ -30,40 +30,45 @@ function AccountPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchProfile() {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      
+    // Do nothing while authentication is in progress
+    if (authLoading) {
+      return;
+    }
+    
+    // If auth is done and there's no user, stop loading and return
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Auth is done and we have a user, so fetch the profile.
+    const fetchProfile = async () => {
       setLoading(true);
       const db = getFirestore(app);
       const userDocRef = doc(db, 'users', user.uid);
       
-      getDoc(userDocRef).then(userDocSnap => {
+      try {
+        const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           setProfile(userDocSnap.data() as UserProfile);
         } else {
           console.log("No such document!");
           setProfile(null);
         }
-        setLoading(false);
-      }).catch(async (serverError) => {
+      } catch (serverError: any) {
         const permissionError = new FirestorePermissionError({
             path: userDocRef.path,
             operation: 'get',
         });
         errorEmitter.emit('permission-error', permissionError);
         setProfile(null);
+      } finally {
         setLoading(false);
-      });
-    }
+      }
+    };
 
-    if (!authLoading && user) {
-        fetchProfile();
-    } else if (!authLoading && !user) {
-      setLoading(false);
-    }
+    fetchProfile();
+    
   }, [user, authLoading]);
 
   const isLoading = authLoading || loading;
