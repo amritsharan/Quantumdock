@@ -81,24 +81,27 @@ export default function SignupPage() {
     };
     const userDocRef = doc(getFirestore(app), 'users', user.uid);
 
-    try {
-      await setDoc(userDocRef, userProfileData);
-      toast({
-        title: 'Account Created',
-        description: "You've been successfully signed up! Redirecting...",
-      });
-      router.push('/');
-    } catch (serverError: any) {
-        // This is the contextual error handling for Firestore
-        const permissionError = new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'create',
-          requestResourceData: userProfileData,
+    // This operation now has its own error handler for permission errors.
+    setDoc(userDocRef, userProfileData)
+      .then(() => {
+        toast({
+          title: 'Account Created',
+          description: "You've been successfully signed up! Redirecting...",
         });
-        errorEmitter.emit('permission-error', permissionError);
-    } finally {
-        setIsLoading(false);
-    }
+        router.push('/');
+      })
+      .catch((serverError: any) => {
+          // This is the contextual error handling for Firestore
+          const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'create',
+            requestResourceData: userProfileData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          // We don't need a generic toast here because the listener will throw
+      }).finally(() => {
+          setIsLoading(false);
+      });
   };
 
   return (
