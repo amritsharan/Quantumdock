@@ -11,5 +11,6 @@ export const useUser = () => {
     throw new Error('useUser must be used within a FirebaseProvider');
   }
 
+  // The context from FirebaseProvider provides { user, loading }
   return context;
 };

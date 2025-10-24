@@ -23,26 +23,36 @@ interface UserProfile {
 }
 
 function AccountPage() {
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchProfile() {
+      if (authLoading) {
+        return; 
+      }
       if (user) {
-        const db = getFirestore(app);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        try {
+          const db = getFirestore(app);
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-          setProfile(userDocSnap.data() as UserProfile);
+          if (userDocSnap.exists()) {
+            setProfile(userDocSnap.data() as UserProfile);
+          }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+        } finally {
+            setLoading(false);
         }
+      } else {
         setLoading(false);
       }
     }
 
     fetchProfile();
-  }, [user]);
+  }, [user, authLoading]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -102,7 +112,7 @@ function AccountPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="phone-number">Phone Number</Label>
-                  <Input id="phone-number" type="tel" value={profile.phoneNumber} readOnly />
+                  <Input id="phone-number" type="tel" value={profile.phoneNumber || 'Not provided'} readOnly />
                 </div>
               </div>
             ) : (
