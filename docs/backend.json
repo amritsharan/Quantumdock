@@ -25,6 +25,28 @@
         }
       },
       "required": ["firstName", "lastName", "email"]
+    },
+    "LoginHistory": {
+      "title": "Login History",
+      "description": "Represents a single login event for a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who logged in."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email of the user who logged in."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the login event."
+        }
+      },
+      "required": ["userId", "email", "timestamp"]
     }
   },
   "auth": {
@@ -36,6 +58,12 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Stores public information for each user, keyed by their UID."
+    },
+    "/login_history/{historyId}": {
+      "schema": {
+        "$ref": "#/entities/LoginHistory"
+      },
+      "description": "A collection of all user login events, used for auditing and monitoring."
     }
   }
 }

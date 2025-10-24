@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import app from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,8 +40,18 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     const auth = getAuth(app);
+    const db = getFirestore(app);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Record login history
+      await addDoc(collection(db, 'login_history'), {
+        userId: user.uid,
+        email: user.email,
+        timestamp: serverTimestamp()
+      });
+
       router.push('/');
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {

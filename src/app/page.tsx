@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -151,7 +152,9 @@ function Home() {
               <DropdownMenuItem asChild>
                 <Link href="/account">My Account</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>Support</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/logins">Login History</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
