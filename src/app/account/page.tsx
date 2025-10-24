@@ -34,6 +34,8 @@ function AccountPage() {
         return;
       }
       
+      // We are fetching data, so set loading to true.
+      setLoading(true);
       try {
         const db = getFirestore(app);
         const userDocRef = doc(db, 'users', user.uid);
@@ -49,14 +51,21 @@ function AccountPage() {
           console.error("Error fetching user profile:", error);
           setProfile(null);
       } finally {
+          // Finished fetching, set loading to false.
           setLoading(false);
       }
     }
 
-    if (!authLoading) {
+    // Only fetch profile if auth is not loading and we have a user.
+    if (!authLoading && user) {
         fetchProfile();
+    } else if (!authLoading && !user) {
+      // If auth is done and there's no user, we are not loading.
+      setLoading(false);
     }
   }, [user, authLoading]);
+
+  const isLoading = authLoading || loading;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -79,7 +88,7 @@ function AccountPage() {
             <CardDescription>View and manage your personal information.</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading || authLoading ? (
+            {isLoading ? (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-24" />
