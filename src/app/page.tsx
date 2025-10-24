@@ -129,10 +129,6 @@ function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
-        <div className="flex items-center gap-2">
-          <QuantumDockLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
-        </div>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -157,6 +153,7 @@ function Home() {
               <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
       </header>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">
