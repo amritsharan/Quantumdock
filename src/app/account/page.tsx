@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface UserProfile {
   firstName: string;
@@ -34,33 +36,32 @@ function AccountPage() {
         return;
       }
       
-      // We are fetching data, so set loading to true.
       setLoading(true);
-      try {
-        const db = getFirestore(app);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
+      const db = getFirestore(app);
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      getDoc(userDocRef).then(userDocSnap => {
         if (userDocSnap.exists()) {
           setProfile(userDocSnap.data() as UserProfile);
         } else {
           console.log("No such document!");
           setProfile(null);
         }
-      } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setProfile(null);
-      } finally {
-          // Finished fetching, set loading to false.
-          setLoading(false);
-      }
+        setLoading(false);
+      }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setProfile(null);
+        setLoading(false);
+      });
     }
 
-    // Only fetch profile if auth is not loading and we have a user.
     if (!authLoading && user) {
         fetchProfile();
     } else if (!authLoading && !user) {
-      // If auth is done and there's no user, we are not loading.
       setLoading(false);
     }
   }, [user, authLoading]);
