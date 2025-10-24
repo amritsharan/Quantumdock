@@ -150,9 +150,6 @@ function Home() {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/account">My Account</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/admin/logins">Login History</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

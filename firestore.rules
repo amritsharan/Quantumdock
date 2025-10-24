@@ -2,84 +2,72 @@
  * @fileoverview Firestore Security Rules for the application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles,
- * ensuring that only the authenticated user can read and write their own profile data.
- * Login history is readable by anyone, but only the backend can create new login entries.
+ * This ruleset enforces a strict user-ownership model for user profiles
+ * and allows only authenticated access to login history, with no write access.
  *
  * Data Structure:
- * - `/users/{userId}`: Stores user profile information. Each document is keyed by the user's UID.
- * - `/login_history/{historyId}`: Stores a history of user login events.
+ * - User profiles are stored under `/users/{userId}`, with each document ID
+ *   matching the user's UID.
+ * - Login history entries are stored in the `/login_history/{historyId}` collection.
  *
  * Key Security Decisions:
- * - User listing is disallowed to prevent enumeration of user accounts.
- * - User profiles are strictly owned by the corresponding user.
- * - Login history is publicly readable but append-only by the backend.  Since the security rules cannot validate the backend, this creates an "unguarded write".  For a production application, the login history collection should be writeable only by a Firebase Function with appropriate authorization.
+ * - Users can only read and write their own profile data.
+ * - No public listing of users is allowed.
+ * - Login history is read-only, intended for internal auditing, and accessible
+ *   only to authenticated users.
  *
  * Denormalization for Authorization:
- *  - The `/users/{userId}` path directly encodes the user's UID, allowing for simple `isOwner(userId)` checks without requiring additional reads.
+ * - The `/users/{userId}` document ID is used as the ownership identifier.
+ *   This avoids the need for an `ownerId` field within the document itself.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Defines a global function to check if the user is signed in.
-     * @returns {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the requesting user is the owner of the document.
-     * @param {string} userId - The user ID to compare against the request's authentication UID.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-     /**
-     * @description Checks if the requesting user is the existing owner of the document.
-     * @param {string} userId - The user ID to compare against the request's authentication UID.
-     * @returns {boolean} True if the user is the owner and the document exists, false otherwise.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Security rules for user profiles.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user_abc' can create their own profile at /users/user_abc.
-     * @allow (get) User with UID 'user_abc' can read their own profile at /users/user_abc.
-     * @allow (update) User with UID 'user_abc' can update their own profile at /users/user_abc.
-     * @allow (delete) User with UID 'user_abc' can delete their own profile at /users/user_abc.
-     * @deny (create) User with UID 'user_abc' cannot create a profile at /users/user_xyz.
-     * @deny (get) User with UID 'user_abc' cannot read the profile at /users/user_xyz.
-     * @principle Enforces document ownership for all operations on user profiles.
+     * @allow (create) - User 'user_abc' can create their own profile if authenticated as 'user_abc'.
+     * @allow (get, update, delete) - User 'user_abc' can read, update, or delete their own profile if authenticated as 'user_abc'.
+     * @deny (create) - User 'user_xyz' cannot create a profile for 'user_abc'.
+     * @deny (update, delete) - User 'user_xyz' cannot update or delete the profile for 'user_abc'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
      */
     match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Security rules for login history entries.
+     * @description Controls access to the login_history collection.
      * @path /login_history/{historyId}
-     * @allow (get) Any user can read login history entries.
-     * @allow (list) Any user can list login history entries.
-     * @allow (create) Only the backend (e.g., a Firebase Function) can create login history entries.
-     * @deny (update) No one can update login history entries.
-     * @deny (delete) No one can delete login history entries.
-     * @principle Allows public read access to login history but restricts creation to the backend.
+     * @allow (get, list) - Any authenticated user can read login history.
+     * @deny (create, update, delete) - No user can create, update, or delete login history entries.
+     * @principle Restricts write access to login history for auditing purposes.
      */
     match /login_history/{historyId} {
-      allow get, list: if true;
-      allow create: if true; // TODO: Protect create with backend authentication (e.g., a custom claim).
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
       allow update: if false;
       allow delete: if false;
     }
