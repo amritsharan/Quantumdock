@@ -29,8 +29,11 @@ function AccountPage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      // We should not proceed if auth is still loading or if there's no user.
-      if (authLoading || !user) {
+      if (!user) {
+        // If there's no user and auth is done loading, we can stop.
+        if (!authLoading) {
+            setLoading(false);
+        }
         return;
       }
       
@@ -47,15 +50,17 @@ function AccountPage() {
       } catch (error) {
           console.error("Error fetching user profile:", error);
       } finally {
-          // Only set loading to false after the fetch attempt is complete.
           setLoading(false);
       }
     }
 
-    fetchProfile();
+    // We only want to fetch the profile once the user object is available.
+    if (!authLoading) {
+        fetchProfile();
+    }
   }, [user, authLoading]);
 
-  // Use the authLoading as the primary loading indicator
+  // The page is loading if either auth is loading or the profile fetch is loading.
   const pageLoading = authLoading || loading;
 
   return (
