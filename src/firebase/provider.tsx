@@ -4,6 +4,7 @@
 import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
 import { createContext, useEffect, useState, type ReactNode } from 'react';
 import app from './config';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface IFirebaseContext {
   user: User | null;
@@ -31,6 +32,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <FirebaseContext.Provider value={{ user, loading }}>
+      <FirebaseErrorListener />
       {children}
     </FirebaseContext.Provider>
   );

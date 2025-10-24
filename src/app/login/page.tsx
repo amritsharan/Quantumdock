@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 export default function LoginPage() {
@@ -40,16 +42,27 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
       // Record login history
-      await addDoc(collection(db, 'login_history'), {
+      const db = getFirestore(app);
+      const loginHistoryData = {
         userId: user.uid,
         email: user.email,
         timestamp: serverTimestamp()
+      };
+      const loginHistoryCollection = collection(db, 'login_history');
+      
+      addDoc(loginHistoryCollection, loginHistoryData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: loginHistoryCollection.path,
+            operation: 'create',
+            requestResourceData: loginHistoryData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
 
       router.push('/');
@@ -63,12 +76,15 @@ export default function LoginPage() {
           description: 'Invalid credentials. Please check your email and password.',
         });
       } else {
-        console.error(error);
-        toast({
-          variant: 'destructive',
-          title: 'Sign In Failed',
-          description: error.message,
-        });
+        // We don't log security errors here anymore, they are handled by the emitter
+        if (error.code !== 'permission-denied') {
+             console.error(error);
+             toast({
+                variant: 'destructive',
+                title: 'Sign In Failed',
+                description: error.message,
+             });
+        }
       }
     } finally {
       setIsLoading(false);
