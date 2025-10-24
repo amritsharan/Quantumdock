@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -41,13 +42,13 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     const auth = getAuth(app);
-    
+    const db = getFirestore(app);
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Record login history
-      const db = getFirestore(app);
+      // Record login history in a separate operation after successful login
       const loginHistoryData = {
         userId: user.uid,
         email: user.email,
@@ -56,6 +57,7 @@ export default function LoginPage() {
       const loginHistoryCollection = collection(db, 'login_history');
       
       addDoc(loginHistoryCollection, loginHistoryData).catch(async (serverError) => {
+        // This is the specific error handling for Firestore permissions
         const permissionError = new FirestorePermissionError({
             path: loginHistoryCollection.path,
             operation: 'create',
@@ -65,7 +67,9 @@ export default function LoginPage() {
       });
 
       router.push('/');
+
     } catch (error: any) {
+      // This catch block now only handles authentication errors
       if (error.code === 'auth/user-not-found') {
         setShowUserNotFoundDialog(true);
       } else if (error.code === 'auth/invalid-credential') {
@@ -75,15 +79,12 @@ export default function LoginPage() {
           description: 'Invalid credentials. Please check your email and password.',
         });
       } else {
-        // We don't log security errors here anymore, they are handled by the emitter
-        if (error.code !== 'permission-denied') {
-             console.error(error);
-             toast({
-                variant: 'destructive',
-                title: 'Sign In Failed',
-                description: error.message,
-             });
-        }
+        // Generic auth errors can still be shown
+        toast({
+          variant: 'destructive',
+          title: 'Sign In Failed',
+          description: error.message,
+        });
       }
     } finally {
       setIsLoading(false);
