@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, type UserCredential } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import app from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
@@ -50,53 +50,55 @@ export default function SignupPage() {
       return;
     }
     setIsLoading(true);
+    
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    let userCredential: UserCredential;
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        const userProfileData = {
-          firstName,
-          lastName,
-          email,
-          phoneNumber,
-        };
-        const userDocRef = doc(db, 'users', user.uid);
+    // Step 1: Create the user with Firebase Auth
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        setShowEmailInUseDialog(true);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: error.message,
+        });
+      }
+      setIsLoading(false);
+      return;
+    }
 
-        // Save additional user information to Firestore
-        setDoc(userDocRef, userProfileData)
-          .then(() => {
-            toast({
-              title: 'Account Created',
-              description: "You've been successfully signed up! Redirecting...",
-            });
-            router.push('/');
-          })
-          .catch((serverError) => {
-            // This is the new contextual error handling for Firestore
-            const permissionError = new FirestorePermissionError({
-              path: userDocRef.path,
-              operation: 'create',
-              requestResourceData: userProfileData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setIsLoading(false);
-          });
-      })
-      .catch((error: any) => {
-        // Handle auth-specific errors
-        if (error.code === 'auth/email-already-in-use') {
-          setShowEmailInUseDialog(true);
-        } else {
-          toast({
-            variant: 'destructive',
-            title: 'Sign Up Failed',
-            description: error.message,
-          });
-        }
-        setIsLoading(false);
+    // Step 2: Save the user's profile to Firestore
+    const user = userCredential.user;
+    const userProfileData = {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+    };
+    const userDocRef = doc(getFirestore(app), 'users', user.uid);
+
+    try {
+      await setDoc(userDocRef, userProfileData);
+      toast({
+        title: 'Account Created',
+        description: "You've been successfully signed up! Redirecting...",
       });
+      router.push('/');
+    } catch (serverError: any) {
+        // This is the contextual error handling for Firestore
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'create',
+          requestResourceData: userProfileData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
