@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import { UserCircle } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -103,7 +103,7 @@ export default function SignupPage() {
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
-            <QuantumDockLogo className="h-12 w-12 text-primary" />
+            <UserCircle className="h-16 w-16 text-primary" />
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>Enter your details below to create your account.</CardDescription>

@@ -12,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { QuantumDockLogo } from '@/components/quantum-dock/logo';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,8 +43,14 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/user-not-found') {
         setShowUserNotFoundDialog(true);
+      } else if (error.code === 'auth/invalid-credential') {
+        toast({
+          variant: 'destructive',
+          title: 'Sign In Failed',
+          description: 'Invalid credentials. Please check your email and password.',
+        });
       } else {
         console.error(error);
         toast({
@@ -108,7 +113,7 @@ export default function LoginPage() {
       <Card className="mx-auto w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
-            <QuantumDockLogo className="h-12 w-12 text-primary" />
+            <UserCircle className="h-16 w-16 text-primary" />
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>Enter your credentials to access your account.</CardDescription>
