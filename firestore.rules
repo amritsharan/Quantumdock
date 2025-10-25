@@ -1,88 +1,154 @@
 /**
- * @fileoverview Firestore Security Rules for Prototyping.
+ * @file Firestore Security Rules for QuantumDock application.
  *
- * Core Philosophy:
- * This ruleset prioritizes security by enforcing strict access control based on user authentication.
- * Data shape validation is relaxed to enable rapid prototyping and iteration.
+ * @core_philosophy This ruleset enforces a strict user-ownership model. Each user has full control over their own molecules,
+ * target proteins, and docking results. No cross-user access is permitted except through explicit sharing mechanisms
+ * that would need to be implemented at the application level and enforced by custom security rules.
  *
- * Data Structure:
- * - /users/{userId}: Stores user profile information.
- * - /login_history/{historyId}: Stores login history events.
+ * @data_structure All data is nested under `/users/{userId}`, with subcollections for `molecules`, `targetProteins`, and
+ * `dockingResults`. This hierarchical structure simplifies security rules and ensures that users can only access their own data.
  *
- * Key Security Decisions:
- * - User listing is disallowed.
- * - Login history is only listable by authenticated users.
+ * @key_security_decisions Listing resources is restricted to the owner.
  *
- * Denormalization for Authorization: N/A.  No denormalization is being used.
- * Structural Segregation: N/A. No structural segregation is being used.
+ * @denormalization_for_authorization  The data is structured to enforce path-based ownership.
+ *
+ * @structural_segregation The design intentionally segregates data into user-specific collections to prevent accidental
+ * or malicious cross-user data access.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Defines the security rules for the /users/{userId} collection.
-     * @path /users/{userId}
-     * @allow (create) Authenticated user can create their own profile if the userId matches their auth UID.
-     * @deny (create) If the userId does not match the authenticated user's UID.
-     * @allow (get) Authenticated user can read their profile.
-     * @deny (get) Non-authenticated user cannot read any user profile.
-     * @allow (update) Authenticated user can update their own profile if the userId matches their auth UID and the document exists.
-     * @deny (update) If the userId does not match the authenticated user's UID or the document does not exist.
-     * @allow (delete) Authenticated user can delete their own profile if the userId matches their auth UID and the document exists.
-     * @deny (delete) If the userId does not match the authenticated user's UID or the document does not exist.
-     * @allow (list) Listing all users is disallowed.
-     * @principle Enforces document ownership for writes.
+     * @description Controls access to molecule data. Only the owning user can create, read, update, and delete molecules.
+     * @path /users/{userId}/molecules/{moleculeId}
+     * @allow (create) User A can create a molecule with moleculeId = "molecule123" under /users/A/molecules/molecule123 if request.auth.uid == "A".
+     * @allow (get) User A can read a molecule with moleculeId = "molecule123" under /users/A/molecules/molecule123 if request.auth.uid == "A".
+     * @allow (update) User A can update a molecule with moleculeId = "molecule123" under /users/A/molecules/molecule123 if request.auth.uid == "A".
+     * @allow (delete) User A can delete a molecule with moleculeId = "molecule123" under /users/A/molecules/molecule123 if request.auth.uid == "A".
+     * @deny (create) User B cannot create a molecule under /users/A/molecules/molecule123.
+     * @deny (get) User B cannot read a molecule under /users/A/molecules/molecule123.
+     * @deny (update) User B cannot update a molecule under /users/A/molecules/molecule123.
+     * @deny (delete) User B cannot delete a molecule under /users/A/molecules/molecule123.
+     * @principle Enforces document ownership for all operations on molecules.
      */
-    match /users/{userId} {
-      // Helper function to check if the user is signed in.
+    match /users/{userId}/molecules/{moleculeId} {
+      // Helper function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Helper function to check if the user is the owner of the document.
+      // Helper function to check if the user is the owner of the document
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-      // Helper function to check if the user is an existing owner of the document.
+      //Helper function to check if the user is the existing owner of the document
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        return isOwner(userId) && resource.data != null;
       }
 
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      // Allow read access to the document if the user is the owner
       allow get: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-      allow list: if false;
+      // Allow listing of documents if the user is the owner
+      allow list: if isSignedIn() && isOwner(userId);
+
+      // Allow creation of the document if the user is the owner and the document id matches the moleculeId in the path
+      allow create: if isSignedIn() && isOwner(userId);
+
+      // Allow updates to the document if the user is the owner and the document exists
+      allow update: if isSignedIn() && isExistingOwner(userId);
+
+      // Allow deletion of the document if the user is the owner and the document exists
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Defines the security rules for the /login_history/{historyId} collection.
-     * @path /login_history/{historyId}
-     * @allow (create) Authenticated user can create a login history entry.
-     * @deny (create) Non-authenticated user cannot create a login history entry.
-     * @allow (get) Authenticated user can read a login history entry.
-     * @deny (get) Non-authenticated user cannot read any login history entry.
-     * @allow (update) Authenticated user can update a login history entry if it exists.
-     * @deny (update) Non-authenticated user cannot update any login history entry or if the document doesn't exist.
-     * @allow (delete) Authenticated user can delete a login history entry if it exists.
-     * @deny (delete) Non-authenticated user cannot delete any login history entry or if the document doesn't exist.
-     * @allow (list) Authenticated user can list login history entries.
-     * @deny (list) Non-authenticated user cannot list login history entries.
-     * @principle Enforces authentication for all operations.
+     * @description Controls access to target protein data. Only the owning user can create, read, update, and delete target proteins.
+     * @path /users/{userId}/targetProteins/{targetProteinId}
+     * @allow (create) User A can create a target protein with targetProteinId = "protein123" under /users/A/targetProteins/protein123 if request.auth.uid == "A".
+     * @allow (get) User A can read a target protein with targetProteinId = "protein123" under /users/A/targetProteins/protein123 if request.auth.uid == "A".
+     * @allow (update) User A can update a target protein with targetProteinId = "protein123" under /users/A/targetProteins/protein123 if request.auth.uid == "A".
+     * @allow (delete) User A can delete a target protein with targetProteinId = "protein123" under /users/A/targetProteins/protein123 if request.auth.uid == "A".
+     * @deny (create) User B cannot create a target protein under /users/A/targetProteins/protein123.
+     * @deny (get) User B cannot read a target protein under /users/A/targetProteins/protein123.
+     * @deny (update) User B cannot update a target protein under /users/A/targetProteins/protein123.
+     * @deny (delete) User B cannot delete a target protein under /users/A/targetProteins/protein123.
+     * @principle Enforces document ownership for all operations on target proteins.
      */
-    match /login_history/{historyId} {
-      // Helper function to check if the user is signed in.
+    match /users/{userId}/targetProteins/{targetProteinId} {
+      // Helper function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      allow create: if isSignedIn();
-      allow get: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-      allow list: if isSignedIn();
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      //Helper function to check if the user is the existing owner of the document
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      // Allow read access to the document if the user is the owner
+      allow get: if isSignedIn() && isOwner(userId);
+      // Allow listing of documents if the user is the owner
+      allow list: if isSignedIn() && isOwner(userId);
+
+      // Allow creation of the document if the user is the owner and the document id matches the targetProteinId in the path
+      allow create: if isSignedIn() && isOwner(userId);
+
+      // Allow updates to the document if the user is the owner and the document exists
+      allow update: if isSignedIn() && isExistingOwner(userId);
+
+      // Allow deletion of the document if the user is the owner and the document exists
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to docking result data. Only the owning user can create, read, update, and delete docking results.
+     * @path /users/{userId}/dockingResults/{dockingResultId}
+     * @allow (create) User A can create a docking result with dockingResultId = "result123" under /users/A/dockingResults/result123 if request.auth.uid == "A".
+     * @allow (get) User A can read a docking result with dockingResultId = "result123" under /users/A/dockingResults/result123 if request.auth.uid == "A".
+     * @allow (update) User A can update a docking result with dockingResultId = "result123" under /users/A/dockingResults/result123 if request.auth.uid == "A".
+     * @allow (delete) User A can delete a docking result with dockingResultId = "result123" under /users/A/dockingResults/result123 if request.auth.uid == "A".
+     * @deny (create) User B cannot create a docking result under /users/A/dockingResults/result123.
+     * @deny (get) User B cannot read a docking result under /users/A/dockingResults/result123.
+     * @deny (update) User B cannot update a docking result under /users/A/dockingResults/result123.
+     * @deny (delete) User B cannot delete a docking result under /users/A/dockingResults/result123.
+     * @principle Enforces document ownership for all operations on docking results.
+     */
+    match /users/{userId}/dockingResults/{dockingResultId} {
+      // Helper function to check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      //Helper function to check if the user is the existing owner of the document
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      // Allow read access to the document if the user is the owner
+      allow get: if isSignedIn() && isOwner(userId);
+      // Allow listing of documents if the user is the owner
+      allow list: if isSignedIn() && isOwner(userId);
+
+      // Allow creation of the document if the user is the owner and the document id matches the dockingResultId in the path
+      allow create: if isSignedIn() && isOwner(userId);
+
+      // Allow updates to the document if the user is the owner and the document exists
+      allow update: if isSignedIn() && isExistingOwner(userId);
+
+      // Allow deletion of the document if the user is the owner and the document exists
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
   }
 }

@@ -1,17 +1,26 @@
-
 'use client';
 
+import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import type { ReactNode } from 'react';
+import { initializeFirebase } from '@/firebase';
 
-/**
- * This provider ensures that the Firebase context, which includes the auth state
- * and the crucial error listener, is only initialized and rendered on the client side.
- * This is the correct pattern for using client-side Firebase services in the Next.js App Router.
- */
-export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  // By rendering the FirebaseProvider inside this client component, we ensure
-  // that all its children (which depend on client-side auth state) are also
-  // treated as client components, preventing mismatches during server rendering.
-  return <FirebaseProvider>{children}</FirebaseProvider>;
+interface FirebaseClientProviderProps {
+  children: ReactNode;
+}
+
+export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
+  const firebaseServices = useMemo(() => {
+    // Initialize Firebase on the client side, once per component mount.
+    return initializeFirebase();
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  return (
+    <FirebaseProvider
+      firebaseApp={firebaseServices.firebaseApp}
+      auth={firebaseServices.auth}
+      firestore={firebaseServices.firestore}
+    >
+      {children}
+    </FirebaseProvider>
+  );
 }
