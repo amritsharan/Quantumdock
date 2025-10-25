@@ -1,8 +1,9 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Info, CheckCircle, TrendingUp, ChevronDown } from 'lucide-react';
+import { Download, Info, CheckCircle, TrendingUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { DockingResults } from '@/lib/schema';
 import {
@@ -11,15 +12,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
+import { molecules } from '@/lib/molecules';
+
 import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
+import { useMemo, useState } from 'react';
 
 interface ResultsDisplayProps {
-  results: DockingResults;
+  results: DockingResults[];
 }
 
+type SortKey = 'name' | 'bindingAffinity' | 'confidenceScore';
+type SortDirection = 'asc' | 'desc';
+
 export function ResultsDisplay({ results }: ResultsDisplayProps) {
+  const [sortKey, setSortKey] = useState<SortKey>('bindingAffinity');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const getAffinityBadge = (affinity: number) => {
     if (affinity < 10) return <Badge variant="default" className='bg-green-500'>High</Badge>;
@@ -27,62 +37,112 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
     return <Badge variant="destructive">Low</Badge>;
   }
 
+  const resultsWithNames = useMemo(() => {
+    return results.map(result => {
+        const molecule = molecules.find(m => m.smiles === result.moleculeSmiles);
+        return {
+            ...result,
+            name: molecule ? molecule.name : 'Unknown Molecule',
+        };
+    });
+  }, [results]);
+
+  const sortedResults = useMemo(() => {
+    return [...resultsWithNames].sort((a, b) => {
+      const aValue = a[sortKey];
+      const bValue = b[sortKey];
+
+      if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [resultsWithNames, sortKey, sortDirection]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground" />;
+    }
+    return sortDirection === 'asc' ? '▲' : '▼';
+  };
+
+
   const handleExport = (format: 'pdf' | 'docx') => {
+    const docTitle = "QuantumDock Simulation Results";
+    
     if (format === 'pdf') {
       const doc = new jsPDF();
-      
       doc.setFontSize(22);
-      doc.text("QuantumDock Simulation Results", 20, 20);
-
-      doc.setFontSize(16);
-      doc.text("Prediction Summary", 20, 40);
-
-      doc.setFontSize(12);
-      doc.text(`Binding Affinity (nM): ${results.bindingAffinity.toFixed(2)}`, 20, 50);
-      doc.text(`Confidence Score: ${(results.confidenceScore * 100).toFixed(0)}%`, 20, 60);
-
-      doc.setFontSize(16);
-      doc.text("AI Rationale", 20, 80);
+      doc.text(docTitle, 20, 20);
       
-      doc.setFontSize(12);
-      const rationaleLines = doc.splitTextToSize(results.rationale, 170);
-      doc.text(rationaleLines, 20, 90);
+      const tableColumn = ["Molecule", "Binding Affinity (nM)", "Confidence", "Rationale"];
+      const tableRows: any[][] = [];
+
+      sortedResults.forEach(res => {
+          const row = [
+              res.name,
+              res.bindingAffinity.toFixed(2),
+              `${(res.confidenceScore * 100).toFixed(0)}%`,
+              res.rationale
+          ];
+          tableRows.push(row);
+      });
+
+      (doc as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 30,
+        theme: 'striped',
+        headStyles: { fillColor: [46, 82, 102] }
+      });
 
       doc.save("QuantumDock_Results.pdf");
 
     } else if (format === 'docx') {
+        const tableHeader = new DocxTableRow({
+            children: [
+                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Binding Affinity (nM)", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Rationale", style: "strong" })] }),
+            ],
+        });
+
+        const tableRows = sortedResults.map(res => new DocxTableRow({
+            children: [
+                new DocxTableCell({ children: [new Paragraph(res.name)] }),
+                new DocxTableCell({ children: [new Paragraph(res.bindingAffinity.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(`${(res.confidenceScore * 100).toFixed(0)}%`)] }),
+                new DocxTableCell({ children: [new Paragraph(res.rationale)] }),
+            ],
+        }));
+
        const doc = new Document({
+        styles: {
+            paragraphStyles: [
+                { id: "strong", name: "Strong", run: { bold: true } }
+            ]
+        },
         sections: [{
           properties: {},
           children: [
-            new Paragraph({
-              text: "QuantumDock Simulation Results",
-              heading: HeadingLevel.TITLE,
-            }),
+            new Paragraph({ text: docTitle, heading: HeadingLevel.TITLE }),
             new Paragraph({ text: "", spacing: { after: 200 } }),
-            new Paragraph({
-              text: "Prediction Summary",
-              heading: HeadingLevel.HEADING_1,
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({ text: "Binding Affinity (nM): ", bold: true }),
-                new TextRun(results.bindingAffinity.toFixed(2)),
-              ],
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({ text: "Confidence Score: ", bold: true }),
-                new TextRun(`${(results.confidenceScore * 100).toFixed(0)}%`),
-              ],
-            }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
-            new Paragraph({
-              text: "AI Rationale",
-              heading: HeadingLevel.HEADING_1,
-            }),
-            new Paragraph({
-              children: [new TextRun(results.rationale)],
+            new DocxTable({
+                rows: [tableHeader, ...tableRows],
+                width: { size: 100, type: WidthType.PERCENTAGE },
             }),
           ],
         }],
@@ -99,7 +159,7 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <div className='space-y-1.5'>
           <CardTitle>Prediction Results</CardTitle>
-          <CardDescription>Binding affinity predicted by the AI model.</CardDescription>
+          <CardDescription>Binding affinity predictions for {results.length} molecule(s).</CardDescription>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -116,43 +176,34 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
         </DropdownMenu>
       </CardHeader>
       <CardContent className="grid gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Binding Affinity (nM)</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{results.bindingAffinity.toFixed(2)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {getAffinityBadge(results.bindingAffinity)} affinity
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Confidence Score</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">
-                {(results.confidenceScore * 100).toFixed(0)}%
-              </div>
-               <p className="text-xs text-muted-foreground mt-1">Model confidence in this prediction</p>
-            </CardContent>
-          </Card>
-        </div>
-        <Card>
-          <CardHeader className="flex flex-row items-center space-x-2 space-y-0 pb-2">
-            <Info className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">AI Rationale</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {results.rationale}
-            </p>
-          </CardContent>
-        </Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                <div className="flex items-center">Molecule {getSortIcon('name')}</div>
+              </TableHead>
+              <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
+                 <div className="flex items-center">Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+              </TableHead>
+              <TableHead onClick={() => handleSort('confidenceScore')} className="cursor-pointer">
+                 <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
+              </TableHead>
+              <TableHead>Affinity Level</TableHead>
+              <TableHead>Rationale</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedResults.map((result, index) => (
+              <TableRow key={`${result.moleculeSmiles}-${index}`}>
+                <TableCell className="font-medium">{result.name}</TableCell>
+                <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
+                <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
+                <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
+                <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{result.rationale}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );

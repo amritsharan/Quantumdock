@@ -7,40 +7,46 @@ import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 
 
-export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults> {
+export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
   // 1. Validate input
   const validatedData = dockingSchema.parse(data);
 
-  // 2. Simulate Classical Docking and Quantum Refinement
-  // In a real application, this would involve complex computations.
-  // Here, we just call the flows with mock data to simulate the process.
-  
-  // The refineDockingPosesWithVQE flow requires a data URI for the ligand pose.
-  const mockLigandPoseData = 'data:text/plain;base64,' + Buffer.from('mock ligand data from classical docking').toString('base64');
-  
-  await refineDockingPosesWithVQE({
-    proteinStructure: 'mock protein data in PDB format',
-    ligandPose: mockLigandPoseData,
-    numPosesToRefine: 5,
-  });
+  const resultsArray: DockingResults[] = [];
 
-  // 3. Predict Binding Affinities
-  // We use a random value to simulate the output of the VQE calculation.
-  const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish energy in kcal/mol
+  for (const smile of validatedData.smiles) {
+    // 2. Simulate Classical Docking and Quantum Refinement for each molecule
+    // In a real application, this would involve complex computations.
+    // Here, we just call the flows with mock data to simulate the process.
+    
+    const mockLigandPoseData = 'data:text/plain;base64,' + Buffer.from('mock ligand data from classical docking').toString('base64');
+    
+    await refineDockingPosesWithVQE({
+      proteinStructure: 'mock protein data in PDB format',
+      ligandPose: mockLigandPoseData,
+      numPosesToRefine: 5,
+    });
 
-  const predictionInput = {
-    quantumRefinedEnergy: mockQuantumRefinedEnergy,
-    moleculeSmiles: validatedData.smiles,
-    proteinTargetName: validatedData.proteinTarget,
-  };
+    // 3. Predict Binding Affinities for each molecule
+    // We use a random value to simulate the output of the VQE calculation.
+    const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish energy in kcal/mol
 
-  const results = await predictBindingAffinities(predictionInput);
-  
-  if (!results || typeof results.bindingAffinity !== 'number') {
-    throw new Error('Failed to predict binding affinities.');
+    const predictionInput = {
+      quantumRefinedEnergy: mockQuantumRefinedEnergy,
+      moleculeSmiles: smile,
+      proteinTargetName: validatedData.proteinTarget,
+    };
+
+    const results = await predictBindingAffinities(predictionInput);
+    
+    if (!results || typeof results.bindingAffinity !== 'number') {
+      throw new Error(`Failed to predict binding affinities for ${smile}.`);
+    }
+
+    resultsArray.push(results);
   }
 
-  return results;
+
+  return resultsArray;
 }
 
 export async function getProteinSuggestions(keyword: string): Promise<string[]> {

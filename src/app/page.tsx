@@ -1,11 +1,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DockingForm } from '@/components/quantum-dock/docking-form';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
@@ -28,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, signOut } from 'firebase/auth';
 import { useUser } from '@/firebase/auth/use-user';
 import { withAuth } from '@/components/with-auth';
+import { Suspense } from 'react';
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -65,53 +67,76 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
 };
 
-function Home() {
+function HomePageContent() {
   const [step, setStep] = useState<ProcessStep>('idle');
-  const [results, setResults] = useState<DockingResults | null>(null);
+  const [results, setResults] = useState<DockingResults[] | null>(null);
   const [isDocked, setIsDocked] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
   const email = user?.email;
+  const searchParams = useSearchParams();
 
   const handleSignOut = () => {
     const auth = getAuth();
     signOut(auth);
     // The withAuth HOC will handle the redirect to the login page.
   };
-
+  
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
     defaultValues: {
-      smiles: 'CC(=O)Oc1ccccc1C(=O)O', // Aspirin
+      smiles: [],
       proteinTarget: '',
       diseaseKeyword: '',
     },
   });
+
+  useEffect(() => {
+    const smilesParam = searchParams.get('smiles');
+    if (smilesParam) {
+      const smilesArray = JSON.parse(smilesParam);
+      form.setValue('smiles', smilesArray);
+    }
+  }, [searchParams, form]);
+
 
   const onSubmit = async (data: z.infer<typeof dockingSchema>) => {
     setStep('classical');
     setResults(null);
     setIsDocked(false);
 
+    let moleculesProcessed = 0;
+    const totalMolecules = data.smiles.length;
+
     try {
-      // Simulate step-by-step progress for better UX
-      const classicalPromise = new Promise(resolve => setTimeout(resolve, 2000));
-      await classicalPromise;
-      setStep('quantum');
+      const finalResults : DockingResults[] = [];
 
-      const quantumPromise = new Promise(resolve => setTimeout(resolve, 3000));
-      await quantumPromise;
-      setStep('predicting');
+      for (const smile of data.smiles) {
+        moleculesProcessed++;
+        const progress = `(${moleculesProcessed}/${totalMolecules})`
 
-      const finalResults = await runFullDockingProcess(data);
+        setStep('classical');
+        stepDescriptions.classical.title = `Classical Docking ${progress}`
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        setStep('quantum');
+        stepDescriptions.quantum.title = `Quantum Refinement ${progress}`
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setStep('predicting');
+        stepDescriptions.predicting.title = `Predicting Affinity ${progress}`
+        const singleMoleculeData = { ...data, smiles: [smile] };
+        const result = await runFullDockingProcess(singleMoleculeData);
+        finalResults.push(...result);
+      }
 
       setResults(finalResults);
       setStep('done');
       setIsDocked(true);
 
       toast({
-        title: 'Simulation Complete',
-        description: 'Binding affinity prediction was successful.',
+        title: 'Simulations Complete',
+        description: `Binding affinity predictions for ${totalMolecules} molecules were successful.`,
       });
     } catch (error) {
       console.error(error);
@@ -163,7 +188,7 @@ function Home() {
             <Card>
               <CardHeader>
                 <CardTitle>Docking Simulation</CardTitle>
-                <CardDescription>Input your molecule and target to begin.</CardDescription>
+                <CardDescription>Input your molecule(s) and target to begin.</CardDescription>
               </CardHeader>
               <CardContent>
                 <DockingForm form={form} onSubmit={onSubmit} isLoading={step !== 'idle' && step !== 'done' && step !== 'error'} />
@@ -200,6 +225,14 @@ function Home() {
       </main>
     </div>
   );
+}
+
+function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
+  )
 }
 
 
