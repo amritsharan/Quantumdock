@@ -1,61 +1,79 @@
 /**
- * @fileoverview Firestore Security Rules for Prototyping.
+ * @fileoverview Firestore Security Rules for the application.
  *
  * Core Philosophy:
- * This ruleset prioritizes strict user-ownership for data privacy while allowing flexible data shapes for rapid prototyping.
- * It enforces that only the authenticated user can read or write their own profile data. Login history is publicly readable but only writeable by the server.
+ * This ruleset enforces a strict user-ownership model for user profiles,
+ * allowing users to read and write their own profile data. Login history
+ * is publicly writeable to allow tracking login events, but is not listable
+ * to prevent unauthorized access to login records.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information, accessible only to the user.
- * - /login_history/{historyId}: Stores login history events. Publicly readable, writeable only by the backend.
+ * - /users/{userId}: Stores user profile information, accessible only by the
+ *   user with the matching UID.
+ * - /login_history/{historyId}: Stores login history entries. Any authenticated
+ *   user can create a login history entry.
  *
  * Key Security Decisions:
- * - User listing is explicitly denied to protect user privacy.
- * - Data validation is minimized to allow for schema flexibility during prototyping. Only authorization-critical fields are validated.
+ * - User profiles are strictly owned and controlled by the individual user.
+ * - Login history is append-only and not listable.
+ * - The ruleset prioritizes security and simplicity. Schema validation beyond
+ *   authorization is not performed in this prototyping phase.
  *
  * Denormalization for Authorization:
- *  N/A - In this configuration, user IDs are already present in both the user profiles and login history, precluding the need for more authorization data.
+ * - The `LoginHistory` schema includes a `userId` field, which is validated
+ *   against `request.auth.uid` in the security rules to ensure the login
+ *   event is recorded for the correct user. This avoids the need for complex
+ *   lookups.
  *
  * Structural Segregation:
- * N/A - There isn't a need to segregate data between private and public in this config.
+ * - User profiles and login history are stored in separate collections with
+ *   different access control requirements.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages user profile data. Only the authenticated user can read or write their own profile.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) - User with UID 'user_abc' can create their profile at /users/user_abc.
-     * @allow (get, update, delete) - User with UID 'user_abc' can read, update, and delete their profile at /users/user_abc.
-     * @deny (create, get, update, delete) - User with UID 'user_xyz' cannot access profile data at /users/user_abc.
-     * @principle Enforces document ownership; users can only manage their own profile data.
+     * @allow (get, update, delete) User with matching UID can read and modify their own profile.
+     * @allow (create) User with matching UID can create their own profile.
+     * @deny (get, update, delete) User attempts to access another user's profile.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
+      // Helper function to check if the user is signed in and owns the document.
       function isOwner(userId) {
         return request.auth != null && request.auth.uid == userId;
       }
+
+      // Helper function to check if the user is signed in and owns the existing document.
       function isExistingOwner(userId) {
-        return isOwner(userId) && exists(resource);
+        return isOwner(userId) && resource != null;
       }
 
       allow get: if isOwner(userId);
-      allow list: if false; // User listing is not permitted.
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.email is string && request.resource.data.firstName is string && request.resource.data.lastName is string;
+      allow update: if isExistingOwner(userId) && request.resource.data.email == resource.data.email;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Stores login history events. Publicly readable, writeable only by the backend.
+     * @description Controls access to login history documents.
      * @path /login_history/{historyId}
-     * @allow (get, list) - Any user can read login history entries.
-     * @deny (create, update, delete) - Regular users cannot create, update, or delete login history entries.
-     * @principle Allows public read access for audit logs but restricts write access to the backend.
+     * @allow (create) Any authenticated user can create a login history entry.
+     * @deny (get, list, update, delete) No one can read, list, update, or delete login history entries.
+     * @principle Allows public writes but restricts reads.
      */
     match /login_history/{historyId} {
-      allow get, list: if true;
-      allow create: if request.auth.token.email == 'example@example.com';
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if false;
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.email is string;
       allow update: if false;
       allow delete: if false;
     }
