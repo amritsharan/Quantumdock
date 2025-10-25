@@ -83,6 +83,9 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     const { auth, firestore } = initializeFirebase();
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      client_id: '232933214397-3lvhqaall8r17ta4q0j4a71ohjc5oo8b.apps.googleusercontent.com',
+    });
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
