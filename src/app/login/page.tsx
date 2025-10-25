@@ -114,7 +114,7 @@ export default function LoginPage() {
       
       recordLogin(user);
 
-    } catch (error: any) => {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
