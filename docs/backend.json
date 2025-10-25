@@ -28,7 +28,7 @@
     },
     "LoginHistory": {
       "title": "Login History",
-      "description": "Represents a single login event for a user.",
+      "description": "Represents a single login event for a user, including session duration.",
       "type": "object",
       "properties": {
         "userId": {
@@ -44,6 +44,11 @@
           "type": "string",
           "format": "date-time",
           "description": "The timestamp of the login event."
+        },
+        "logoutTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the user logged out."
         }
       },
       "required": ["userId", "email", "timestamp"]

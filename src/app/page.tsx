@@ -29,6 +29,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, signOut } from 'firebase/auth';
 import { useUser } from '@/firebase/auth/use-user';
 import { withAuth } from '@/components/with-auth';
+import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import app from '@/firebase/config';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -75,10 +79,30 @@ function HomePageContent() {
   const email = user?.email;
   const searchParams = useSearchParams();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     const auth = getAuth();
-    signOut(auth);
-    // The withAuth HOC will handle the redirect to the login page.
+    const db = getFirestore(app);
+    const loginRecordId = typeof window !== 'undefined' ? window.sessionStorage.getItem('loginRecordId') : null;
+
+    if (loginRecordId) {
+      const loginRecordRef = doc(db, 'login_history', loginRecordId);
+      const updateData = { logoutTimestamp: serverTimestamp() };
+      
+      updateDoc(loginRecordRef, updateData)
+        .catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: loginRecordRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+    }
+
+    await signOut(auth);
+    if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem('loginRecordId');
+    }
   };
   
   const form = useForm<z.infer<typeof dockingSchema>>({

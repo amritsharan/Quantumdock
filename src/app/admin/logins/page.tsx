@@ -8,11 +8,11 @@ import app from '@/firebase/config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, formatDistanceStrict } from 'date-fns';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Badge } from 'lucide-react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -20,7 +20,22 @@ interface LoginRecord {
   id: string;
   email: string;
   timestamp: Date | null;
+  logoutTimestamp: Date | null;
 }
+
+function formatDuration(seconds: number) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  let result = '';
+  if (hours > 0) result += `${hours}h `;
+  if (minutes > 0) result += `${minutes}m `;
+  if (remainingSeconds > 0 || (hours === 0 && minutes === 0)) result += `${remainingSeconds}s`;
+  
+  return result.trim();
+}
+
 
 function LoginHistoryPage() {
   const [logins, setLogins] = useState<LoginRecord[]>([]);
@@ -40,10 +55,12 @@ function LoginHistoryPage() {
         const loginRecords = querySnapshot.docs.map(doc => {
           const data = doc.data();
           const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate() : null;
+          const logoutTimestamp = data.logoutTimestamp instanceof Timestamp ? data.logoutTimestamp.toDate() : null;
           return {
             id: doc.id,
             email: data.email,
             timestamp: timestamp,
+            logoutTimestamp: logoutTimestamp,
           };
         });
         setLogins(loginRecords);
@@ -61,6 +78,15 @@ function LoginHistoryPage() {
 
     fetchLoginHistory();
   }, []);
+
+  const getSessionDuration = (login: LoginRecord) => {
+    if (!login.timestamp) return 'N/A';
+    if (!login.logoutTimestamp) {
+        return <span className="text-green-500 font-semibold">Still active</span>;
+    }
+    const durationInSeconds = (login.logoutTimestamp.getTime() - login.timestamp.getTime()) / 1000;
+    return formatDuration(durationInSeconds);
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -80,7 +106,7 @@ function LoginHistoryPage() {
         <Card className="w-full max-w-4xl">
           <CardHeader>
             <CardTitle>Login History</CardTitle>
-            <CardDescription>A record of all user login events.</CardDescription>
+            <CardDescription>A record of all user login events and session durations.</CardDescription>
           </CardHeader>
           <CardContent>
             {error ? (
@@ -91,6 +117,7 @@ function LoginHistoryPage() {
                 <TableRow>
                   <TableHead>Email</TableHead>
                   <TableHead>Login Timestamp</TableHead>
+                  <TableHead>Session Duration</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -99,6 +126,7 @@ function LoginHistoryPage() {
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     </TableRow>
                   ))
                 ) : logins.length > 0 ? (
@@ -108,11 +136,14 @@ function LoginHistoryPage() {
                       <TableCell>
                         {login.timestamp ? format(login.timestamp, "PPP p") : 'No timestamp'}
                       </TableCell>
+                       <TableCell>
+                        {getSessionDuration(login)}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={2} className="text-center">
+                    <TableCell colSpan={3} className="text-center">
                       No login history found.
                     </TableCell>
                   </TableRow>

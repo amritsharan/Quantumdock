@@ -55,10 +55,15 @@ export default function LoginPage() {
         };
         const loginHistoryCollection = collection(db, 'login_history');
         
-        // This database write has its own separate error handler
         addDoc(loginHistoryCollection, loginHistoryData)
+          .then((docRef) => {
+            // Store the ID of the login record to update it on logout
+            if (typeof window !== 'undefined') {
+              window.sessionStorage.setItem('loginRecordId', docRef.id);
+            }
+            router.push('/');
+          })
           .catch((serverError) => {
-            // Create and emit the detailed permission error
             const permissionError = new FirestorePermissionError({
                 path: loginHistoryCollection.path,
                 operation: 'create',
@@ -66,11 +71,8 @@ export default function LoginPage() {
             });
             errorEmitter.emit('permission-error', permissionError);
           });
-          
-        router.push('/');
       })
       .catch((error: any) => {
-        // This catch block now ONLY handles authentication errors
         if (error.code === 'auth/user-not-found') {
           setShowUserNotFoundDialog(true);
         } else if (error.code === 'auth/invalid-credential') {
@@ -80,7 +82,6 @@ export default function LoginPage() {
             description: 'Invalid credentials. Please check your email and password.',
           });
         } else {
-          // Fallback for other auth errors
           toast({
             variant: 'destructive',
             title: 'Sign In Failed',
