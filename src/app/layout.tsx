@@ -43,7 +43,6 @@ export default function RootLayout({
             </SignedIn>
           </header>
           {children}
-          <Toaster />
         </body>
       </html>
     </ClerkProvider>

@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
-import { UserButton } from '@clerk/nextjs';
+import { Toaster } from '@/components/ui/toaster';
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -211,6 +211,7 @@ function HomePageContent() {
           </div>
         </div>
       </main>
+      <Toaster />
     </div>
   );
 }
