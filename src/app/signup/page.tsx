@@ -133,6 +133,7 @@ export default function SignupPage() {
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
+                    suppressHydrationWarning
                   />
                 </div>
                 <div className="grid gap-2">
@@ -143,6 +144,7 @@ export default function SignupPage() {
                     required
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
+                    suppressHydrationWarning
                   />
                 </div>
             </div>
@@ -155,6 +157,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                suppressHydrationWarning
               />
             </div>
              <div className="grid gap-2">
@@ -165,6 +168,7 @@ export default function SignupPage() {
                 placeholder="(123) 456-7890"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
+                suppressHydrationWarning
               />
             </div>
             <div className="grid gap-2">
@@ -176,6 +180,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 minLength={6}
+                suppressHydrationWarning
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
