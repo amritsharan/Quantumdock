@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -43,8 +43,13 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showUserNotFoundDialog, setShowUserNotFoundDialog] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const recordLogin = (user: any) => {
     const { firestore } = initializeFirebase();
@@ -109,7 +114,7 @@ export default function LoginPage() {
       
       recordLogin(user);
 
-    } catch (error: any) {
+    } catch (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
@@ -192,7 +197,7 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                <ForgotPasswordDialog />
+                {isClient && <ForgotPasswordDialog />}
               </div>
               <Input 
                 id="password" 
