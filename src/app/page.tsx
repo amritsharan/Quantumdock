@@ -87,15 +87,29 @@ function HomePageContent() {
     defaultValues: {
       smiles: [],
       proteinTarget: '',
-      diseaseKeyword: '',
+      diseaseKeywords: [],
     },
   });
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
     if (smilesParam) {
-      const smilesArray = JSON.parse(smilesParam);
-      form.setValue('smiles', smilesArray);
+      try {
+        const smilesArray = JSON.parse(smilesParam);
+        form.setValue('smiles', smilesArray);
+      } catch (e) {
+        console.error("Failed to parse smiles from URL", e);
+      }
+    }
+    
+    const diseasesParam = searchParams.get('diseases');
+    if (diseasesParam) {
+      try {
+        const diseasesArray = JSON.parse(diseasesParam);
+        form.setValue('diseaseKeywords', diseasesArray);
+      } catch (e) {
+        console.error("Failed to parse diseases from URL", e);
+      }
     }
   }, [searchParams, form]);
 

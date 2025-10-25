@@ -49,13 +49,16 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
   return resultsArray;
 }
 
-export async function getProteinSuggestions(keyword: string): Promise<string[]> {
-  if (!keyword || keyword.trim().length < 3) {
+export async function getProteinSuggestions(keywords: string[]): Promise<string[]> {
+  if (!keywords || keywords.length === 0) {
       return [];
   }
   try {
-      const result = await suggestTargetProteins({ keyword });
-      return result.proteins || [];
+      const suggestionsPromises = keywords.map(keyword => suggestTargetProteins({ keyword }));
+      const results = await Promise.all(suggestionsPromises);
+      const allProteins = results.flatMap(result => result.proteins || []);
+      // Return unique proteins
+      return [...new Set(allProteins)];
   } catch (error) {
       console.error("Error suggesting proteins:", error);
       // In case of an API error, return an empty array to prevent UI crashing.
