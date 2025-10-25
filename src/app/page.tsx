@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,7 +29,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, signOut } from 'firebase/auth';
 import { useUser } from '@/firebase/auth/use-user';
 import { withAuth } from '@/components/with-auth';
-import { Suspense } from 'react';
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -111,6 +110,12 @@ function HomePageContent() {
         console.error("Failed to parse diseases from URL", e);
       }
     }
+    
+    const proteinParam = searchParams.get('protein');
+    if (proteinParam) {
+      form.setValue('proteinTarget', proteinParam);
+    }
+
   }, [searchParams, form]);
 
 

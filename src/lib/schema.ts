@@ -3,7 +3,7 @@ import type { PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-
 
 export const dockingSchema = z.object({
   smiles: z.array(z.string()).min(1, "At least one molecule must be selected."),
-  proteinTarget: z.string().min(1, "Protein target is required."),
+  proteinTarget: z.string().min(1, "A protein target must be selected."),
   diseaseKeywords: z.array(z.string()).optional(),
 });
 
