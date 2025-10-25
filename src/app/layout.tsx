@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata: Metadata = {
   title: 'QuantumDock',
@@ -22,7 +29,20 @@ export default function RootLayout({
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         </head>
         <body className="font-body antialiased">
-            {children}
+          <header className="flex justify-end items-center p-4 gap-4 h-16 border-b">
+            <SignedOut>
+              <SignInButton />
+              <SignUpButton>
+                <button className="bg-primary text-primary-foreground rounded-md font-medium text-sm h-10 px-4 cursor-pointer hover:bg-primary/90">
+                  Sign Up
+                </button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </header>
+          {children}
           <Toaster />
         </body>
       </html>

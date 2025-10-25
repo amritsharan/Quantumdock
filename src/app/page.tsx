@@ -5,7 +5,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DockingForm } from '@/components/quantum-dock/docking-form';
@@ -16,16 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserButton } from '@clerk/nextjs';
 
 
@@ -180,9 +169,8 @@ function HomePageContent() {
           <QuantumDockLogo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
-        <UserButton afterSignOutUrl="/"/>
       </header>
-      <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+      <main className="flex min-h-[calc(100vh_-_8rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">
           <div className="grid auto-rows-max items-start gap-6">
             <Card>
