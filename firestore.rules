@@ -1,80 +1,88 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a strict user-ownership model for user profiles
- * and restricts access to login history to the owner, ensuring data privacy and security.
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes security by enforcing strict access control based on user authentication.
+ * Data shape validation is relaxed to enable rapid prototyping and iteration.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profile information, accessible only to the owner.
- * - /login_history/{historyId}: Stores login history for all users, accessible only to the owner.
+ * - /users/{userId}: Stores user profile information.
+ * - /login_history/{historyId}: Stores login history events.
  *
  * Key Security Decisions:
- * - User listing is disallowed to protect user privacy.
- * - Login history is protected to prevent unauthorized access to user activity data.
- * - Enforces that the userId stored inside documents matches the userId used in the document path.
+ * - User listing is disallowed.
+ * - Login history is only listable by authenticated users.
  *
- * Denormalization for Authorization:
- * - The `userId` field is present within the `/login_history/{historyId}` documents.
- *   This allows simple, performant security rules without requiring additional `get()` calls.
+ * Denormalization for Authorization: N/A.  No denormalization is being used.
+ * Structural Segregation: N/A. No structural segregation is being used.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for profiles, allowing only the authenticated user to read and write their own profile.
+     * @description Defines the security rules for the /users/{userId} collection.
      * @path /users/{userId}
-     * @allow (read) User 'abc' can get their own profile: `get()`
-     * @allow (read) User 'abc' can list their own profile (though generally a single document): `list()`
-     * @allow (create) User 'abc' can create their profile: `create()`
-     * @allow (update) User 'abc' can update their own profile: `update()`
-     * @allow (delete) User 'abc' can delete their own profile: `delete()`
-     * @deny (read) User 'def' cannot get user 'abc's profile: `get()`
-     * @deny (create) User 'abc' cannot create a profile with a different userId: `create(data.id='def')`
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) Authenticated user can create their own profile if the userId matches their auth UID.
+     * @deny (create) If the userId does not match the authenticated user's UID.
+     * @allow (get) Authenticated user can read their profile.
+     * @deny (get) Non-authenticated user cannot read any user profile.
+     * @allow (update) Authenticated user can update their own profile if the userId matches their auth UID and the document exists.
+     * @deny (update) If the userId does not match the authenticated user's UID or the document does not exist.
+     * @allow (delete) Authenticated user can delete their own profile if the userId matches their auth UID and the document exists.
+     * @deny (delete) If the userId does not match the authenticated user's UID or the document does not exist.
+     * @allow (list) Listing all users is disallowed.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      // Helper function to check if the authenticated user is the owner of the document
+      // Helper function to check if the user is signed in.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Helper function to check if the user is the owner of the document.
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-      // Helper function to check if the authenticated user is the existing owner of the document
+      // Helper function to check if the user is an existing owner of the document.
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
 
-      // Read rules: Only the owner can get or list their own profile.
-      allow get, list: if isOwner(userId);
-
-      // Write rules: Only the owner can create, update, or delete their own profile.
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow get: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
+      allow list: if false;
     }
 
     /**
-     * @description Enforces user-ownership for login history, allowing only the authenticated user to read and write their own login history.
+     * @description Defines the security rules for the /login_history/{historyId} collection.
      * @path /login_history/{historyId}
-     * @allow (read) User 'abc' can get their login history: `get()`
-     * @allow (read) User 'abc' can list their login history: `list()`
-     * @deny (create) No one can create a login history through client side
-     * @deny (update) No one can update a login history through client side
-     * @deny (delete) No one can delete a login history through client side
-     * @principle Enforces document ownership for reads. No one can create, update, or delete login history documents.
+     * @allow (create) Authenticated user can create a login history entry.
+     * @deny (create) Non-authenticated user cannot create a login history entry.
+     * @allow (get) Authenticated user can read a login history entry.
+     * @deny (get) Non-authenticated user cannot read any login history entry.
+     * @allow (update) Authenticated user can update a login history entry if it exists.
+     * @deny (update) Non-authenticated user cannot update any login history entry or if the document doesn't exist.
+     * @allow (delete) Authenticated user can delete a login history entry if it exists.
+     * @deny (delete) Non-authenticated user cannot delete any login history entry or if the document doesn't exist.
+     * @allow (list) Authenticated user can list login history entries.
+     * @deny (list) Non-authenticated user cannot list login history entries.
+     * @principle Enforces authentication for all operations.
      */
     match /login_history/{historyId} {
-      // Helper function to check if the authenticated user is the owner of the document
-      function isOwnerOfLoginHistory() {
-          return request.auth.uid == resource.data.userId;
+      // Helper function to check if the user is signed in.
+      function isSignedIn() {
+        return request.auth != null;
       }
-      // Read rules: Only the owner can get or list their own login history.
-      allow get: if isOwnerOfLoginHistory();
-      allow list: if false;
 
-      // Write rules: No one can create, update, or delete login history documents.
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow create: if isSignedIn();
+      allow get: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+      allow list: if isSignedIn();
     }
   }
 }
