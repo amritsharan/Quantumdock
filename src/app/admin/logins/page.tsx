@@ -13,6 +13,8 @@ import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface LoginRecord {
   id: string;
@@ -23,25 +25,38 @@ interface LoginRecord {
 function LoginHistoryPage() {
   const [logins, setLogins] = useState<LoginRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchLoginHistory() {
       setLoading(true);
+      setError(null);
       const db = getFirestore(app);
-      const q = query(collection(db, 'login_history'), orderBy('timestamp', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const loginRecords = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        // Firestore timestamps need to be converted to JS Date objects
-        const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate() : null;
-        return {
-          id: doc.id,
-          email: data.email,
-          timestamp: timestamp,
-        };
-      });
-      setLogins(loginRecords);
-      setLoading(false);
+      const loginHistoryCollection = collection(db, 'login_history');
+      const q = query(loginHistoryCollection, orderBy('timestamp', 'desc'));
+
+      try {
+        const querySnapshot = await getDocs(q);
+        const loginRecords = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toDate() : null;
+          return {
+            id: doc.id,
+            email: data.email,
+            timestamp: timestamp,
+          };
+        });
+        setLogins(loginRecords);
+      } catch (serverError) {
+        const permissionError = new FirestorePermissionError({
+          path: loginHistoryCollection.path,
+          operation: 'list', 
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setError("You don't have permission to view login history.");
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchLoginHistory();
@@ -68,6 +83,9 @@ function LoginHistoryPage() {
             <CardDescription>A record of all user login events.</CardDescription>
           </CardHeader>
           <CardContent>
+            {error ? (
+                 <div className="text-center text-destructive">{error}</div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -101,6 +119,7 @@ function LoginHistoryPage() {
                 )}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
       </main>
