@@ -24,7 +24,7 @@ interface ResultsDisplayProps {
   results: DockingResults[];
 }
 
-type SortKey = 'name' | 'bindingAffinity' | 'confidenceScore';
+type SortKey = 'name' | 'proteinTarget' | 'bindingAffinity' | 'confidenceScore';
 type SortDirection = 'asc' | 'desc';
 
 export function ResultsDisplay({ results }: ResultsDisplayProps) {
@@ -87,12 +87,13 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Binding Affinity (nM)", "Confidence", "Rationale"];
+      const tableColumn = ["Molecule", "Protein Target", "Binding Affinity (nM)", "Confidence", "Rationale"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
           const row = [
               res.name,
+              res.proteinTarget,
               res.bindingAffinity.toFixed(2),
               `${(res.confidenceScore * 100).toFixed(0)}%`,
               res.rationale
@@ -114,15 +115,17 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
         const tableHeader = new DocxTableRow({
             children: [
                 new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Binding Affinity (nM)", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Rationale", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Binding Affinity (nM)", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Rationale", style: "strong" })] }),
             ],
         });
 
         const tableRows = sortedResults.map(res => new DocxTableRow({
             children: [
                 new DocxTableCell({ children: [new Paragraph(res.name)] }),
+                new DocxTableCell({ children: [new Paragraph(res.proteinTarget)] }),
                 new DocxTableCell({ children: [new Paragraph(res.bindingAffinity.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${(res.confidenceScore * 100).toFixed(0)}%`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.rationale)] }),
@@ -159,7 +162,7 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <div className='space-y-1.5'>
           <CardTitle>Prediction Results</CardTitle>
-          <CardDescription>Binding affinity predictions for {results.length} molecule(s).</CardDescription>
+          <CardDescription>Binding affinity predictions for {results.length} combination(s).</CardDescription>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -182,6 +185,9 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
               <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
                 <div className="flex items-center">Molecule {getSortIcon('name')}</div>
               </TableHead>
+              <TableHead onClick={() => handleSort('proteinTarget')} className="cursor-pointer">
+                <div className="flex items-center">Protein Target {getSortIcon('proteinTarget')}</div>
+              </TableHead>
               <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
                  <div className="flex items-center">Affinity (nM) {getSortIcon('bindingAffinity')}</div>
               </TableHead>
@@ -194,8 +200,9 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           </TableHeader>
           <TableBody>
             {sortedResults.map((result, index) => (
-              <TableRow key={`${result.moleculeSmiles}-${index}`}>
+              <TableRow key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
                 <TableCell className="font-medium">{result.name}</TableCell>
+                <TableCell className="font-medium">{result.proteinTarget}</TableCell>
                 <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
                 <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
                 <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>

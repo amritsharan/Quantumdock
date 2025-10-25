@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,7 +22,14 @@ function SelectProteinContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProtein, setSelectedProtein] = useState<string>(searchParams.get('protein') || '');
+  const [selectedProteins, setSelectedProteins] = useState<Set<string>>(() => {
+    const proteins = searchParams.get('proteins');
+    try {
+      return proteins ? new Set(JSON.parse(proteins)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredProteins = useMemo(() => {
@@ -41,23 +48,54 @@ function SelectProteinContent() {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredProteins.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredProteins, currentPage]);
+  
+  const handleSelect = (proteinName: string, checked: boolean | 'indeterminate') => {
+    const newSet = new Set(selectedProteins);
+    if (checked) {
+      newSet.add(proteinName);
+    } else {
+      newSet.delete(proteinName);
+    }
+    setSelectedProteins(newSet);
+  };
+  
+    const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+      const newSet = new Set(selectedProteins);
+      paginatedProteins.forEach(p => {
+          if (checked) {
+              newSet.add(p.name);
+          } else {
+              newSet.delete(p.name);
+          }
+      });
+      setSelectedProteins(newSet);
+  };
 
-  const buildQueryString = (newProtein: string) => {
+  const isAllOnPageSelected = paginatedProteins.length > 0 && paginatedProteins.every(d => selectedProteins.has(d.name));
+
+
+  const buildQueryString = () => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('protein', newProtein);
+    const proteinsArray = Array.from(selectedProteins);
+    if (proteinsArray.length > 0) {
+      params.set('proteins', JSON.stringify(proteinsArray));
+    } else {
+      params.delete('proteins');
+    }
+    // Delete old single-protein param if it exists
+    params.delete('protein');
     return params.toString();
   };
 
   const handleConfirm = () => {
-    if (selectedProtein) {
-      const queryString = buildQueryString(selectedProtein);
-      router.push(`/?${queryString}`);
-    }
+    const queryString = buildQueryString();
+    router.push(`/?${queryString}`);
   };
 
   const backLink = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     // Don't persist the new selection on 'back'
+    params.delete('proteins');
     params.delete('protein'); 
     return `/?${params.toString()}`;
   }, [searchParams]);
@@ -79,9 +117,9 @@ function SelectProteinContent() {
       <main className="flex flex-1 justify-center p-4 md:p-6">
         <Card className="w-full max-w-4xl">
           <CardHeader>
-            <CardTitle>Select Protein Target</CardTitle>
+            <CardTitle>Select Protein Targets</CardTitle>
             <CardDescription>
-              Search and select a protein for the docking simulation.
+              Search and select one or more proteins for the docking simulation.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -96,11 +134,16 @@ function SelectProteinContent() {
                 suppressHydrationWarning
               />
               <ScrollArea className="h-[50vh] rounded-md border">
-                <RadioGroup value={selectedProtein} onValueChange={setSelectedProtein}>
                   <Table>
                     <TableHeader className="sticky top-0 bg-background">
                       <TableRow>
-                        <TableHead className="w-[50px]"></TableHead>
+                         <TableHead className="w-[50px]">
+                            <Checkbox 
+                                checked={isAllOnPageSelected}
+                                onCheckedChange={handleSelectAllOnPage}
+                                aria-label="Select all on page"
+                            />
+                        </TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Description</TableHead>
                       </TableRow>
@@ -108,8 +151,12 @@ function SelectProteinContent() {
                     <TableBody>
                       {paginatedProteins.map((protein) => (
                         <TableRow key={protein.name}>
-                          <TableCell>
-                            <RadioGroupItem value={protein.name} id={protein.name} />
+                           <TableCell>
+                                <Checkbox
+                                checked={selectedProteins.has(protein.name)}
+                                onCheckedChange={(checked) => handleSelect(protein.name, checked)}
+                                id={protein.name}
+                                />
                           </TableCell>
                           <TableCell>
                             <Label htmlFor={protein.name} className="font-medium cursor-pointer">{protein.name}</Label>
@@ -119,11 +166,10 @@ function SelectProteinContent() {
                       ))}
                     </TableBody>
                   </Table>
-                </RadioGroup>
               </ScrollArea>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Showing {paginatedProteins.length} of {filteredProteins.length} proteins.
+                  Selected {selectedProteins.size} protein(s).
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -145,8 +191,8 @@ function SelectProteinContent() {
                   </Button>
                 </div>
               </div>
-              <Button onClick={handleConfirm} disabled={!selectedProtein}>
-                Confirm Selection
+              <Button onClick={handleConfirm}>
+                Confirm Selection ({selectedProteins.size})
               </Button>
             </div>
           </CardContent>

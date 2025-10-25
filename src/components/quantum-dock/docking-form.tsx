@@ -8,14 +8,12 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { getProteinSuggestions } from '@/app/actions';
 import { ScrollArea } from '../ui/scroll-area';
 import { dockingSchema } from '@/lib/schema';
 import { Card, CardContent } from '../ui/card';
 import { molecules } from '@/lib/molecules';
-import { proteins as allProteinsData } from '@/lib/proteins';
 
 interface DockingFormProps {
   form: UseFormReturn<z.infer<typeof dockingSchema>>;
@@ -30,7 +28,7 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   
   const diseaseKeywords = form.watch('diseaseKeywords') || [];
   const selectedSmiles = form.watch('smiles') || [];
-  const selectedProtein = form.watch('proteinTarget');
+  const selectedProteins = form.watch('proteinTargets') || [];
 
   const selectedMolecules = molecules.filter(m => selectedSmiles.includes(m.smiles));
 
@@ -48,11 +46,6 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   useEffect(() => {
     fetchSuggestions(diseaseKeywords);
   }, [diseaseKeywords, fetchSuggestions]);
-  
-  const allTargets = useMemo(() => {
-      const defaultTargets = allProteinsData.slice(0, 5).map(p => p.name);
-      return [...new Set([...defaultTargets, ...suggestedTargets])];
-  }, [suggestedTargets]);
 
   const buildLink = (pathname: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -138,35 +131,42 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
 
         <FormField
           control={form.control}
-          name="proteinTarget"
+          name="proteinTargets"
           render={() => (
             <FormItem>
-              <FormLabel>Protein Target</FormLabel>
-              <Card>
-                <CardContent className="p-3">
-                  {selectedProtein ? (
-                    <p className="text-sm font-medium">{selectedProtein}</p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No protein selected.</p>
-                  )}
-                </CardContent>
-              </Card>
+              <FormLabel>Protein Targets</FormLabel>
+                <Card className="min-h-[100px]">
+                   <CardContent className="p-2">
+                     {selectedProteins.length > 0 ? (
+                        <ScrollArea className="h-24">
+                            <ul className="space-y-1">
+                                {selectedProteins.map(p => (
+                                    <li key={p} className="text-sm p-2 bg-muted/50 rounded-md">
+                                        {p}
+                                    </li>
+                                ))}
+                            </ul>
+                        </ScrollArea>
+                     ) : (
+                        <div className="flex items-center justify-center h-24">
+                            <p className="text-sm text-muted-foreground">No protein targets selected.</p>
+                        </div>
+                     )}
+                   </CardContent>
+                </Card>
               <Button asChild variant="outline" className="w-full">
                   <Link href={buildLink('/select-protein')}>
-                      {selectedProtein ? 'Change Protein Target' : 'Select Protein Target'}
+                      {selectedProteins.length > 0 ? 'Change Protein Targets' : 'Select Protein Targets'}
                   </Link>
               </Button>
-              {isPending && suggestedTargets.length > 0 && (
-                <p className="text-sm text-muted-foreground">Updating suggestions based on selected diseases...</p>
-              )}
                <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit" disabled={isLoading || selectedMolecules.length === 0 || !selectedProtein} className="w-full">
+        <Button type="submit" disabled={isLoading || selectedMolecules.length === 0 || selectedProteins.length === 0} className="w-full">
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {isLoading ? 'Running Simulation...' : `Run Docking for ${selectedMolecules.length} Molecule(s)`}
+          {isLoading ? 'Running Simulation...' : `Run Docking for ${selectedMolecules.length * selectedProteins.length} Combination(s)`}
         </Button>
       </form>
     </Form>

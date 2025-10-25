@@ -109,7 +109,7 @@ function HomePageContent() {
     resolver: zodResolver(dockingSchema),
     defaultValues: {
       smiles: [],
-      proteinTarget: '',
+      proteinTargets: [],
       diseaseKeywords: [],
     },
   });
@@ -135,9 +135,20 @@ function HomePageContent() {
       }
     }
     
+    const proteinsParam = searchParams.get('proteins');
+    if (proteinsParam) {
+       try {
+        const proteinsArray = JSON.parse(proteinsParam);
+        form.setValue('proteinTargets', proteinsArray);
+      } catch (e) {
+        console.error("Failed to parse proteins from URL", e);
+      }
+    }
+    
+    // Handle legacy single protein param
     const proteinParam = searchParams.get('protein');
-    if (proteinParam) {
-      form.setValue('proteinTarget', proteinParam);
+    if (proteinParam && !proteinsParam) {
+      form.setValue('proteinTargets', [proteinParam]);
     }
 
   }, [searchParams, form]);
@@ -148,29 +159,30 @@ function HomePageContent() {
     setResults(null);
     setIsDocked(false);
 
-    let moleculesProcessed = 0;
-    const totalMolecules = data.smiles.length;
+    let combinationsProcessed = 0;
+    const totalCombinations = data.smiles.length * data.proteinTargets.length;
+    const finalResults : DockingResults[] = [];
 
     try {
-      const finalResults : DockingResults[] = [];
+      for (const proteinTarget of data.proteinTargets) {
+        for (const smile of data.smiles) {
+          combinationsProcessed++;
+          const progress = `(${combinationsProcessed}/${totalCombinations})`
 
-      for (const smile of data.smiles) {
-        moleculesProcessed++;
-        const progress = `(${moleculesProcessed}/${totalMolecules})`
+          setStep('classical');
+          stepDescriptions.classical.title = `Classical Docking ${progress}`
+          await new Promise(resolve => setTimeout(resolve, 1500));
 
-        setStep('classical');
-        stepDescriptions.classical.title = `Classical Docking ${progress}`
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        setStep('quantum');
-        stepDescriptions.quantum.title = `Quantum Refinement ${progress}`
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        setStep('predicting');
-        stepDescriptions.predicting.title = `Predicting Affinity ${progress}`
-        const singleMoleculeData = { ...data, smiles: [smile] };
-        const result = await runFullDockingProcess(singleMoleculeData);
-        finalResults.push(...result);
+          setStep('quantum');
+          stepDescriptions.quantum.title = `Quantum Refinement ${progress}`
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          setStep('predicting');
+          stepDescriptions.predicting.title = `Predicting Affinity ${progress}`
+          const singleCombinationData = { ...data, smiles: [smile], proteinTarget };
+          const result = await runFullDockingProcess(singleCombinationData);
+          finalResults.push(...result);
+        }
       }
 
       setResults(finalResults);
@@ -179,7 +191,7 @@ function HomePageContent() {
 
       toast({
         title: 'Simulations Complete',
-        description: `Binding affinity predictions for ${totalMolecules} molecules were successful.`,
+        description: `Binding affinity predictions for ${totalCombinations} molecule-protein combinations were successful.`,
       });
     } catch (error) {
       console.error(error);
@@ -231,7 +243,7 @@ function HomePageContent() {
             <Card>
               <CardHeader>
                 <CardTitle>Docking Simulation</CardTitle>
-                <CardDescription>Input your molecule(s) and target to begin.</CardDescription>
+                <CardDescription>Input your molecule(s) and target(s) to begin.</CardDescription>
               </CardHeader>
               <CardContent>
                 <DockingForm form={form} onSubmit={onSubmit} isLoading={step !== 'idle' && step !== 'done' && step !== 'error'} />

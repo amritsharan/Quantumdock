@@ -4,12 +4,20 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { refineDockingPosesWithVQE } from '@/ai/flows/refine-docking-poses-with-vqe';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
-import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
+import { z } from 'zod';
+import { dockingSchema, type DockingResults } from '@/lib/schema';
+
+// We create a temporary schema for the single-protein action
+const singleProteinDockingSchema = dockingSchema.extend({
+    proteinTarget: z.string(),
+    proteinTargets: z.array(z.string()).optional(), // make the array optional
+});
+type SingleProteinDockingInput = z.infer<typeof singleProteinDockingSchema>;
 
 
-export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
-  // 1. Validate input
-  const validatedData = dockingSchema.parse(data);
+export async function runFullDockingProcess(data: SingleProteinDockingInput): Promise<DockingResults[]> {
+  // 1. Validate input for a single protein target
+   const validatedData = singleProteinDockingSchema.parse(data);
 
   const resultsArray: DockingResults[] = [];
 
@@ -42,7 +50,10 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
       throw new Error(`Failed to predict binding affinities for ${smile}.`);
     }
 
-    resultsArray.push(results);
+    resultsArray.push({
+        ...results,
+        proteinTarget: validatedData.proteinTarget,
+    });
   }
 
 
