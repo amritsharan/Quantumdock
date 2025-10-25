@@ -38,7 +38,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     const auth = getAuth(app);
@@ -48,7 +48,6 @@ export default function LoginPage() {
       .then((userCredential) => {
         const user = userCredential.user;
         
-        // Record login history in a separate operation with its own error handling
         const loginHistoryData = {
           userId: user.uid,
           email: user.email,
@@ -56,9 +55,10 @@ export default function LoginPage() {
         };
         const loginHistoryCollection = collection(db, 'login_history');
         
+        // This database write has its own separate error handler
         addDoc(loginHistoryCollection, loginHistoryData)
           .catch((serverError) => {
-            // This is the specific error handling for Firestore permissions
+            // Create and emit the detailed permission error
             const permissionError = new FirestorePermissionError({
                 path: loginHistoryCollection.path,
                 operation: 'create',
@@ -66,10 +66,11 @@ export default function LoginPage() {
             });
             errorEmitter.emit('permission-error', permissionError);
           });
+          
         router.push('/');
       })
       .catch((error: any) => {
-        // This catch block now primarily handles authentication errors
+        // This catch block now ONLY handles authentication errors
         if (error.code === 'auth/user-not-found') {
           setShowUserNotFoundDialog(true);
         } else if (error.code === 'auth/invalid-credential') {
