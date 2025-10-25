@@ -103,7 +103,7 @@ function LoginHistoryPage() {
         </Button>
       </header>
       <main className="flex flex-1 justify-center p-4 md:p-6">
-        <Card className="w-full max-w-4xl">
+        <Card className="w-full max-w-5xl">
           <CardHeader>
             <CardTitle>Login History</CardTitle>
             <CardDescription>A record of all user login events and session durations.</CardDescription>
@@ -117,6 +117,7 @@ function LoginHistoryPage() {
                 <TableRow>
                   <TableHead>Email</TableHead>
                   <TableHead>Login Timestamp</TableHead>
+                  <TableHead>Logout Timestamp</TableHead>
                   <TableHead>Session Duration</TableHead>
                 </TableRow>
               </TableHeader>
@@ -124,6 +125,7 @@ function LoginHistoryPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -137,13 +139,16 @@ function LoginHistoryPage() {
                         {login.timestamp ? format(login.timestamp, "PPP p") : 'No timestamp'}
                       </TableCell>
                        <TableCell>
+                        {login.logoutTimestamp ? format(login.logoutTimestamp, "PPP p") : 'N/A'}
+                      </TableCell>
+                       <TableCell>
                         {getSessionDuration(login)}
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center">
+                    <TableCell colSpan={4} className="text-center">
                       No login history found.
                     </TableCell>
                   </TableRow>
