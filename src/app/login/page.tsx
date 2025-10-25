@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, addDoc, collection, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -23,11 +23,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
+import { ForgotPasswordDialog } from '@/components/quantum-dock/forgot-password-dialog';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -42,7 +42,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
   const [showUserNotFoundDialog, setShowUserNotFoundDialog] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -152,35 +151,6 @@ export default function LoginPage() {
       });
   };
 
-  const handlePasswordReset = async () => {
-    if (!resetEmail) {
-      toast({
-        variant: 'destructive',
-        title: 'Email required',
-        description: 'Please enter your email address to reset your password.',
-      });
-      return;
-    }
-    setIsLoading(true);
-    const { auth } = initializeFirebase();
-    try {
-      await sendPasswordResetEmail(auth, resetEmail);
-      toast({
-        title: 'Password Reset Email Sent',
-        description: 'Check your inbox for password reset instructions.',
-      });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Password Reset Failed',
-        description: error.message,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
        <AlertDialog open={showUserNotFoundDialog} onOpenChange={setShowUserNotFoundDialog}>
@@ -222,36 +192,7 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                     <Button variant="link" type="button" className="ml-auto inline-block text-sm underline">
-                        Forgot your password?
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reset Password</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Enter your email address and we will send you a link to reset your password.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                     <div className="grid gap-2">
-                        <Label htmlFor="reset-email" className="sr-only">Email</Label>
-                        <Input
-                          id="reset-email"
-                          type="email"
-                          placeholder="m@example.com"
-                          required
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                        />
-                      </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handlePasswordReset}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <ForgotPasswordDialog />
               </div>
               <Input 
                 id="password" 
