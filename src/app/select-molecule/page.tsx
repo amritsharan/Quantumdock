@@ -99,6 +99,7 @@ export default function SelectMoleculePage() {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1); // Reset to first page on new search
               }}
+              suppressHydrationWarning
             />
             <ScrollArea className="h-[50vh] rounded-md border">
               <Table>
