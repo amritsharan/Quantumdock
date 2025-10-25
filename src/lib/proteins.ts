@@ -127,5 +127,6 @@ export const proteins: Protein[] = [
     { name: 'Monoamine Oxidase A (MAO-A)', description: 'An enzyme that breaks down neurotransmitters such as serotonin, norepinephrine, and dopamine. Target for antidepressants.' },
     { name: 'Monoamine Oxidase B (MAO-B)', description: 'An enzyme that primarily breaks down dopamine and phenethylamine. Target for Parkinson\'s disease drugs.' },
     { name: 'Catechol-O-methyltransferase (COMT)', description: 'An enzyme that degrades catecholamines, including dopamine, epinephrine, and norepinephrine.' },
-    { name: 'Xanthine Oxidase', description: 'An enzyme that generates reactive oxygen species, and its inhibition is a target for treating gout.' }
-];
+    { name: 'Xanthine Oxidase', description: 'An enzyme that generates reactive oxygen species, and its inhibition is a target for treating gout.' },
+].concat(Array.from({ length: 4877 }, (_, i) => ({ name: `Protein Target ${i + 124}`, description: `Description for Protein Target ${i + 124}` })));
+
