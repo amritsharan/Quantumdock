@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, addDoc, collection, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore';
-import app from '@/firebase/config';
+import { initializeFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -51,13 +51,13 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const recordLogin = (user: any) => {
-    const db = getFirestore(app);
+    const { firestore } = initializeFirebase();
     const loginHistoryData = {
       userId: user.uid,
       email: user.email,
       timestamp: serverTimestamp()
     };
-    const loginHistoryCollection = collection(db, 'login_history');
+    const loginHistoryCollection = collection(firestore, 'login_history');
     
     addDoc(loginHistoryCollection, loginHistoryData)
       .then((docRef) => {
@@ -80,15 +80,14 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const { auth, firestore } = initializeFirebase();
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
       // Check if user profile exists, if not create it
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(firestore, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
@@ -128,7 +127,7 @@ export default function LoginPage() {
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const auth = getAuth(app);
+    const { auth } = initializeFirebase();
     
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
@@ -166,7 +165,7 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
-    const auth = getAuth(app);
+    const { auth } = initializeFirebase();
     try {
       await sendPasswordResetEmail(auth, resetEmail);
       toast({

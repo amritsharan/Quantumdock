@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { withAuth } from '@/components/with-auth';
-import app from '@/firebase/config';
+import { initializeFirebase } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,8 +46,8 @@ function LoginHistoryPage() {
     async function fetchLoginHistory() {
       setLoading(true);
       setError(null);
-      const db = getFirestore(app);
-      const loginHistoryCollection = collection(db, 'login_history');
+      const { firestore } = initializeFirebase();
+      const loginHistoryCollection = collection(firestore, 'login_history');
       const q = query(loginHistoryCollection, orderBy('timestamp', 'desc'));
 
       try {

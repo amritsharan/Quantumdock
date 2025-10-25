@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import app from '@/firebase/config';
+import { initializeFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -51,8 +51,7 @@ export default function SignupPage() {
     }
     setIsLoading(true);
     
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const { auth, firestore } = initializeFirebase();
 
     createUserWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
@@ -63,7 +62,7 @@ export default function SignupPage() {
             email,
             phoneNumber,
         };
-        const userDocRef = doc(db, 'users', user.uid);
+        const userDocRef = doc(firestore, 'users', user.uid);
         
         setDoc(userDocRef, userProfileData)
           .then(() => {

@@ -30,7 +30,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { useUser } from '@/firebase/auth/use-user';
 import { withAuth } from '@/components/with-auth';
 import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import app from '@/firebase/config';
+import { initializeFirebase } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -80,12 +80,11 @@ function HomePageContent() {
   const searchParams = useSearchParams();
 
   const handleSignOut = async () => {
-    const auth = getAuth();
-    const db = getFirestore(app);
+    const { auth, firestore } = initializeFirebase();
     const loginRecordId = typeof window !== 'undefined' ? window.sessionStorage.getItem('loginRecordId') : null;
 
     if (loginRecordId) {
-      const loginRecordRef = doc(db, 'login_history', loginRecordId);
+      const loginRecordRef = doc(firestore, 'login_history', loginRecordId);
       const updateData = { logoutTimestamp: serverTimestamp() };
       
       updateDoc(loginRecordRef, updateData)
