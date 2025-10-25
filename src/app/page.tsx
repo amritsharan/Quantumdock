@@ -26,13 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAuth, signOut } from 'firebase/auth';
-import { useUser } from '@/firebase/auth/use-user';
-import { withAuth } from '@/components/with-auth';
-import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { UserButton } from '@clerk/nextjs';
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -75,34 +69,8 @@ function HomePageContent() {
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [isDocked, setIsDocked] = useState(false);
   const { toast } = useToast();
-  const { user } = useUser();
-  const email = user?.email;
   const searchParams = useSearchParams();
 
-  const handleSignOut = async () => {
-    const { auth, firestore } = initializeFirebase();
-    const loginRecordId = typeof window !== 'undefined' ? window.sessionStorage.getItem('loginRecordId') : null;
-
-    if (loginRecordId) {
-      const loginRecordRef = doc(firestore, 'login_history', loginRecordId);
-      const updateData = { logoutTimestamp: serverTimestamp() };
-      
-      updateDoc(loginRecordRef, updateData)
-        .catch((serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: loginRecordRef.path,
-            operation: 'update',
-            requestResourceData: updateData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
-    }
-
-    await signOut(auth);
-    if (typeof window !== 'undefined') {
-        window.sessionStorage.removeItem('loginRecordId');
-    }
-  };
   
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
@@ -212,29 +180,7 @@ function HomePageContent() {
           <QuantumDockLogo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="overflow-hidden rounded-full"
-              >
-                <Avatar>
-                  <AvatarImage src={`https://avatar.vercel.sh/${email || ''}.png`} alt="User" />
-                  <AvatarFallback>{email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/logins">Login History</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <UserButton afterSignOutUrl="/"/>
       </header>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">
@@ -290,4 +236,4 @@ function Home() {
 }
 
 
-export default withAuth(Home);
+export default Home;
