@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
-import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +32,7 @@ export default function SignInPage() {
         const newLoginEvent = {
           userId: user.uid,
           email: user.email,
-          loginTime: serverTimestamp()
+          loginTime: new Date() // Use client-side timestamp
         };
 
         if (!userDoc.exists()) {
@@ -120,10 +121,10 @@ export default function SignInPage() {
             </div>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button onClick={handleSignIn} className="w-full">
+          <Button onClick={handleSignIn} className="w-full" suppressHydrationWarning>
             Sign In
           </Button>
-          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
+          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" suppressHydrationWarning>
             Sign in with Google
           </Button>
         </CardContent>

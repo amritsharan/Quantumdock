@@ -1,3 +1,4 @@
+
 'use client';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { arrayUnion, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { History } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -31,19 +32,23 @@ export default function DashboardLayout({
   const handleSignOut = async () => {
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const loginEvents = userDoc.data().loginEvents || [];
-        const lastLoginEvent = loginEvents.find((event: any) => !event.logoutTime);
+      try {
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const loginEvents = userDoc.data().loginEvents || [];
+          const lastLoginEventIndex = loginEvents.findLastIndex((event: any) => !event.logoutTime);
 
-        if (lastLoginEvent) {
-          const updatedEvents = loginEvents.map((event: any) =>
-            event.loginTime === lastLoginEvent.loginTime
-              ? { ...event, logoutTime: serverTimestamp() }
-              : event
-          );
-          await updateDoc(userRef, { loginEvents: updatedEvents });
+          if (lastLoginEventIndex !== -1) {
+            const updatedEvents = [...loginEvents];
+            updatedEvents[lastLoginEventIndex] = {
+              ...updatedEvents[lastLoginEventIndex],
+              logoutTime: new Date(), // Use client-side timestamp
+            };
+            await updateDoc(userRef, { loginEvents: updatedEvents });
+          }
         }
+      } catch (error) {
+        console.error("Error updating logout time:", error);
       }
     }
     await signOut(auth);
