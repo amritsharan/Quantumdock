@@ -6,7 +6,6 @@ import { useUser, useDatabase } from '@/firebase';
 import { ref, query, onValue, off, orderByChild, limitToLast } from 'firebase/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -17,14 +16,12 @@ type LoginEvent = {
 };
 
 export default function HistoryPage() {
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const db = useDatabase();
   const [history, setHistory] = useState<LoginEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isUserLoading || !user || !db) {
-      setIsLoading(isUserLoading);
+    if (!user || !db) {
       return;
     }
 
@@ -43,12 +40,11 @@ export default function HistoryPage() {
       } else {
         setHistory([]);
       }
-      setIsLoading(false);
     });
 
     // Cleanup subscription on unmount
     return () => off(historyQuery, 'value', unsubscribe);
-  }, [user, db, isUserLoading]);
+  }, [user, db]);
   
   const toDate = (timestamp: number) => new Date(timestamp);
   
@@ -59,26 +55,6 @@ export default function HistoryPage() {
     if (durationInSeconds < 60) return `${Math.round(durationInSeconds)} seconds`;
     const durationInMinutes = durationInSeconds / 60;
     return `${Math.round(durationInMinutes)} minutes`;
-  }
-  
-  if (isLoading) {
-    return (
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-10">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    );
   }
 
   return (
