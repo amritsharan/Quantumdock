@@ -23,6 +23,10 @@ export default function SignInPage() {
   const { toast } = useToast();
 
   const handleSuccessfulLogin = (userCredential: UserCredential) => {
+    // Immediately redirect to make the UI feel responsive
+    router.push('/dashboard');
+    
+    // Perform database operations in the background
     const user = userCredential.user;
     if (user && db) {
       // Create user profile if it doesn't exist
@@ -45,9 +49,10 @@ export default function SignInPage() {
       push(loginHistoryRef, {
         loginTime: Date.now(),
         logoutTime: null,
+      }).catch(error => {
+          console.error("Error recording login event:", error);
       });
     }
-    router.push('/dashboard');
   };
 
   const handleSignIn = async () => {
