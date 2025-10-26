@@ -15,7 +15,6 @@ import {
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { molecules } from '@/lib/molecules';
 
-import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
@@ -79,10 +78,13 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
   };
 
 
-  const handleExport = (format: 'pdf' | 'docx') => {
+  const handleExport = async (format: 'pdf' | 'docx') => {
     const docTitle = "QuantumDock Simulation Results";
     
     if (format === 'pdf') {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+
       const doc = new jsPDF();
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
@@ -101,7 +103,7 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           tableRows.push(row);
       });
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
         startY: 30,
