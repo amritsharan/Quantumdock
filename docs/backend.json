@@ -95,6 +95,41 @@
         "moleculeId",
         "targetProteinId"
       ]
+    },
+    "LoginEvent": {
+      "title": "Login Event",
+      "description": "Records a user login event.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who logged in."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email of the user who logged in.",
+          "format": "email"
+        },
+        "loginTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user logged in."
+        },
+        "logoutTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user logged out."
+        },
+        "durationMinutes": {
+            "type": "number",
+            "description": "The duration of the session in minutes."
+        }
+      },
+      "required": [
+        "userId",
+        "email",
+        "loginTime"
+      ]
     }
   },
   "auth": {
@@ -152,8 +187,25 @@
             }
           ]
         }
+      },
+      {
+        "path": "/loginHistory/{loginEventId}",
+        "definition": {
+          "entityName": "LoginEvent",
+          "schema": {
+            "$ref": "#/backend/entities/LoginEvent"
+          },
+          "description": "Stores user login events.",
+          "params": [
+            {
+              "name": "loginEventId",
+              "description": "Unique identifier for the login event."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the QuantumDock application.  \n\n**Authorization Independence:**  Authorization is enforced without relying on hierarchical `get()` calls by denormalizing relevant data.  For example, while the application focuses on simulating molecule-protein interaction, there isn't a clear ownership/authorization context described in the use case. Therefore, a flat data model is chosen, where authorization is not enforced beyond the default. For a future version, if users will own molecule or docking result data, `userId` should be associated with entities like Molecule and TargetProtein, and then denormalized into the DockingResult to enable atomic creation and secure listing.\n\n**Structural Segregation:** The structure segregates data based on entity type, using dedicated collections for `Molecule`, `TargetProtein`, and `DockingResult`.  This ensures a homogeneous security posture for each collection, simplifying rules.\n\n**Access Modeling:** Currently, the data model assumes public/unrestricted access to the data entities by default, meaning no authorization is enforced besides the default (all authenticated users can read/write data).\n\n**QAPs:** The segregation into separate collections (`molecules`, `target_proteins`, `docking_results`) allows for secure `list` operations. Security rules can be applied at the collection level to allow or deny access based on user authentication status (e.g., only authenticated users can view the molecules). If more granular access control is needed (e.g., user-owned molecules), the denormalization strategy described above is required.\n\n**Invariants:** Timestamps can be added to each document to track creation and modification times. If ownership is added to future schema changes, this structure could support ownership invariants. With the current schema, invariants are not specifically designed for."
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the QuantumDock application.  \n\n**Authorization Independence:**  Authorization is enforced without relying on hierarchical `get()` calls by denormalizing relevant data.  For example, while the application focuses on simulating molecule-protein interaction, there isn't a clear ownership/authorization context described in the use case. Therefore, a flat data model is chosen, where authorization is not enforced beyond the default. For a future version, if users will own molecule or docking result data, `userId` should be associated with entities like Molecule and TargetProtein, and then denormalized into the DockingResult to enable atomic creation and secure listing.\n\n**Structural Segregation:** The structure segregates data based on entity type, using dedicated collections for `Molecule`, `TargetProtein`, `DockingResult`, and `LoginEvent`.  This ensures a homogeneous security posture for each collection, simplifying rules.\n\n**Access Modeling:** Currently, the data model assumes public/unrestricted access to the data entities by default, meaning no authorization is enforced besides the default (all authenticated users can read/write data).\n\n**QAPs:** The segregation into separate collections (`molecules`, `target_proteins`, `docking_results`, `loginHistory`) allows for secure `list` operations. Security rules can be applied at the collection level to allow or deny access based on user authentication status (e.g., only authenticated users can view the molecules). If more granular access control is needed (e.g., user-owned molecules), the denormalization strategy described above is required.\n\n**Invariants:** Timestamps can be added to each document to track creation and modification times. If ownership is added to future schema changes, this structure could support ownership invariants. With the current schema, invariants are not specifically designed for."
   }
 }
+    

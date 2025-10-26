@@ -1,9 +1,10 @@
 'use client';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { collection, query, where, orderBy, limit, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { History } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -22,9 +25,25 @@ export default function DashboardLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
 
   const handleSignOut = async () => {
+    if (user && firestore) {
+      const q = query(
+        collection(firestore, 'loginHistory'),
+        where('userId', '==', user.uid),
+        orderBy('loginTime', 'desc'),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const lastLoginDoc = querySnapshot.docs[0];
+        await updateDoc(lastLoginDoc.ref, {
+          logoutTime: serverTimestamp()
+        });
+      }
+    }
     await signOut(auth);
     router.push('/sign-in');
   }
@@ -63,6 +82,13 @@ export default function DashboardLayout({
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                     <Link href="/dashboard/history">
+                        <History className="mr-2 h-4 w-4" />
+                        <span>Login History</span>
+                      </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     Log out
                   </DropdownMenuItem>
@@ -79,3 +105,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    

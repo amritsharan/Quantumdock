@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -15,13 +16,26 @@ export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
+  const handleSuccessfulLogin = async (userCredential: UserCredential) => {
+    const user = userCredential.user;
+    if (user && firestore) {
+      await addDoc(collection(firestore, 'loginHistory'), {
+        userId: user.uid,
+        email: user.email,
+        loginTime: serverTimestamp()
+      });
+    }
+    router.push('/dashboard');
+  };
+
   const handleSignIn = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -34,8 +48,8 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      router.push('/dashboard');
+      const userCredential = await signInWithPopup(auth, provider);
+      await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -83,3 +97,5 @@ export default function SignInPage() {
     </div>
   );
 }
+
+    
