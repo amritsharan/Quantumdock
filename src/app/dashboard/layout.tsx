@@ -1,12 +1,5 @@
 
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
-import {
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs';
 
 export default function DashboardLayout({
   children,
@@ -21,10 +14,8 @@ export default function DashboardLayout({
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
         <div className="flex items-center gap-4">
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </div>
+            {/* User button can be placed here later */}
+        </div>
       </header>
       {children}
     </div>

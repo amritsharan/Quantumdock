@@ -1,40 +1,41 @@
 'use client';
 
-import { useSignUp } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 export default function SignUpPage() {
-  const { signUp } = useSignUp();
-  const router = useRouter();
-
-  const signUpWithGoogle = async () => {
-    if (!signUp) return;
-    try {
-      await signUp.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/dashboard',
-      });
-    } catch (error) {
-      console.error('Error signing up with Google:', error);
-    }
-  };
-
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-md bg-transparent border-0 shadow-none">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold">Create an Account</CardTitle>
-          <CardDescription>to get started with QuantumDock</CardDescription>
+          <CardDescription>Enter your information to create an account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={signUpWithGoogle} className="w-full">
-            Continue with Google
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" placeholder="m@example.com" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" required />
+          </div>
+          <Button type="submit" className="w-full">
+            Create Account
           </Button>
-          <div id="clerk-captcha"></div>
+          <Button variant="outline" className="w-full">
+            Sign up with Google
+          </Button>
         </CardContent>
+        <div className="mt-4 text-center text-sm">
+          Already have an account?{' '}
+          <Link href="/sign-in" className="underline">
+            Sign in
+          </Link>
+        </div>
       </Card>
     </div>
   );
