@@ -2,77 +2,96 @@
  * @fileoverview Firestore Security Rules for QuantumDock application.
  *
  * Core Philosophy:
- * This ruleset provides unrestricted access to the data entities by default,
- * meaning no authorization is enforced beyond the default (all authenticated users can read/write data).
+ * This ruleset provides basic protection against unauthenticated access to the database.
+ * It does not implement strong access control beyond requiring users to be signed in.
+ * This is suitable for prototyping but should be hardened before production use.
  *
  * Data Structure:
+ * The database consists of four top-level collections:
  * - /molecules/{moleculeId}: Stores molecule data.
  * - /target_proteins/{targetProteinId}: Stores target protein data.
  * - /docking_results/{dockingResultId}: Stores docking result data.
  * - /loginHistory/{loginEventId}: Stores user login events.
  *
  * Key Security Decisions:
- * - Unrestricted access: All authenticated users can read and write data in all collections.
- * - No specific authorization fields are denormalized.
+ * - All read and write access requires authentication.
+ * - No user listing is allowed to protect user privacy.
+ * - Data validation is minimal, focusing on relational integrity where required for authorization.
+ * - Public read access is NOT enabled for any collection.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows any authenticated user to read and write molecule data.
-     * @path /molecules/{moleculeId}
-     * @allow (get, list) Any authenticated user can read molecule data.
-     * @allow (create, update, delete) Any authenticated user can write molecule data.
-     * @deny (create, update, delete) Not applicable, all authenticated users are allowed.
-     * @principle Unrestricted access for authenticated users.
+     * @description Controls access to the /molecules/{moleculeId} collection.
+     * @path /databases/{database}/documents/molecules/{moleculeId}
+     * @allow (get, list) An authenticated user can read molecule data.
+     * @allow (create, update, delete) An authenticated user can modify molecule data.
+     * @deny (get, list) An unauthenticated user cannot read molecule data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify molecule data.
+     * @principle Requires authentication for all access.
      */
     match /molecules/{moleculeId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Allows any authenticated user to read and write target protein data.
-     * @path /target_proteins/{targetProteinId}
-     * @allow (get, list) Any authenticated user can read target protein data.
-     * @allow (create, update, delete) Any authenticated user can write target protein data.
-     * @deny (create, update, delete) Not applicable, all authenticated users are allowed.
-     * @principle Unrestricted access for authenticated users.
+     * @description Controls access to the /target_proteins/{targetProteinId} collection.
+     * @path /databases/{database}/documents/target_proteins/{targetProteinId}
+     * @allow (get, list) An authenticated user can read target protein data.
+     * @allow (create, update, delete) An authenticated user can modify target protein data.
+     * @deny (get, list) An unauthenticated user cannot read target protein data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify target protein data.
+     * @principle Requires authentication for all access.
      */
     match /target_proteins/{targetProteinId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Allows any authenticated user to read and write docking result data.
-     * @path /docking_results/{dockingResultId}
-     * @allow (get, list) Any authenticated user can read docking result data.
-     * @allow (create, update, delete) Any authenticated user can write docking result data.
-     * @deny (create, update, delete) Not applicable, all authenticated users are allowed.
-     * @principle Unrestricted access for authenticated users.
+     * @description Controls access to the /docking_results/{dockingResultId} collection.
+     * @path /databases/{database}/documents/docking_results/{dockingResultId}
+     * @allow (get, list) An authenticated user can read docking result data.
+     * @allow (create, update, delete) An authenticated user can modify docking result data.
+     * @deny (get, list) An unauthenticated user cannot read docking result data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify docking result data.
+     * @principle Requires authentication for all access.
      */
     match /docking_results/{dockingResultId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
-
-     /**
-      * @description Allows any authenticated user to read and write login event data.
-      * @path /loginHistory/{loginEventId}
-      * @allow (get, list) Any authenticated user can read login event data.
-      * @allow (create, update, delete) Any authenticated user can write login event data.
-      * @deny (create, update, delete) Not applicable, all authenticated users are allowed.
-      * @principle Unrestricted access for authenticated users.
-      */
+    
+    /**
+     * @description Controls access to the /loginHistory/{loginEventId} collection.
+     * @path /databases/{database}/documents/loginHistory/{loginEventId}
+     * @allow (get, list) An authenticated user can read login history data.
+     * @allow (create, update, delete) An authenticated user can modify login history data.
+     * @deny (get, list) An unauthenticated user cannot read login history data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify login history data.
+     * @principle Requires authentication for all access.
+     */
     match /loginHistory/{loginEventId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
-
-    // ---- Helper functions ----
+    // Helper function to determine if a user is signed in.
     function isSignedIn() {
       return request.auth != null;
     }
