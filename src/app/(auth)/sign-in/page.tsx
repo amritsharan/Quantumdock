@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +23,9 @@ export default function SignInPage() {
   const handleSuccessfulLogin = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     if (user && firestore) {
-      await addDoc(collection(firestore, 'loginHistory'), {
+      // Store login event in a subcollection under the user's document
+      const loginHistoryRef = collection(doc(firestore, 'users', user.uid), 'loginHistory');
+      await addDoc(loginHistoryRef, {
         userId: user.uid,
         email: user.email,
         loginTime: serverTimestamp()
@@ -97,5 +99,3 @@ export default function SignInPage() {
     </div>
   );
 }
-
-    

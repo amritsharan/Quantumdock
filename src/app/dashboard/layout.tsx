@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { collection, query, where, orderBy, limit, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { History } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -30,18 +30,20 @@ export default function DashboardLayout({
 
   const handleSignOut = async () => {
     if (user && firestore) {
+       const loginHistoryRef = collection(doc(firestore, 'users', user.uid), 'loginHistory');
       const q = query(
-        collection(firestore, 'loginHistory'),
-        where('userId', '==', user.uid),
+        loginHistoryRef,
         orderBy('loginTime', 'desc'),
         limit(1)
       );
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const lastLoginDoc = querySnapshot.docs[0];
-        await updateDoc(lastLoginDoc.ref, {
-          logoutTime: serverTimestamp()
-        });
+        if (!lastLoginDoc.data().logoutTime) {
+            await updateDoc(lastLoginDoc.ref, {
+              logoutTime: serverTimestamp()
+            });
+        }
       }
     }
     await signOut(auth);
@@ -105,5 +107,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-    

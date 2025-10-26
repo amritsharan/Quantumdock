@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, type Query } from 'firebase/firestore';
+import { collection, query, where, orderBy, type Query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,9 +35,9 @@ export default function LoginHistoryPage() {
 
   const historyQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
+    // Query the subcollection within the user's document
     return query(
-      collection(firestore, 'loginHistory'),
-      where('userId', '==', user.uid),
+      collection(doc(firestore, 'users', user.uid), 'loginHistory'),
       orderBy('loginTime', 'desc')
     );
   }, [user, firestore]);
