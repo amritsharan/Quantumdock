@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { doc, Timestamp } from 'firebase/firestore';
+import { doc, Timestamp, collection } from 'firebase/firestore';
 
 
 interface LoginEvent {
