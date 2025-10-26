@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import Image from 'next/image';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -110,10 +111,12 @@ export default function SelectMoleculePage() {
                         checked={isAllOnPageSelected}
                         onCheckedChange={handleSelectAllOnPage}
                         aria-label="Select all on page"
+                        suppressHydrationWarning
                       />
                     </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Molecular Formula</TableHead>
+                    <TableHead>Structure</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -123,10 +126,22 @@ export default function SelectMoleculePage() {
                         <Checkbox
                           checked={selectedSmiles.has(molecule.smiles)}
                           onCheckedChange={(checked) => handleSelect(molecule.smiles, checked)}
+                          suppressHydrationWarning
                         />
+
                       </TableCell>
                       <TableCell className="font-medium">{molecule.name}</TableCell>
                       <TableCell>{molecule.formula}</TableCell>
+                       <TableCell>
+                        <Image
+                          src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(molecule.smiles)}/image?width=100&height=100`}
+                          alt={`Structure of ${molecule.name}`}
+                          width={100}
+                          height={100}
+                          className="rounded-md bg-white p-1"
+                          unoptimized // External URLs can't be optimized by Next/image by default
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
