@@ -7,7 +7,8 @@ import { ref, query, onValue, off, orderByChild, limitToLast } from 'firebase/da
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type LoginEvent = {
   id: string;
@@ -19,19 +20,19 @@ export default function HistoryPage() {
   const { user } = useUser();
   const db = useDatabase();
   const [history, setHistory] = useState<LoginEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!user || !db) {
+      setIsLoading(false);
       return;
     }
 
-    // Query for the last 50 login events, ordered by loginTime
     const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(50));
 
     const unsubscribe = onValue(historyQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Firebase returns the data. We convert it to an array and sort descending.
         const events: LoginEvent[] = Object.keys(data).map(key => ({
           id: key,
           ...data[key],
@@ -40,9 +41,9 @@ export default function HistoryPage() {
       } else {
         setHistory([]);
       }
+      setIsLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => off(historyQuery, 'value', unsubscribe);
   }, [user, db]);
   
@@ -50,7 +51,6 @@ export default function HistoryPage() {
   
   const getDuration = (login: number, logout: number | undefined) => {
     if (!logout) return <Badge variant="secondary">Active</Badge>;
-    // Simple duration calculation, can be improved with date-fns if needed
     const durationInSeconds = (logout - login) / 1000;
     if (durationInSeconds < 60) return `${Math.round(durationInSeconds)} seconds`;
     const durationInMinutes = durationInSeconds / 60;
@@ -67,7 +67,13 @@ export default function HistoryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {history.length > 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : history.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
