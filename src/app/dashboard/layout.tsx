@@ -2,8 +2,9 @@
 'use client';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useDatabase, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { ref, query, orderByChild, limitToLast, get, update, serverTimestamp } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -25,12 +26,30 @@ export default function DashboardLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const db = useDatabase();
   const router = useRouter();
 
   const handleSignOut = async () => {
-    if (!auth) return;
-    await signOut(auth);
-    router.push('/sign-in');
+    if (!auth || !user || !db) return;
+    
+    // Find the last login event and update it
+    const loginHistoryRef = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(1));
+    
+    get(loginHistoryRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        snapshot.forEach((childSnapshot) => {
+          const lastLoginKey = childSnapshot.key;
+          const lastLoginData = childSnapshot.val();
+          if (lastLoginKey && !lastLoginData.logoutTime) {
+            const eventRef = ref(db, `loginHistory/${user.uid}/${lastLoginKey}`);
+            update(eventRef, { logoutTime: serverTimestamp() });
+          }
+        });
+      }
+    }).finally(async () => {
+        await signOut(auth);
+        router.push('/sign-in');
+    });
   }
 
   const getInitials = (email?: string | null) => {
@@ -66,6 +85,11 @@ export default function DashboardLayout({
                       </p>
                     </div>
                   </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                   <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
+                    <History className="mr-2 h-4 w-4" />
+                    <span>Login History</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     Log out

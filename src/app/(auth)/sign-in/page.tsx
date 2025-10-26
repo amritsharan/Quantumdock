@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useDatabase } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
-import { ref, get, set } from "firebase/database";
+import { ref, get, set, push, serverTimestamp } from "firebase/database";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,7 @@ export default function SignInPage() {
   const handleSuccessfulLogin = (userCredential: UserCredential) => {
     const user = userCredential.user;
     if (user && db) {
+      // Create user profile if it doesn't exist
       const userRef = ref(db, 'users/' + user.uid);
       get(userRef).then((snapshot) => {
         if (!snapshot.exists()) {
@@ -38,6 +39,13 @@ export default function SignInPage() {
         }
       }).catch(error => {
         console.error("Error checking for user profile in Realtime Database:", error);
+      });
+
+      // Record login event
+      const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+      push(loginHistoryRef, {
+        loginTime: serverTimestamp(),
+        logoutTime: null,
       });
     }
     router.push('/dashboard');
@@ -96,7 +104,7 @@ export default function SignInPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} suppressHydrationWarning />
           </div>
           <div className="space-y-2">
             <div className="flex items-center">
@@ -105,7 +113,7 @@ export default function SignInPage() {
                 Forgot your password?
               </Link>
             </div>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} suppressHydrationWarning />
           </div>
           <Button onClick={handleSignIn} className="w-full" suppressHydrationWarning>
             Sign In
