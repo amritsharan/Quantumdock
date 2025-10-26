@@ -9,7 +9,10 @@
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "photoURL": { "type": "string", "format": "uri" }
+        "photoURL": { "type": "string", "format": "uri" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phoneNumber": { "type": "string" }
       },
       "required": ["uid", "email"]
     },
