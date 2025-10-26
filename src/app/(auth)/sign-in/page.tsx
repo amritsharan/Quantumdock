@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
-import { arrayUnion, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ export default function SignInPage() {
     const user = userCredential.user;
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
+      const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
       
       try {
         const userDoc = await getDoc(userRef);
@@ -32,22 +33,22 @@ export default function SignInPage() {
         const newLoginEvent = {
           userId: user.uid,
           email: user.email,
-          loginTime: new Date() // Use client-side timestamp
+          loginTime: serverTimestamp() // Use server-side timestamp for accuracy
         };
 
         if (!userDoc.exists()) {
+          // Create the user profile document if it doesn't exist
           await setDoc(userRef, {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            loginEvents: [newLoginEvent]
-          });
-        } else {
-          await updateDoc(userRef, {
-            loginEvents: arrayUnion(newLoginEvent)
           });
         }
+        
+        // Add a new document to the loginHistory sub-collection
+        await addDoc(loginHistoryRef, newLoginEvent);
+
       } catch (error) {
           console.error("Error updating login history:", error);
           // Don't block login if history write fails

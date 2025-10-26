@@ -8,11 +8,7 @@
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "photoURL": { "type": "string", "format": "uri" },
-        "loginEvents": {
-          "type": "array",
-          "items": { "$ref": "#/backend/entities/LoginEvent" }
-        }
+        "photoURL": { "type": "string", "format": "uri" }
       },
       "required": ["uid", "email"]
     },
@@ -163,7 +159,15 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile information, including an array of login events."
+          "description": "Stores user profile information."
+        }
+      },
+      {
+        "path": "/users/{userId}/loginHistory/{loginHistoryId}",
+        "definition": {
+          "entityName": "LoginEvent",
+          "schema": { "$ref": "#/backend/entities/LoginEvent" },
+          "description": "Sub-collection for a user's login events."
         }
       },
       {

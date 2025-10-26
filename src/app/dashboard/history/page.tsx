@@ -2,32 +2,29 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { doc, Timestamp, collection } from 'firebase/firestore';
+import { collection, Timestamp, query, orderBy, limit } from 'firebase/firestore';
 
 
 interface LoginEvent {
+  id: string;
   userId: string;
   email: string;
-  loginTime: Timestamp | Date; // Can be either from Firestore or newly created
-  logoutTime?: Timestamp | Date;
+  loginTime: Timestamp; // Always a timestamp from Firestore
+  logoutTime?: Timestamp;
 }
 
-interface UserProfile {
-    loginEvents?: LoginEvent[];
-}
-
-// Helper to safely convert Firestore Timestamps or JS Dates
+// Helper to safely convert Firestore Timestamps to JS Dates
 function toDate(timestamp: Timestamp | Date | undefined | null): Date | null {
   if (!timestamp) return null;
   if (timestamp instanceof Timestamp) {
     return timestamp.toDate();
   }
-  if (timestamp instanceof Date) {
+  if (timestamp instanceof Date) { // Should not happen with serverTimestamps, but safe to have
     return timestamp;
   }
   return null;
@@ -39,7 +36,7 @@ function calculateDuration(loginTime: Date, logoutTime?: Date): string {
         return 'Active';
     }
     const durationMs = logoutTime.getTime() - loginTime.getTime();
-    if (durationMs < 0) return '...'; // logoutTime might not be synced yet
+    if (durationMs < 0) return '...'; // Should not happen
     const minutes = Math.floor(durationMs / 60000);
     const seconds = Math.floor((durationMs % 60000) / 1000);
     if (minutes < 1) {
@@ -52,22 +49,17 @@ export default function LoginHistoryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const userDocRef = useMemoFirebase(() => {
+  const loginHistoryQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    return doc(firestore, 'users', user.uid);
+    // Query the sub-collection for the current user, ordering by login time
+    return query(
+        collection(firestore, 'users', user.uid, 'loginHistory'), 
+        orderBy('loginTime', 'desc'), 
+        limit(50) // Limit to the last 50 events for performance
+    );
   }, [user, firestore]);
 
-  const { data: userProfile, isLoading: isHistoryLoading } = useDoc<UserProfile>(userDocRef);
-
-  const history = useMemo(() => {
-    if (!userProfile || !Array.isArray(userProfile.loginEvents)) return [];
-    // Create a mutable copy before sorting
-    return [...userProfile.loginEvents].sort((a, b) => {
-        const timeA = toDate(a.loginTime)?.getTime() || 0;
-        const timeB = toDate(b.loginTime)?.getTime() || 0;
-        return timeB - timeA;
-    });
-  }, [userProfile]);
+  const { data: history, isLoading: isHistoryLoading } = useCollection<LoginEvent>(loginHistoryQuery);
 
   const loading = isUserLoading || isHistoryLoading;
 
@@ -104,11 +96,11 @@ export default function LoginHistoryPage() {
                     </TableRow>
                   ))
                 ) : history && history.length > 0 ? (
-                  history.map((event, index) => {
+                  history.map((event) => {
                     const loginDate = toDate(event.loginTime);
                     const logoutDate = toDate(event.logoutTime);
                     return (
-                        <TableRow key={`${event.userId}-${index}`}>
+                        <TableRow key={event.id}>
                             <TableCell>{event.email}</TableCell>
                             <TableCell>
                             {loginDate ? format(loginDate, "PPpp") : 'N/A'}
@@ -117,7 +109,7 @@ export default function LoginHistoryPage() {
                             {logoutDate ? format(logoutDate, "PPpp") : 'Active'}
                             </TableCell>
                             <TableCell>
-                            {loginDate ? calculateDuration(loginDate, logoutDate ?? undefined) : 'N/A'}
+                            {loginDate ? calculateDuration(loginDate, logoutDate) : 'N/A'}
                             </TableCell>
                         </TableRow>
                     );

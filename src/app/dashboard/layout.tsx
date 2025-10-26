@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { History } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -31,24 +31,24 @@ export default function DashboardLayout({
 
   const handleSignOut = async () => {
     if (user && firestore) {
-      const userRef = doc(firestore, 'users', user.uid);
-      try {
-        const userDoc = await getDoc(userRef);
-        if (userDoc.exists()) {
-          const loginEvents = userDoc.data().loginEvents || [];
-          // Find the last login event that doesn't have a logoutTime
-          const lastLoginEventIndex = loginEvents.findLastIndex((event: any) => !event.logoutTime);
+      const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
+      
+      // Find the last login event for the current user that doesn't have a logoutTime
+      const q = query(
+        loginHistoryRef, 
+        where('userId', '==', user.uid), 
+        where('logoutTime', '==', null),
+        orderBy('loginTime', 'desc'), 
+        limit(1)
+      );
 
-          if (lastLoginEventIndex !== -1) {
-            // Create a new array with the updated event
-            const updatedEvents = [...loginEvents];
-            updatedEvents[lastLoginEventIndex] = {
-              ...updatedEvents[lastLoginEventIndex],
-              logoutTime: new Date(), // Use client-side timestamp
-            };
-            // Update the document with the new array
-            await updateDoc(userRef, { loginEvents: updatedEvents });
-          }
+      try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const lastLoginDoc = querySnapshot.docs[0];
+          await updateDoc(lastLoginDoc.ref, {
+            logoutTime: serverTimestamp() // Use server-side timestamp for accuracy
+          });
         }
       } catch (error) {
         console.error("Error updating logout time:", error);
