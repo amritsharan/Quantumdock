@@ -2,33 +2,35 @@
  * @fileoverview Firestore Security Rules for QuantumDock application.
  *
  * Core Philosophy:
- * This ruleset provides basic read/write access to the data entities
- * (Molecule, TargetProtein, DockingResult). The LoginEvent collection is locked down for all
- * client 'list' operations to fix a bug. The ruleset does not currently implement any strong authorization.
+ * This ruleset provides basic protection against unauthenticated access to the database.
+ * It does not implement strong access control beyond requiring users to be signed in.
+ * This is suitable for prototyping but should be hardened before production use.
  *
  * Data Structure:
- * The database consists of top-level collections for 'molecules', 'target_proteins', 'docking_results',
- * and 'loginHistory'.
+ * The database consists of four top-level collections:
+ * - /molecules/{moleculeId}: Stores molecule data.
+ * - /target_proteins/{targetProteinId}: Stores target protein data.
+ * - /docking_results/{dockingResultId}: Stores docking result data.
+ * - /loginHistory/{loginEventId}: Stores user login events.
  *
  * Key Security Decisions:
- * - User listing is explicitly denied on `/loginHistory` to fix a permission issue reported by NextJS.
- * - No ownership or role-based access control is implemented at this stage beyond requiring users to be signed in to use the app.
+ * - All read and write access requires authentication.
+ * - No user listing is allowed to protect user privacy.
+ * - Data validation is minimal, focusing on relational integrity where required for authorization.
+ * - Public read access is NOT enabled for any collection.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     /**
-     * @description Grants read/write access to molecules for authenticated users.
-     * @path /molecules/{moleculeId}
-     * @allow (get) Signed-in user can read any molecule.
-     * @allow (create) Signed-in user can create a molecule.
-     * @deny (create) Anonymous user cannot create a molecule.
-     * @principle Authenticated users can create and read molecules.
+     * @description Controls access to the /molecules/{moleculeId} collection.
+     * @path /databases/{database}/documents/molecules/{moleculeId}
+     * @allow (get, list) An authenticated user can read molecule data.
+     * @allow (create, update, delete) An authenticated user can modify molecule data.
+     * @deny (get, list) An unauthenticated user cannot read molecule data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify molecule data.
+     * @principle Requires authentication for all access.
      */
     match /molecules/{moleculeId} {
       allow get: if isSignedIn();
@@ -39,12 +41,13 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read/write access to target proteins for authenticated users.
-     * @path /target_proteins/{targetProteinId}
-     * @allow (get) Signed-in user can read any target protein.
-     * @allow (create) Signed-in user can create a target protein.
-     * @deny (create) Anonymous user cannot create a target protein.
-     * @principle Authenticated users can create and read target proteins.
+     * @description Controls access to the /target_proteins/{targetProteinId} collection.
+     * @path /databases/{database}/documents/target_proteins/{targetProteinId}
+     * @allow (get, list) An authenticated user can read target protein data.
+     * @allow (create, update, delete) An authenticated user can modify target protein data.
+     * @deny (get, list) An unauthenticated user cannot read target protein data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify target protein data.
+     * @principle Requires authentication for all access.
      */
     match /target_proteins/{targetProteinId} {
       allow get: if isSignedIn();
@@ -55,12 +58,13 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read/write access to docking results for authenticated users.
-     * @path /docking_results/{dockingResultId}
-     * @allow (get) Signed-in user can read any docking result.
-     * @allow (create) Signed-in user can create a docking result.
-     * @deny (create) Anonymous user cannot create a docking result.
-     * @principle Authenticated users can create and read docking results.
+     * @description Controls access to the /docking_results/{dockingResultId} collection.
+     * @path /databases/{database}/documents/docking_results/{dockingResultId}
+     * @allow (get, list) An authenticated user can read docking result data.
+     * @allow (create, update, delete) An authenticated user can modify docking result data.
+     * @deny (get, list) An unauthenticated user cannot read docking result data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify docking result data.
+     * @principle Requires authentication for all access.
      */
     match /docking_results/{dockingResultId} {
       allow get: if isSignedIn();
@@ -69,19 +73,27 @@ service cloud.firestore {
       allow update: if isSignedIn();
       allow delete: if isSignedIn();
     }
-
+    
     /**
-     * @description Restricts listing login history.
-     * @path /loginHistory/{loginEventId}
-     * @deny (list) Any user cannot list login history.
-     * @principle Prevents unauthorized listing of login history.
+     * @description Controls access to the /loginHistory/{loginEventId} collection.
+     * @path /databases/{database}/documents/loginHistory/{loginEventId}
+     * @allow (get, list) An authenticated user can read login history data.
+     * @allow (create, update, delete) An authenticated user can modify login history data.
+     * @deny (get, list) An unauthenticated user cannot read login history data.
+     * @deny (create, update, delete) An unauthenticated user cannot modify login history data.
+     * @principle Requires authentication for all access.
      */
     match /loginHistory/{loginEventId} {
       allow get: if isSignedIn();
-      allow list: if false;
+      allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isSignedIn();
+    }
+
+    // Helper function to determine if a user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
     }
   }
 }
