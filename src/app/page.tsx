@@ -16,6 +16,13 @@ import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
+import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
 
 
 type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
@@ -169,6 +176,19 @@ function HomePageContent() {
           <QuantumDockLogo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
+        <div className="flex items-center gap-4">
+            <SignedOut>
+              <SignInButton />
+              <SignUpButton>
+                <button className="bg-primary text-primary-foreground rounded-md font-medium text-sm h-10 px-4 cursor-pointer hover:bg-primary/90">
+                  Sign Up
+                </button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
       </header>
       <main className="flex min-h-[calc(100vh_-_8rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">

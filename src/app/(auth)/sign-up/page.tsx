@@ -29,10 +29,11 @@ export default function SignUpPage() {
           <CardTitle className="text-3xl font-bold">Create an Account</CardTitle>
           <CardDescription>to get started with QuantumDock</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button onClick={signUpWithGoogle} className="w-full">
             Continue with Google
           </Button>
+          <div id="clerk-captcha"></div>
         </CardContent>
       </Card>
     </div>

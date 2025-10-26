@@ -29,10 +29,11 @@ export default function SignInPage() {
           <CardTitle className="text-3xl font-bold">Sign In</CardTitle>
           <CardDescription>to continue to QuantumDock</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button onClick={signInWithGoogle} className="w-full">
             Continue with Google
           </Button>
+          <div id="clerk-captcha"></div>
         </CardContent>
       </Card>
     </div>
