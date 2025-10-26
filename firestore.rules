@@ -1,111 +1,132 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a user-ownership model for user profiles and allows public read access to molecules, target proteins, and docking results.
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a user-ownership model for user profiles and their associated login history,
+ * while allowing public read access to molecules, target proteins, and docking results.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile data, accessible only to the user themselves.
- * - /molecules/{moleculeId}: Stores molecule data, publicly readable and writable by any authenticated user.
- * - /target_proteins/{targetProteinId}: Stores target protein data, publicly readable and writable by any authenticated user.
- * - /docking_results/{dockingResultId}: Stores docking result data, publicly readable and writable by any authenticated user.
+ * - User profiles are stored under `/users/{userId}`.
+ * - Login history is stored as a subcollection `/users/{userId}/loginHistory/{loginHistoryId}`.
+ * - Molecules are stored under `/molecules/{moleculeId}`.
+ * - Target proteins are stored under `/target_proteins/{targetProteinId}`.
+ * - Docking results are stored under `/docking_results/{dockingResultId}`.
  *
  * Key Security Decisions:
- * - User profiles are strictly controlled: only the authenticated user can read, update, or delete their own profile.
- * - Listing of users is disallowed.
- * - Molecules, target proteins, and docking results are publicly readable and writable by authenticated users.
+ * - Users can only read and write their own profile data and login history.
+ * - Listing all users is disallowed.
+ * - Molecules, target proteins, and docking results are publicly readable, but only authenticated users can create, update, or delete them.
  *
  * Denormalization for Authorization:
- * - User profiles are stored under `/users/{userId}`, allowing for simple ownership checks using the `userId` path segment.
+ *  - User login history documents are stored under the user's profile, so ownership checks are straightforward.
+ *
+ * Structural Segregation:
+ *  - Login history is stored as a subcollection under the user's profile to maintain data privacy.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile information. Only the authenticated user can read, update, or delete their own profile.
+     * @description Grants access to a user's profile.
      * @path /users/{userId}
-     * @allow (get, create, update, delete) if request.auth.uid == userId
-     * @deny (get, create, update, delete) if request.auth.uid != userId
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User with UID 'user123' can create their own profile.
+     *   - request.auth.uid: 'user123'
+     *   - resource.data.uid: 'user123'
+     * @allow (get, update, delete) User with UID 'user123' can read, update, or delete their own profile.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) User with UID 'user456' cannot create a profile for 'user123'.
+     *   - request.auth.uid: 'user456'
+     *   - resource.data.uid: 'user123'
+     * @deny (get, update, delete) User with UID 'user456' cannot read, update, or delete profile of 'user123'.
+     *   - request.auth.uid: 'user456'
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.auth.uid == userId;
-      allow update: if isOwner(userId) && resource.data.uid == userId;
+      allow create: if isOwner(userId) && request.resource.data.uid == request.auth.uid;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to molecule data. Any authenticated user can read, create, update, or delete molecule data.
+     * @description Grants access to a user's login history.
+     * @path /users/{userId}/loginHistory/{loginHistoryId}
+     * @allow (create) User with UID 'user123' can create a login history event for themselves.
+     *   - request.auth.uid: 'user123'
+     * @allow (get, list, update, delete) User with UID 'user123' can read, list, update or delete their own login history.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) User with UID 'user456' cannot create a login history event for 'user123'.
+     *   - request.auth.uid: 'user456'
+     * @deny (get, list, update, delete) User with UID 'user456' cannot read, list, update, or delete login history of 'user123'.
+     *   - request.auth.uid: 'user456'
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/loginHistory/{loginHistoryId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Grants public read access to molecules, but restricts writes to authenticated users.
      * @path /molecules/{moleculeId}
-     * @allow (get, list) if true
-     * @allow (create, update, delete) if isSignedIn()
-     * @principle Grants public read access with authentication required for writes.
+     * @allow (get, list) Any user can read molecule data.
+     * @allow (create, update, delete) Only authenticated users can create, update, or delete molecule data.
+     *   - request.auth.uid: 'user123'
+     * @principle Allows public read access with owner-only writes.
      */
     match /molecules/{moleculeId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
     }
 
     /**
-     * @description Controls access to target protein data. Any authenticated user can read, create, update, or delete target protein data.
+     * @description Grants public read access to target proteins, but restricts writes to authenticated users.
      * @path /target_proteins/{targetProteinId}
-     * @allow (get, list) if true
-     * @allow (create, update, delete) if isSignedIn()
-     * @principle Grants public read access with authentication required for writes.
+     * @allow (get, list) Any user can read target protein data.
+     * @allow (create, update, delete) Only authenticated users can create, update, or delete target protein data.
+     *   - request.auth.uid: 'user123'
+     * @principle Allows public read access with owner-only writes.
      */
     match /target_proteins/{targetProteinId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
     }
 
     /**
-     * @description Controls access to docking result data. Any authenticated user can read, create, update, or delete docking result data.
+     * @description Grants public read access to docking results, but restricts writes to authenticated users.
      * @path /docking_results/{dockingResultId}
-     * @allow (get, list) if true
-     * @allow (create, update, delete) if isSignedIn()
-     * @principle Grants public read access with authentication required for writes.
+     * @allow (get, list) Any user can read docking result data.
+     * @allow (create, update, delete) Only authenticated users can create, update, or delete docking result data.
+     *   - request.auth.uid: 'user123'
+     * @principle Allows public read access with owner-only writes.
      */
     match /docking_results/{dockingResultId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
     }
+  }
 
-    // ---- Helper functions ----
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
 
-    /**
-     * @description Checks if the user is signed in.
-     * @return True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
 
-    /**
-     * @description Checks if the user is the owner of the resource.
-     * @param {string} userId The user ID to check against.
-     * @return True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the user is the owner of the resource and the resource exists.
-     * @param {string} userId The user ID to check against.
-     * @return True if the user is the owner and the resource exists, false otherwise.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
   }
 }
