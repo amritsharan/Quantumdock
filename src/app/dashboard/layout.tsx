@@ -4,7 +4,7 @@ import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
 import { useAuth, useDatabase, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { ref, query, orderByChild, limitToLast, get, update } from 'firebase/database';
+import { ref, query, orderByChild, limitToLast, get, update, equalTo } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -36,15 +36,15 @@ export default function DashboardLayout({
         return;
     };
     
-    // Find the last login event and update it in the background
-    const loginHistoryRef = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(1));
+    // Find the last login event that is still active (no logoutTime) and update it.
+    const userLoginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+    const activeSessionQuery = query(userLoginHistoryRef, orderByChild('logoutTime'), equalTo(null), limitToLast(1));
     
-    get(loginHistoryRef).then((snapshot) => {
+    get(activeSessionQuery).then((snapshot) => {
       if (snapshot.exists()) {
         snapshot.forEach((childSnapshot) => {
           const lastLoginKey = childSnapshot.key;
-          const lastLoginData = childSnapshot.val();
-          if (lastLoginKey && !lastLoginData.logoutTime) {
+          if (lastLoginKey) {
             const eventRef = ref(db, `loginHistory/${user.uid}/${lastLoginKey}`);
             update(eventRef, { logoutTime: Date.now() });
           }
