@@ -30,9 +30,13 @@ export default function DashboardLayout({
   const router = useRouter();
 
   const handleSignOut = async () => {
-    if (!auth || !user || !db) return;
+    if (!auth || !user || !db) {
+        if(auth) await signOut(auth);
+        router.push('/sign-in');
+        return;
+    };
     
-    // Find the last login event and update it
+    // Find the last login event and update it in the background
     const loginHistoryRef = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(1));
     
     get(loginHistoryRef).then((snapshot) => {
@@ -46,10 +50,11 @@ export default function DashboardLayout({
           }
         });
       }
-    }).finally(async () => {
-        await signOut(auth);
-        router.push('/sign-in');
     });
+
+    // Immediately sign out and redirect
+    await signOut(auth);
+    router.push('/sign-in');
   }
 
   const getInitials = (email?: string | null) => {
