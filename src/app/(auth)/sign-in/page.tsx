@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useDatabase } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
-import { ref, get, set, push, serverTimestamp } from "firebase/database";
+import { ref, get, set, push } from "firebase/database";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -44,7 +44,7 @@ export default function SignInPage() {
       // Record login event
       const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
       push(loginHistoryRef, {
-        loginTime: serverTimestamp(),
+        loginTime: Date.now(),
         logoutTime: null,
       });
     }

@@ -4,7 +4,7 @@ import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
 import { useAuth, useDatabase, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { ref, query, orderByChild, limitToLast, get, update, serverTimestamp } from 'firebase/database';
+import { ref, query, orderByChild, limitToLast, get, update } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -42,7 +42,7 @@ export default function DashboardLayout({
           const lastLoginData = childSnapshot.val();
           if (lastLoginKey && !lastLoginData.logoutTime) {
             const eventRef = ref(db, `loginHistory/${user.uid}/${lastLoginKey}`);
-            update(eventRef, { logoutTime: serverTimestamp() });
+            update(eventRef, { logoutTime: Date.now() });
           }
         });
       }

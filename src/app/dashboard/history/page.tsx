@@ -44,7 +44,11 @@ export default function HistoryPage() {
       setIsLoading(false);
     });
 
-    return () => off(historyQuery, 'value', unsubscribe);
+    return () => {
+        if(historyQuery) {
+            off(historyQuery, 'value', unsubscribe);
+        }
+    };
   }, [user, db]);
   
   const toDate = (timestamp: number) => new Date(timestamp);
@@ -94,11 +98,7 @@ export default function HistoryPage() {
                       )}
                     </TableCell>
                      <TableCell>
-                      {event.logoutTime ? (
-                         getDuration(event.loginTime, event.logoutTime)
-                      ) : (
-                        <Badge variant="secondary">In Progress</Badge>
-                      )}
+                      {getDuration(event.loginTime, event.logoutTime)}
                     </TableCell>
                   </TableRow>
                 ))}
