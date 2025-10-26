@@ -49,7 +49,9 @@ export default function HistoryPage() {
     });
 
     return () => {
-        off(historyQuery, 'value', handleValueChange);
+        if(historyQuery) {
+            off(historyQuery, 'value', handleValueChange);
+        }
     };
   }, [user, db]);
   
@@ -76,12 +78,24 @@ export default function HistoryPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
+             <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Login Time</TableHead>
+                  <TableHead>Logout Time</TableHead>
+                  <TableHead>Duration</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : history.length > 0 ? (
             <Table>
               <TableHeader>
