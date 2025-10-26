@@ -24,8 +24,8 @@ export const molecules: Molecule[] = [
     { name: 'Dopamine', smiles: 'C1=CC(=C(C=C1CCN)O)O', formula: 'C8H11NO2' },
     { name: 'Serotonin', smiles: 'C1=CC=C2C(=C1)C(=CN2)CCN', formula: 'C10H12N2O' },
     { name: 'Adrenaline (Epinephrine)', smiles: 'CNC[C@H](C1=CC(=C(C=C1)O)O)O', formula: 'C9H13NO3' },
-    { name: 'Glucose', smiles: 'C(C1C(C(C(C(O1)O)O)O)O)O)O', formula: 'C6H12O6' },
-    { name: 'Fructose', smiles: 'C(C1C(C(C(O1)(CO)O)O)O)O', formula: 'C6H12O6' },
+    { name: 'Glucose', smiles: 'O=C[C@H](O)[C@H](O)[C@H](O)[C@H](O)CO', formula: 'C6H12O6' },
+    { name: 'Fructose', smiles: 'C([C@@H]1(C(C(C(O1)O)O)O)O)O', formula: 'C6H12O6' },
     { name: 'Sucrose', smiles: 'C(C1C(C(C(C(O1)O)O)O)O)OC2(C(C(C(O2)CO)O)O)CO', formula: 'C12H22O11' },
     { name: 'Cholesterol', smiles: 'CC(C)CCCC(C)C1CCC2C1(CCC3C2CC=C4C3(CCC(C4)O)C)C', formula: 'C27H46O' },
     { name: 'Testosterone', smiles: 'C[C@H]1CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@]4(C)[C@H]3CC[C@]12C', formula: 'C19H28O2' },
@@ -67,7 +67,7 @@ export const molecules: Molecule[] = [
     { name: 'Pregabalin', smiles: 'CC(C)C[C@H](CC(=O)O)CN', formula: 'C8H17NO2' },
     { name: 'Omeprazole', smiles: 'Cc1c(c(nc(n1)C)OC)CS(=O)c2[nH]c3cc(c(cc3n2)OC)C', formula: 'C17H19N3O3S' },
     { name: 'Loratadine', smiles: 'c1ccc(c(c1)Cl)C2(C(=O)N(C=C2)C(=O)OCC)c3cc[nH]n3', formula: 'C22H23ClN2O2' },
-    { name: 'Cetirizine', smiles: 'c1ccc(cc1)C(c2ccccc2)N3CCN(CC3)CCOCC(=O)O', formula: 'C21H25ClN2O3' },
+    { name: 'Cetirizine', smiles: 'c1ccc(cc1)C(c2ccccc2)N3CCN(CC3)CCOOC(=O)O', formula: 'C21H25ClN2O3' },
     { name: 'Fexofenadine', smiles: 'c1ccc(cc1)C(O)(CCCC(O)(C(=O)O)C(C)C)c2ccccc2', formula: 'C32H39NO4' },
     { name: 'Ranitidine', smiles: 'CN(C)CSCC/C=C(\\N=C/N)/[N+](=O)[O-]', formula: 'C13H22N4O3S' },
     { name: 'Cimetidine', smiles: 'CN=C(N)NCCCSc1cn(c(n1)C)C', formula: 'C10H16N6S' },
@@ -425,5 +425,3 @@ export const molecules: Molecule[] = [
     { name: 'Povidone-iodine', smiles: '[I-].[I-].c1ccc(cc1)C(=O)N1CCCC1=O', formula: 'C6H9INO' }
 ].concat((Array.from({length: 16088 - 500}).map((_, i) => ({ name: `Molecule ${i + 501}`, smiles: 'C', formula: 'CH4' }))))
 ;
-
-    
