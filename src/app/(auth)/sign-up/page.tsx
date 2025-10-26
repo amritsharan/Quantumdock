@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -5,24 +6,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
+  const handleSuccessfulSignUp = (userCredential: UserCredential) => {
+    const user = userCredential.user;
+    // Non-blocking write to Firestore
+    if (user && firestore) {
+      const userRef = doc(firestore, 'users', user.uid);
+      setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      }).catch(error => {
+        console.error("Error creating user profile:", error);
+      });
+    }
+    // Immediately redirect
+    router.push('/dashboard');
+  };
+
   const handleSignUp = async () => {
+    if (!auth) return;
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      handleSuccessfulSignUp(userCredential);
     } catch (error: any) {
        toast({
         variant: "destructive",
@@ -33,10 +54,11 @@ export default function SignUpPage() {
   };
 
   const handleGoogleSignUp = async () => {
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      router.push('/dashboard');
+      const userCredential = await signInWithPopup(auth, provider);
+      handleSuccessfulSignUp(userCredential);
     } catch (error: any) {
        toast({
         variant: "destructive",

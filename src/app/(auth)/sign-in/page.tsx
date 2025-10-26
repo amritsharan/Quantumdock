@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -21,26 +21,27 @@ export default function SignInPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSuccessfulLogin = async (userCredential: UserCredential) => {
+  const handleSuccessfulLogin = (userCredential: UserCredential) => {
     const user = userCredential.user;
+    // Non-blocking write to Firestore
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
-      try {
-        const userDoc = await getDoc(userRef);
+      getDoc(userRef).then(userDoc => {
         if (!userDoc.exists()) {
-          // Create the user profile document if it doesn't exist
-          await setDoc(userRef, {
+          setDoc(userRef, {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
+          }).catch(error => {
+            console.error("Error creating user profile:", error);
           });
         }
-      } catch (error) {
-          console.error("Error creating user profile:", error);
-          // Don't block login if profile creation fails
-      }
+      }).catch(error => {
+          console.error("Error checking for user profile:", error);
+      });
     }
+    // Immediately redirect
     router.push('/dashboard');
   };
 
@@ -55,7 +56,7 @@ export default function SignInPage() {
     }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      await handleSuccessfulLogin(userCredential);
+      handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -77,7 +78,7 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
       const userCredential = await signInWithPopup(auth, provider);
-      await handleSuccessfulLogin(userCredential);
+      handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
