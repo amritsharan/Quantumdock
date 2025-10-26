@@ -2,35 +2,33 @@
  * @fileoverview Firestore Security Rules for QuantumDock application.
  *
  * Core Philosophy:
- * This ruleset provides basic read and write access to all authenticated users for molecule,
- * target protein, and docking result data. It assumes no specific ownership or roles are defined.
+ * This ruleset provides basic read/write access to the data entities
+ * (Molecule, TargetProtein, DockingResult). The LoginEvent collection is locked down for all
+ * client 'list' operations to fix a bug. The ruleset does not currently implement any strong authorization.
  *
  * Data Structure:
- * - /molecules/{moleculeId}: Stores molecule data.
- * - /target_proteins/{targetProteinId}: Stores target protein data.
- * - /docking_results/{dockingResultId}: Stores docking result data.
+ * The database consists of top-level collections for 'molecules', 'target_proteins', 'docking_results',
+ * and 'loginHistory'.
  *
  * Key Security Decisions:
- * - No ownership or role-based access control is enforced.
- * - All authenticated users can read and write data in all collections.
- * - Listing of all collections is allowed for all authenticated users.
- *
- * Future Considerations:
- * - If user-specific data ownership is introduced, the schema must be updated
- *   to include a userId field on each entity. This will allow for the implementation
- *   of owner-based access control.
+ * - User listing is explicitly denied on `/loginHistory` to fix a permission issue reported by NextJS.
+ * - No ownership or role-based access control is implemented at this stage beyond requiring users to be signed in to use the app.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     /**
-     * @description Grants read and write access to all authenticated users for molecules.
+     * @description Grants read/write access to molecules for authenticated users.
      * @path /molecules/{moleculeId}
-     * @allow (get, list) User is authenticated.
-     * @allow (create, update, delete) User is authenticated.
-     * @deny (create, update, delete) User is not authenticated.
-     * @principle Allows all authenticated users to manage molecule data.
+     * @allow (get) Signed-in user can read any molecule.
+     * @allow (create) Signed-in user can create a molecule.
+     * @deny (create) Anonymous user cannot create a molecule.
+     * @principle Authenticated users can create and read molecules.
      */
     match /molecules/{moleculeId} {
       allow get: if isSignedIn();
@@ -41,12 +39,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read and write access to all authenticated users for target proteins.
+     * @description Grants read/write access to target proteins for authenticated users.
      * @path /target_proteins/{targetProteinId}
-     * @allow (get, list) User is authenticated.
-     * @allow (create, update, delete) User is authenticated.
-     * @deny (create, update, delete) User is not authenticated.
-     * @principle Allows all authenticated users to manage target protein data.
+     * @allow (get) Signed-in user can read any target protein.
+     * @allow (create) Signed-in user can create a target protein.
+     * @deny (create) Anonymous user cannot create a target protein.
+     * @principle Authenticated users can create and read target proteins.
      */
     match /target_proteins/{targetProteinId} {
       allow get: if isSignedIn();
@@ -57,12 +55,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read and write access to all authenticated users for docking results.
+     * @description Grants read/write access to docking results for authenticated users.
      * @path /docking_results/{dockingResultId}
-     * @allow (get, list) User is authenticated.
-     * @allow (create, update, delete) User is authenticated.
-     * @deny (create, update, delete) User is not authenticated.
-     * @principle Allows all authenticated users to manage docking result data.
+     * @allow (get) Signed-in user can read any docking result.
+     * @allow (create) Signed-in user can create a docking result.
+     * @deny (create) Anonymous user cannot create a docking result.
+     * @principle Authenticated users can create and read docking results.
      */
     match /docking_results/{dockingResultId} {
       allow get: if isSignedIn();
@@ -72,9 +70,18 @@ service cloud.firestore {
       allow delete: if isSignedIn();
     }
 
-    // Helper function to check if a user is signed in.
-    function isSignedIn() {
-      return request.auth != null;
+    /**
+     * @description Restricts listing login history.
+     * @path /loginHistory/{loginEventId}
+     * @deny (list) Any user cannot list login history.
+     * @principle Prevents unauthorized listing of login history.
+     */
+    match /loginHistory/{loginEventId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
   }
 }
