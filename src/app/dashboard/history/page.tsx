@@ -3,25 +3,36 @@
 
 import { useState, useMemo } from 'react';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { doc } from 'firebase/firestore';
+import { doc, Timestamp } from 'firebase/firestore';
 
 
 interface LoginEvent {
-  id: string;
   userId: string;
   email: string;
-  loginTime: { toDate: () => Date };
-  logoutTime?: { toDate: () => Date };
+  loginTime: Timestamp | Date; // Can be either from Firestore or newly created
+  logoutTime?: Timestamp | Date;
 }
 
 interface UserProfile {
     loginEvents?: LoginEvent[];
 }
+
+// Helper to safely convert Firestore Timestamps or JS Dates
+function toDate(timestamp: Timestamp | Date | undefined | null): Date | null {
+  if (!timestamp) return null;
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate();
+  }
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  return null;
+}
+
 
 function calculateDuration(loginTime: Date, logoutTime?: Date): string {
     if (!logoutTime) {
@@ -52,8 +63,8 @@ export default function LoginHistoryPage() {
     if (!userProfile || !Array.isArray(userProfile.loginEvents)) return [];
     // Create a mutable copy before sorting
     return [...userProfile.loginEvents].sort((a, b) => {
-        const timeA = a.loginTime?.toDate?.()?.getTime() || 0;
-        const timeB = b.loginTime?.toDate?.()?.getTime() || 0;
+        const timeA = toDate(a.loginTime)?.getTime() || 0;
+        const timeB = toDate(b.loginTime)?.getTime() || 0;
         return timeB - timeA;
     });
   }, [userProfile]);
@@ -94,9 +105,8 @@ export default function LoginHistoryPage() {
                   ))
                 ) : history && history.length > 0 ? (
                   history.map((event, index) => {
-                    // Firestore timestamps need to be converted to JS Dates
-                    const loginDate = event.loginTime?.toDate ? event.loginTime.toDate() : null;
-                    const logoutDate = event.logoutTime?.toDate ? event.logoutTime.toDate() : null;
+                    const loginDate = toDate(event.loginTime);
+                    const logoutDate = toDate(event.logoutTime);
                     return (
                         <TableRow key={`${event.userId}-${index}`}>
                             <TableCell>{event.email}</TableCell>
@@ -107,7 +117,7 @@ export default function LoginHistoryPage() {
                             {logoutDate ? format(logoutDate, "PPpp") : 'Active'}
                             </TableCell>
                             <TableCell>
-                            {loginDate ? calculateDuration(loginDate, logoutDate) : 'N/A'}
+                            {loginDate ? calculateDuration(loginDate, logoutDate ?? undefined) : 'N/A'}
                             </TableCell>
                         </TableRow>
                     );
