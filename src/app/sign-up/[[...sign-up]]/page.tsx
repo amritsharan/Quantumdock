@@ -3,7 +3,8 @@ import { SignUp } from "@clerk/nextjs";
 
 export default function Page() {
   return (
-    <div className="flex justify-center items-center h-screen">
+    <main className="flex justify-center items-center p-4 md:p-6">
+      <div className="w-full max-w-md">
       <SignUp
         appearance={{
           elements: {
@@ -19,6 +20,7 @@ export default function Page() {
           },
         }}
       />
-    </div>
+      </div>
+    </main>
   );
 }
