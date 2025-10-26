@@ -35,7 +35,7 @@ export default function SignInPage() {
             Sign in with Google
           </Button>
         </CardContent>
-        <div className="mt-4 text-center text-sm">
+        <div className="mt-4 text-center text-sm p-6 pt-0">
           Don&apos;t have an account?{' '}
           <Link href="/sign-up" className="underline">
             Sign up
