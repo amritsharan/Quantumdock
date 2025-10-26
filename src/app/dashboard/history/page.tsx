@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser, useDatabase } from '@/firebase';
-import { ref, query, onValue, off, orderByChild } from 'firebase/database';
+import { ref, query, onValue, off, orderByChild, limitToLast } from 'firebase/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,15 +28,17 @@ export default function HistoryPage() {
       return;
     }
 
-    const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'));
+    // Query for the last 50 login events, ordered by loginTime
+    const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(50));
 
     const unsubscribe = onValue(historyQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        // Firebase returns the data. We convert it to an array and sort descending.
         const events: LoginEvent[] = Object.keys(data).map(key => ({
           id: key,
           ...data[key],
-        })).sort((a, b) => b.loginTime - a.loginTime); // Sort descending
+        })).sort((a, b) => b.loginTime - a.loginTime); 
         setHistory(events);
       } else {
         setHistory([]);
@@ -44,6 +46,7 @@ export default function HistoryPage() {
       setIsLoading(false);
     });
 
+    // Cleanup subscription on unmount
     return () => off(historyQuery, 'value', unsubscribe);
   }, [user, db, isUserLoading]);
   
@@ -51,8 +54,11 @@ export default function HistoryPage() {
   
   const getDuration = (login: number, logout: number | undefined) => {
     if (!logout) return <Badge variant="secondary">Active</Badge>;
-    const duration = formatDistanceToNow(login, { addSuffix: false, includeSeconds: true });
-    return `${(logout-login)/1000} seconds`;
+    // Simple duration calculation, can be improved with date-fns if needed
+    const durationInSeconds = (logout - login) / 1000;
+    if (durationInSeconds < 60) return `${Math.round(durationInSeconds)} seconds`;
+    const durationInMinutes = durationInSeconds / 60;
+    return `${Math.round(durationInMinutes)} minutes`;
   }
   
   if (isLoading) {
@@ -81,7 +87,7 @@ export default function HistoryPage() {
         <CardHeader>
           <CardTitle>Login History</CardTitle>
           <CardDescription>
-            Here is a list of your recent login and logout times.
+            Here is a list of your 50 most recent login and logout times.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,12 +111,12 @@ export default function HistoryPage() {
                         <Badge variant="secondary">Active Session</Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {event.logoutTime ?
-                        formatDistanceToNow(toDate(event.logoutTime), { addSuffix: true, unit: 'minute', 'numeric': 'always', 'roundingMethod': 'floor' })
-                        :
+                     <TableCell>
+                      {event.logoutTime ? (
+                         getDuration(event.loginTime, event.logoutTime)
+                      ) : (
                         <Badge variant="secondary">In Progress</Badge>
-                      }
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -126,4 +132,3 @@ export default function HistoryPage() {
     </main>
   );
 }
-
