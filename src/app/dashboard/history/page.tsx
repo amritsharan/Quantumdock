@@ -1,12 +1,15 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { doc } from 'firebase/firestore';
+
 
 interface LoginEvent {
   id: string;
@@ -25,7 +28,7 @@ function calculateDuration(loginTime: Date, logoutTime?: Date): string {
         return 'Active';
     }
     const durationMs = logoutTime.getTime() - loginTime.getTime();
-    if (durationMs < 0) return '...'; // logoutTime is a server timestamp, may not be synced yet
+    if (durationMs < 0) return '...'; // logoutTime might not be synced yet
     const minutes = Math.floor(durationMs / 60000);
     const seconds = Math.floor((durationMs % 60000) / 1000);
     if (minutes < 1) {
@@ -46,10 +49,11 @@ export default function LoginHistoryPage() {
   const { data: userProfile, isLoading: isHistoryLoading } = useDoc<UserProfile>(userDocRef);
 
   const history = useMemo(() => {
-    if (!userProfile || !userProfile.loginEvents) return [];
+    if (!userProfile || !Array.isArray(userProfile.loginEvents)) return [];
+    // Create a mutable copy before sorting
     return [...userProfile.loginEvents].sort((a, b) => {
-        const timeA = a.loginTime?.toDate()?.getTime() || 0;
-        const timeB = b.loginTime?.toDate()?.getTime() || 0;
+        const timeA = a.loginTime?.toDate?.()?.getTime() || 0;
+        const timeB = b.loginTime?.toDate?.()?.getTime() || 0;
         return timeB - timeA;
     });
   }, [userProfile]);

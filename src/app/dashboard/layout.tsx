@@ -36,19 +36,23 @@ export default function DashboardLayout({
         const userDoc = await getDoc(userRef);
         if (userDoc.exists()) {
           const loginEvents = userDoc.data().loginEvents || [];
+          // Find the last login event that doesn't have a logoutTime
           const lastLoginEventIndex = loginEvents.findLastIndex((event: any) => !event.logoutTime);
 
           if (lastLoginEventIndex !== -1) {
+            // Create a new array with the updated event
             const updatedEvents = [...loginEvents];
             updatedEvents[lastLoginEventIndex] = {
               ...updatedEvents[lastLoginEventIndex],
               logoutTime: new Date(), // Use client-side timestamp
             };
+            // Update the document with the new array
             await updateDoc(userRef, { loginEvents: updatedEvents });
           }
         }
       } catch (error) {
         console.error("Error updating logout time:", error);
+        // Don't block sign-out if history update fails
       }
     }
     await signOut(auth);
