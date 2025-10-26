@@ -94,10 +94,11 @@ export default function LoginHistoryPage() {
                   ))
                 ) : history && history.length > 0 ? (
                   history.map((event, index) => {
-                    const loginDate = event.loginTime?.toDate();
-                    const logoutDate = event.logoutTime?.toDate();
+                    // Firestore timestamps need to be converted to JS Dates
+                    const loginDate = event.loginTime?.toDate ? event.loginTime.toDate() : null;
+                    const logoutDate = event.logoutTime?.toDate ? event.logoutTime.toDate() : null;
                     return (
-                        <TableRow key={`${event.id}-${index}`}>
+                        <TableRow key={`${event.userId}-${index}`}>
                             <TableCell>{event.email}</TableCell>
                             <TableCell>
                             {loginDate ? format(loginDate, "PPpp") : 'N/A'}
