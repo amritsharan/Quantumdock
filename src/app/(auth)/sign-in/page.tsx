@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useDatabase } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref, get, set } from "firebase/database";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -17,31 +17,29 @@ export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
-  const firestore = useFirestore();
+  const db = useDatabase();
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSuccessfulLogin = (userCredential: UserCredential) => {
     const user = userCredential.user;
-    // Non-blocking write to Firestore
-    if (user && firestore) {
-      const userRef = doc(firestore, 'users', user.uid);
-      getDoc(userRef).then(userDoc => {
-        if (!userDoc.exists()) {
-          setDoc(userRef, {
+    if (user && db) {
+      const userRef = ref(db, 'users/' + user.uid);
+      get(userRef).then((snapshot) => {
+        if (!snapshot.exists()) {
+          set(userRef, {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
           }).catch(error => {
-            console.error("Error creating user profile:", error);
+            console.error("Error creating user profile in Realtime Database:", error);
           });
         }
       }).catch(error => {
-          console.error("Error checking for user profile:", error);
+        console.error("Error checking for user profile in Realtime Database:", error);
       });
     }
-    // Immediately redirect
     router.push('/dashboard');
   };
 
