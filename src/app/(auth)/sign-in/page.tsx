@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
-import { collection, addDoc, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -25,17 +25,8 @@ export default function SignInPage() {
     const user = userCredential.user;
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
-      const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
-      
       try {
         const userDoc = await getDoc(userRef);
-
-        const newLoginEvent = {
-          userId: user.uid,
-          email: user.email,
-          loginTime: serverTimestamp() // Use server-side timestamp for accuracy
-        };
-
         if (!userDoc.exists()) {
           // Create the user profile document if it doesn't exist
           await setDoc(userRef, {
@@ -45,16 +36,11 @@ export default function SignInPage() {
             photoURL: user.photoURL,
           });
         }
-        
-        // Add a new document to the loginHistory sub-collection
-        await addDoc(loginHistoryRef, newLoginEvent);
-
       } catch (error) {
-          console.error("Error updating login history:", error);
-          // Don't block login if history write fails
+          console.error("Error creating user profile:", error);
+          // Don't block login if profile creation fails
       }
     }
-    // This will now reliably push the user to the dashboard.
     router.push('/dashboard');
   };
 

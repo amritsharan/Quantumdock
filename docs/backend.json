@@ -107,41 +107,6 @@
         "moleculeId",
         "targetProteinId"
       ]
-    },
-    "LoginEvent": {
-      "title": "Login Event",
-      "description": "Records a user login event.",
-      "type": "object",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The UID of the user who logged in."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email of the user who logged in.",
-          "format": "email"
-        },
-        "loginTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the user logged in."
-        },
-        "logoutTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the user logged out."
-        },
-        "durationMinutes": {
-            "type": "number",
-            "description": "The duration of the session in minutes."
-        }
-      },
-      "required": [
-        "userId",
-        "email",
-        "loginTime"
-      ]
     }
   },
   "auth": {
@@ -160,14 +125,6 @@
             "$ref": "#/backend/entities/UserProfile"
           },
           "description": "Stores user profile information."
-        }
-      },
-      {
-        "path": "/users/{userId}/loginHistory/{loginHistoryId}",
-        "definition": {
-          "entityName": "LoginEvent",
-          "schema": { "$ref": "#/backend/entities/LoginEvent" },
-          "description": "Sub-collection for a user's login events."
         }
       },
       {
