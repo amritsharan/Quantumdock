@@ -28,9 +28,10 @@ export default function HistoryPage() {
       return;
     }
 
+    setIsLoading(true);
     const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(50));
 
-    const unsubscribe = onValue(historyQuery, (snapshot) => {
+    const handleValueChange = onValue(historyQuery, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const events: LoginEvent[] = Object.keys(data).map(key => ({
@@ -42,12 +43,13 @@ export default function HistoryPage() {
         setHistory([]);
       }
       setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching login history:", error);
+      setIsLoading(false);
     });
 
     return () => {
-        if(historyQuery) {
-            off(historyQuery, 'value', unsubscribe);
-        }
+        off(historyQuery, 'value', handleValueChange);
     };
   }, [user, db]);
   
@@ -58,7 +60,9 @@ export default function HistoryPage() {
     const durationInSeconds = (logout - login) / 1000;
     if (durationInSeconds < 60) return `${Math.round(durationInSeconds)} seconds`;
     const durationInMinutes = durationInSeconds / 60;
-    return `${Math.round(durationInMinutes)} minutes`;
+    if (durationInMinutes < 60) return `${Math.round(durationInMinutes)} minutes`;
+    const durationInHours = durationInMinutes / 60;
+    return `${Math.round(durationInHours)} hours`;
   }
 
   return (
@@ -72,10 +76,11 @@ export default function HistoryPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           ) : history.length > 0 ? (
             <Table>
