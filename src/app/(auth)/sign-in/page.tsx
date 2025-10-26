@@ -30,18 +30,18 @@ export default function SignInPage() {
     
     if (user && db) {
       // Perform database operations in the background
-      
-      // 1. Record the login event reliably
+      const userRef = ref(db, 'users/' + user.uid);
       const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+
+      // 1. Record the login event reliably
       push(loginHistoryRef, {
         loginTime: Date.now(),
-        logoutTime: null,
+        logoutTime: null, // Explicitly set logoutTime to null for active sessions
       }).catch(error => {
           console.error("Error recording login event:", error);
       });
 
       // 2. Check for and create user profile if it doesn't exist
-      const userRef = ref(db, 'users/' + user.uid);
       get(userRef).then((snapshot) => {
         if (!snapshot.exists()) {
           set(userRef, {

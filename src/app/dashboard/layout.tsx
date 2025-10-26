@@ -30,14 +30,20 @@ export default function DashboardLayout({
   const router = useRouter();
 
   const handleSignOut = async () => {
+    // Immediately sign out and redirect for a responsive UI
+    if(auth) {
+        await signOut(auth);
+    }
+    router.push('/sign-in');
+
+    // Perform database operations in the background
     if (!auth || !user || !db) {
-        if(auth) await signOut(auth);
-        router.push('/sign-in');
         return;
     };
     
     // Find the last login event that is still active (no logoutTime) and update it.
     const userLoginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+    // Correctly query for the session where logoutTime is null.
     const activeSessionQuery = query(userLoginHistoryRef, orderByChild('logoutTime'), equalTo(null), limitToLast(1));
     
     get(activeSessionQuery).then((snapshot) => {
@@ -50,11 +56,9 @@ export default function DashboardLayout({
           }
         });
       }
+    }).catch(error => {
+      console.error("Error updating logout time:", error);
     });
-
-    // Immediately sign out and redirect
-    await signOut(auth);
-    router.push('/sign-in');
   }
 
   const getInitials = (email?: string | null) => {
@@ -66,7 +70,7 @@ export default function DashboardLayout({
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
         <div className="flex items-center gap-2">
           <QuantumDockLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
+          <Link href="/dashboard" className="text-2xl font-semibold text-foreground">QuantumDock</Link>
         </div>
         <div className="flex items-center gap-4">
             {isUserLoading ? (
@@ -102,7 +106,7 @@ export default function DashboardLayout({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={() => router.push('/sign-in')} variant="outline">
+              <Button onClick={() => router.push('/sin-in')} variant="outline">
                 Sign In
               </Button>
             )}
