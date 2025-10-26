@@ -12,6 +12,7 @@ import { ref, get, set, push } from "firebase/database";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -37,8 +38,6 @@ export default function SignInPage() {
             console.error("Error creating user profile in Realtime Database:", error);
           });
         }
-      }).catch(error => {
-        console.error("Error checking for user profile in Realtime Database:", error);
       });
 
       // Record login event
@@ -97,7 +96,8 @@ export default function SignInPage() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+        <CardHeader className="items-center text-center">
+          <QuantumDockLogo className="h-10 w-10 text-primary mb-4" />
           <CardTitle className="text-3xl font-bold">Sign In</CardTitle>
           <CardDescription>to continue to QuantumDock</CardDescription>
         </CardHeader>
