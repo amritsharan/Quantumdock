@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCollection, useFirestore, useUser } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, type Query } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +33,7 @@ export default function LoginHistoryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const historyQuery = useMemo(() => {
+  const historyQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'loginHistory'),
@@ -42,7 +42,7 @@ export default function LoginHistoryPage() {
     );
   }, [user, firestore]);
 
-  const { data: history, isLoading: isHistoryLoading } = useCollection<LoginEvent>(historyQuery as any);
+  const { data: history, isLoading: isHistoryLoading } = useCollection<LoginEvent>(historyQuery);
 
   const loading = isUserLoading || isHistoryLoading;
 
@@ -112,5 +112,3 @@ export default function LoginHistoryPage() {
     </main>
   );
 }
-
-    
