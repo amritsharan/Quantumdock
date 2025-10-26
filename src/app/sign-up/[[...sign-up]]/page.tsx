@@ -8,6 +8,11 @@ export default function Page() {
         appearance={{
           elements: {
             card: "bg-transparent shadow-none border-none",
+            headerTitle: "text-white",
+            headerSubtitle: "text-white/90",
+            socialButtonsBlockButtonText: "text-white",
+            dividerLine: "bg-white/50",
+            dividerText: "text-white/90"
           },
         }}
       />
