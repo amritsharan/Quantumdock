@@ -8,7 +8,11 @@
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "photoURL": { "type": "string", "format": "uri" }
+        "photoURL": { "type": "string", "format": "uri" },
+        "loginEvents": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/LoginEvent" }
+        }
       },
       "required": ["uid", "email"]
     },
@@ -159,19 +163,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile information.",
-          "subcollections": [
-            {
-              "path": "loginHistory/{loginEventId}",
-              "definition": {
-                "entityName": "LoginEvent",
-                "schema": {
-                  "$ref": "#/backend/entities/LoginEvent"
-                },
-                "description": "Stores login events for a specific user."
-              }
-            }
-          ]
+          "description": "Stores user profile information, including an array of login events."
         }
       },
       {

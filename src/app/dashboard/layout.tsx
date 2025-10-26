@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { collection, query, where, orderBy, limit, getDocs, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { History } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -30,19 +30,19 @@ export default function DashboardLayout({
 
   const handleSignOut = async () => {
     if (user && firestore) {
-       const loginHistoryRef = collection(doc(firestore, 'users', user.uid), 'loginHistory');
-      const q = query(
-        loginHistoryRef,
-        orderBy('loginTime', 'desc'),
-        limit(1)
-      );
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const lastLoginDoc = querySnapshot.docs[0];
-        if (!lastLoginDoc.data().logoutTime) {
-            await updateDoc(lastLoginDoc.ref, {
-              logoutTime: serverTimestamp()
-            });
+      const userRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const loginEvents = userDoc.data().loginEvents || [];
+        const lastLoginEvent = loginEvents.find((event: any) => !event.logoutTime);
+
+        if (lastLoginEvent) {
+          const updatedEvents = loginEvents.map((event: any) =>
+            event.loginTime === lastLoginEvent.loginTime
+              ? { ...event, logoutTime: serverTimestamp() }
+              : event
+          );
+          await updateDoc(userRef, { loginEvents: updatedEvents });
         }
       }
     }

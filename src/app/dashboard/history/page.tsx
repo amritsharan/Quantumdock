@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, type Query, doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,11 +16,16 @@ interface LoginEvent {
   logoutTime?: { toDate: () => Date };
 }
 
+interface UserProfile {
+    loginEvents?: LoginEvent[];
+}
+
 function calculateDuration(loginTime: Date, logoutTime?: Date): string {
     if (!logoutTime) {
         return 'Active';
     }
     const durationMs = logoutTime.getTime() - loginTime.getTime();
+    if (durationMs < 0) return '...'; // logoutTime is a server timestamp, may not be synced yet
     const minutes = Math.floor(durationMs / 60000);
     const seconds = Math.floor((durationMs % 60000) / 1000);
     if (minutes < 1) {
@@ -33,16 +38,21 @@ export default function LoginHistoryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const historyQuery = useMemoFirebase(() => {
+  const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    // Query the subcollection within the user's document
-    return query(
-      collection(doc(firestore, 'users', user.uid), 'loginHistory'),
-      orderBy('loginTime', 'desc')
-    );
+    return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: history, isLoading: isHistoryLoading } = useCollection<LoginEvent>(historyQuery);
+  const { data: userProfile, isLoading: isHistoryLoading } = useDoc<UserProfile>(userDocRef);
+
+  const history = useMemo(() => {
+    if (!userProfile || !userProfile.loginEvents) return [];
+    return [...userProfile.loginEvents].sort((a, b) => {
+        const timeA = a.loginTime?.toDate()?.getTime() || 0;
+        const timeB = b.loginTime?.toDate()?.getTime() || 0;
+        return timeB - timeA;
+    });
+  }, [userProfile]);
 
   const loading = isUserLoading || isHistoryLoading;
 
@@ -79,11 +89,11 @@ export default function LoginHistoryPage() {
                     </TableRow>
                   ))
                 ) : history && history.length > 0 ? (
-                  history.map((event) => {
+                  history.map((event, index) => {
                     const loginDate = event.loginTime?.toDate();
                     const logoutDate = event.logoutTime?.toDate();
                     return (
-                        <TableRow key={event.id}>
+                        <TableRow key={`${event.id}-${index}`}>
                             <TableCell>{event.email}</TableCell>
                             <TableCell>
                             {loginDate ? format(loginDate, "PPpp") : 'N/A'}

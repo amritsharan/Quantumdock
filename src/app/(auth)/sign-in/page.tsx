@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInAnonymously, UserCredential } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -23,13 +23,28 @@ export default function SignInPage() {
   const handleSuccessfulLogin = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     if (user && firestore) {
-      // Store login event in a subcollection under the user's document
-      const loginHistoryRef = collection(doc(firestore, 'users', user.uid), 'loginHistory');
-      await addDoc(loginHistoryRef, {
+      const userRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
+      const newLoginEvent = {
         userId: user.uid,
         email: user.email,
         loginTime: serverTimestamp()
-      });
+      };
+
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          loginEvents: [newLoginEvent]
+        });
+      } else {
+        await updateDoc(userRef, {
+          loginEvents: arrayUnion(newLoginEvent)
+        });
+      }
     }
     router.push('/dashboard');
   };
