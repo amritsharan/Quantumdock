@@ -23,13 +23,24 @@ export default function SignInPage() {
   const { toast } = useToast();
 
   const handleSuccessfulLogin = (userCredential: UserCredential) => {
+    const user = userCredential.user;
+    
     // Immediately redirect to make the UI feel responsive
     router.push('/dashboard');
     
-    // Perform database operations in the background
-    const user = userCredential.user;
     if (user && db) {
-      // Create user profile if it doesn't exist
+      // Perform database operations in the background
+      
+      // 1. Record the login event reliably
+      const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+      push(loginHistoryRef, {
+        loginTime: Date.now(),
+        logoutTime: null,
+      }).catch(error => {
+          console.error("Error recording login event:", error);
+      });
+
+      // 2. Check for and create user profile if it doesn't exist
       const userRef = ref(db, 'users/' + user.uid);
       get(userRef).then((snapshot) => {
         if (!snapshot.exists()) {
@@ -42,15 +53,6 @@ export default function SignInPage() {
             console.error("Error creating user profile in Realtime Database:", error);
           });
         }
-      });
-
-      // Record login event
-      const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
-      push(loginHistoryRef, {
-        loginTime: Date.now(),
-        logoutTime: null,
-      }).catch(error => {
-          console.error("Error recording login event:", error);
       });
     }
   };
