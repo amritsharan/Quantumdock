@@ -24,32 +24,47 @@ export default function SignInPage() {
     const user = userCredential.user;
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
+      
+      try {
+        const userDoc = await getDoc(userRef);
 
-      const newLoginEvent = {
-        userId: user.uid,
-        email: user.email,
-        loginTime: serverTimestamp()
-      };
-
-      if (!userDoc.exists()) {
-        await setDoc(userRef, {
-          uid: user.uid,
+        const newLoginEvent = {
+          userId: user.uid,
           email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          loginEvents: [newLoginEvent]
-        });
-      } else {
-        await updateDoc(userRef, {
-          loginEvents: arrayUnion(newLoginEvent)
-        });
+          loginTime: serverTimestamp()
+        };
+
+        if (!userDoc.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            loginEvents: [newLoginEvent]
+          });
+        } else {
+          await updateDoc(userRef, {
+            loginEvents: arrayUnion(newLoginEvent)
+          });
+        }
+      } catch (error) {
+          console.error("Error updating login history:", error);
+          // Don't block login if history write fails
       }
     }
+    // This will now reliably push the user to the dashboard.
     router.push('/dashboard');
   };
 
   const handleSignIn = async () => {
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Authentication service not available.",
+            description: "Please try again later.",
+        });
+        return;
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleSuccessfulLogin(userCredential);
@@ -63,6 +78,14 @@ export default function SignInPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth) {
+        toast({
+            variant: "destructive",
+            title: "Authentication service not available.",
+            description: "Please try again later.",
+        });
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       const userCredential = await signInWithPopup(auth, provider);
