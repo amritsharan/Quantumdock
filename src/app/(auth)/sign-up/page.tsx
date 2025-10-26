@@ -5,8 +5,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { useAuth } from '@/firebase';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function SignUpPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSignUp = async () => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Sign-up Failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      router.push('/dashboard');
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Google Sign-up Failed",
+        description: error.message,
+      });
+    }
+  };
+
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <Card className="w-full max-w-md">
@@ -17,16 +57,16 @@ export default function SignUpPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required />
+            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required />
+            <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full">
+          <Button onClick={handleSignUp} className="w-full">
             Create Account
           </Button>
-          <Button variant="outline" className="w-full">
+          <Button onClick={handleGoogleSignUp} variant="outline" className="w-full">
             Sign up with Google
           </Button>
         </CardContent>
