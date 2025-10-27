@@ -45,6 +45,8 @@ export default function SignUpPage() {
           firstName: firstName,
           lastName: lastName,
           phoneNumber: phoneNumber,
+          role: 'user',
+          isAdmin: false,
         }).catch(error => {
           console.error("Error creating user profile in Realtime Database:", error);
         });
@@ -86,6 +88,8 @@ export default function SignUpPage() {
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
           phoneNumber: user.phoneNumber || '',
+          role: 'user',
+          isAdmin: false,
         }).catch(error => {
           console.error("Error creating user profile in Realtime Database:", error);
         });
