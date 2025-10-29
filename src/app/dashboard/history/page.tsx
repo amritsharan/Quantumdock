@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser, useDatabase } from '@/firebase';
-import { ref, query, onValue, off, orderByChild, get } from 'firebase/database';
+import { ref, query, onValue, get, orderByChild } from 'firebase/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -20,106 +20,99 @@ type LoginEvent = {
 type UserProfile = {
   isAdmin?: boolean;
   email?: string;
-}
+};
 
 export default function HistoryPage() {
-  const { user } = useUser();
+  const { user, isUserLoading: isUserAuthLoading } = useUser();
   const db = useDatabase();
   const [history, setHistory] = useState<LoginEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
-    if (user && db) {
-      const userProfileRef = ref(db, 'users/' + user.uid);
-      get(userProfileRef).then(snapshot => {
-        if (snapshot.exists()) {
-          const profile = snapshot.val() as UserProfile;
-          setIsAdmin(profile.isAdmin || false);
-        }
-      });
+    if (isUserAuthLoading || !db) {
+      return; // Wait for auth and db to be ready
     }
-  }, [user, db]);
 
-  useEffect(() => {
-    if (!user || !db) {
+    if (!user) {
       setIsLoading(false);
+      setHistory([]);
       return;
     }
-    
-    // Wait until we know if the user is an admin or not
-    if (user && !isAdmin && !isLoading) { // Check if loading is already false to avoid race conditions
-        // continue
-    } else if (user && isAdmin === undefined) {
-        return;
-    }
 
+    // This effect will run once user/db status is resolved.
+    const userProfileRef = ref(db, 'users/' + user.uid);
+    let unsubscribe: () => void = () => {};
 
-    setIsLoading(true);
+    get(userProfileRef).then(snapshot => {
+      const profile = (snapshot.exists() ? snapshot.val() : {}) as UserProfile;
+      const userIsAdmin = profile.isAdmin || false;
+      setIsAdmin(userIsAdmin);
 
-    const handleAllUsersHistory = async () => {
+      if (userIsAdmin) {
+        // --- Admin Data Fetching ---
         const loginHistoryRef = ref(db, 'loginHistory');
         const usersRef = ref(db, 'users');
 
-        const [historySnapshot, usersSnapshot] = await Promise.all([
-            get(loginHistoryRef),
-            get(usersRef)
-        ]);
+        // Use `onValue` to listen for real-time updates for admins too
+        unsubscribe = onValue(loginHistoryRef, async (historySnapshot) => {
+          if (!historySnapshot.exists()) {
+            setHistory([]);
+            setIsLoading(false);
+            return;
+          }
+          
+          const usersSnapshot = await get(usersRef);
+          const usersData = usersSnapshot.val() || {};
+          const allHistory: LoginEvent[] = [];
 
-        const usersData = usersSnapshot.val() || {};
-        const allHistory: LoginEvent[] = [];
-
-        historySnapshot.forEach(userHistorySnapshot => {
+          historySnapshot.forEach(userHistorySnapshot => {
             const userId = userHistorySnapshot.key;
             const userEmail = usersData[userId]?.email || 'Unknown';
             const events = userHistorySnapshot.val();
             Object.keys(events).forEach(key => {
-                allHistory.push({
-                    id: `${userId}-${key}`,
-                    ...events[key],
-                    userEmail: userEmail,
-                });
+              allHistory.push({
+                id: `${userId}-${key}`,
+                ...events[key],
+                userEmail: userEmail,
+              });
             });
-        });
+          });
 
-        setHistory(allHistory.sort((a, b) => b.loginTime - a.loginTime));
-        setIsLoading(false);
-    };
-
-    const handleSingleUserHistory = () => {
-        const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'));
-        return onValue(historyQuery, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const events: LoginEvent[] = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key],
-                })).sort((a, b) => b.loginTime - a.loginTime);
-                setHistory(events);
-            } else {
-                setHistory([]);
-            }
-            setIsLoading(false);
+          setHistory(allHistory.sort((a, b) => b.loginTime - a.loginTime));
+          setIsLoading(false);
         }, (error) => {
-            console.error("Error fetching login history:", error);
+            console.error("Error fetching all user history:", error);
             setIsLoading(false);
         });
-    };
-    
-    let unsubscribe: Function = () => {};
 
-    if(isAdmin) {
-        handleAllUsersHistory();
-    } else {
-        unsubscribe = handleSingleUserHistory();
-    }
+      } else {
+        // --- Single User Data Fetching ---
+        const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'));
+        unsubscribe = onValue(historyQuery, (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const events: LoginEvent[] = Object.keys(data).map(key => ({
+              id: key,
+              ...data[key],
+            })).sort((a, b) => b.loginTime - a.loginTime);
+            setHistory(events);
+          } else {
+            setHistory([]);
+          }
+          setIsLoading(false);
+        }, (error) => {
+          console.error("Error fetching login history:", error);
+          setIsLoading(false);
+        });
+      }
+    });
 
+    // Cleanup function for onValue listener
     return () => {
-       if (typeof unsubscribe === 'function') {
-         unsubscribe();
-       }
+      unsubscribe();
     };
-  }, [user, db, isAdmin, isLoading]);
+  }, [user, db, isUserAuthLoading]); // Effect depends on user and db availability
   
   const toDate = (timestamp: number) => new Date(timestamp);
   
@@ -171,7 +164,7 @@ export default function HistoryPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {isAdmin && <TableHead>Email</TableHead>}
+                  {isAdmin === true && <TableHead>Email</TableHead>}
                   <TableHead>Login Time</TableHead>
                   <TableHead>Logout Time</TableHead>
                   <TableHead>Duration</TableHead>
@@ -180,7 +173,7 @@ export default function HistoryPage() {
               <TableBody>
                 {history.map((event) => (
                   <TableRow key={event.id}>
-                    {isAdmin && <TableCell>{event.userEmail}</TableCell>}
+                    {isAdmin === true && <TableCell>{event.userEmail}</TableCell>}
                     <TableCell>{format(toDate(event.loginTime), 'PPP p')}</TableCell>
                     <TableCell>
                       {event.logoutTime ? (
