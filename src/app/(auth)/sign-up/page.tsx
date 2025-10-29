@@ -37,6 +37,7 @@ export default function SignUpPage() {
       // Save user info to Realtime Database
       if (db) {
         const userRef = ref(db, 'users/' + user.uid);
+        const isAdmin = user.email === 'amritsr2005@gmail.com';
         set(userRef, {
           uid: user.uid,
           email: user.email,
@@ -45,8 +46,8 @@ export default function SignUpPage() {
           firstName: firstName,
           lastName: lastName,
           phoneNumber: phoneNumber,
-          role: 'user',
-          isAdmin: false,
+          role: isAdmin ? 'admin' : 'user',
+          isAdmin: isAdmin,
         }).catch(error => {
           console.error("Error creating user profile in Realtime Database:", error);
         });
@@ -80,6 +81,7 @@ export default function SignUpPage() {
       if (user && db) {
         const userRef = ref(db, 'users/' + user.uid);
         const nameParts = user.displayName?.split(' ') || [];
+        const isAdmin = user.email === 'amritsr2005@gmail.com';
         set(userRef, {
           uid: user.uid,
           email: user.email,
@@ -88,8 +90,8 @@ export default function SignUpPage() {
           firstName: nameParts[0] || '',
           lastName: nameParts.slice(1).join(' ') || '',
           phoneNumber: user.phoneNumber || '',
-          role: 'user',
-          isAdmin: false,
+          role: isAdmin ? 'admin' : 'user',
+          isAdmin: isAdmin,
         }).catch(error => {
           console.error("Error creating user profile in Realtime Database:", error);
         });

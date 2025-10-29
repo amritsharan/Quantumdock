@@ -44,11 +44,14 @@ export default function SignInPage() {
       // 2. Check for and create user profile if it doesn't exist
       get(userRef).then((snapshot) => {
         if (!snapshot.exists()) {
+          const isAdmin = user.email === 'amritsr2005@gmail.com';
           set(userRef, {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
+            isAdmin: isAdmin,
+            role: isAdmin ? 'admin' : 'user',
           }).catch(error => {
             console.error("Error creating user profile in Realtime Database:", error);
           });
