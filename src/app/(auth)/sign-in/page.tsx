@@ -29,19 +29,18 @@ export default function SignInPage() {
     router.push('/dashboard');
     
     if (user && db) {
-      // Perform database operations in the background
       const userRef = ref(db, 'users/' + user.uid);
       const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
 
       // 1. Record the login event reliably
       push(loginHistoryRef, {
         loginTime: Date.now(),
-        logoutTime: null, // Explicitly set logoutTime to null for active sessions
+        logoutTime: null,
       }).catch(error => {
           console.error("Error recording login event:", error);
       });
 
-      // 2. Check for and create user profile if it doesn't exist
+      // 2. Check for and create user profile if it doesn't exist. This is the single source of truth for profile creation.
       get(userRef).then((snapshot) => {
         if (!snapshot.exists()) {
           const isAdmin = user.email === 'amritsr2005@gmail.com';

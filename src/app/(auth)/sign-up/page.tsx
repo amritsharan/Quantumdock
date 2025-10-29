@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth, useDatabase } from '@/firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential, updateProfile } from 'firebase/auth';
-import { ref, set } from "firebase/database";
+import { ref, get, set } from "firebase/database";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -29,30 +29,37 @@ export default function SignUpPage() {
     if (user) {
       const displayName = `${firstName} ${lastName}`.trim();
       
-      // Update Firebase Auth profile
+      // Only update the Firebase Auth profile here. The database profile will be created
+      // by the centralized logic in the sign-in page after the redirect.
       updateProfile(user, { displayName }).catch(error => {
         console.error("Error updating Firebase Auth profile:", error);
       });
 
-      // Save user info to Realtime Database
+      // Also create the user profile in the database immediately
+      // to ensure all data is present before redirection.
       if (db) {
         const userRef = ref(db, 'users/' + user.uid);
         const isAdmin = user.email === 'amritsr2005@gmail.com';
-        set(userRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: displayName,
-          photoURL: user.photoURL,
-          firstName: firstName,
-          lastName: lastName,
-          phoneNumber: phoneNumber,
-          role: isAdmin ? 'admin' : 'user',
-          isAdmin: isAdmin,
-        }).catch(error => {
-          console.error("Error creating user profile in Realtime Database:", error);
-        });
+        get(userRef).then((snapshot) => {
+          if (!snapshot.exists()) {
+             set(userRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: displayName,
+                photoURL: user.photoURL,
+                firstName: firstName,
+                lastName: lastName,
+                phoneNumber: phoneNumber,
+                role: isAdmin ? 'admin' : 'user',
+                isAdmin: isAdmin,
+              }).catch(error => {
+                console.error("Error creating user profile in Realtime Database:", error);
+              });
+          }
+        })
       }
     }
+    // The redirect will trigger the login flow, which handles history and profile checks.
     router.push('/dashboard');
   };
 
@@ -74,26 +81,29 @@ export default function SignUpPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      // For Google Sign-Up, we don't have first/last name from the form
-      // Firebase will provide it from the Google account.
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
       if (user && db) {
         const userRef = ref(db, 'users/' + user.uid);
-        const nameParts = user.displayName?.split(' ') || [];
-        const isAdmin = user.email === 'amritsr2005@gmail.com';
-        set(userRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          firstName: nameParts[0] || '',
-          lastName: nameParts.slice(1).join(' ') || '',
-          phoneNumber: user.phoneNumber || '',
-          role: isAdmin ? 'admin' : 'user',
-          isAdmin: isAdmin,
-        }).catch(error => {
-          console.error("Error creating user profile in Realtime Database:", error);
+        // On first Google sign-in, check if profile exists before creating it.
+        get(userRef).then((snapshot) => {
+            if (!snapshot.exists()) {
+                const nameParts = user.displayName?.split(' ') || [];
+                const isAdmin = user.email === 'amritsr2005@gmail.com';
+                set(userRef, {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    firstName: nameParts[0] || '',
+                    lastName: nameParts.slice(1).join(' ') || '',
+                    phoneNumber: user.phoneNumber || '',
+                    role: isAdmin ? 'admin' : 'user',
+                    isAdmin: isAdmin,
+                }).catch(error => {
+                    console.error("Error creating user profile via Google Sign-Up:", error);
+                });
+            }
         });
       }
       router.push('/dashboard');
