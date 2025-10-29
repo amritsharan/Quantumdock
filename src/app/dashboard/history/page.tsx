@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser, useDatabase } from '@/firebase';
-import { ref, query, onValue, get, orderByChild } from 'firebase/database';
+import { ref, query, onValue, get, orderByChild, limitToLast } from 'firebase/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ type UserProfile = {
   isAdmin?: boolean;
   email?: string;
 };
+
+const MAX_HISTORY_ITEMS = 50;
 
 export default function HistoryPage() {
   const { user, isUserLoading: isUserAuthLoading } = useUser();
@@ -40,7 +42,6 @@ export default function HistoryPage() {
       return;
     }
 
-    // This effect will run once user/db status is resolved.
     const userProfileRef = ref(db, 'users/' + user.uid);
     let unsubscribe: () => void = () => {};
 
@@ -52,9 +53,8 @@ export default function HistoryPage() {
       if (userIsAdmin) {
         // --- Admin Data Fetching ---
         const loginHistoryRef = ref(db, 'loginHistory');
-        const usersRef = ref(db, 'users');
-
-        // Use `onValue` to listen for real-time updates for admins too
+        
+        // Listen for real-time updates on the entire history node for admins
         unsubscribe = onValue(loginHistoryRef, async (historySnapshot) => {
           if (!historySnapshot.exists()) {
             setHistory([]);
@@ -62,7 +62,7 @@ export default function HistoryPage() {
             return;
           }
           
-          const usersSnapshot = await get(usersRef);
+          const usersSnapshot = await get(ref(db, 'users'));
           const usersData = usersSnapshot.val() || {};
           const allHistory: LoginEvent[] = [];
 
@@ -70,15 +70,18 @@ export default function HistoryPage() {
             const userId = userHistorySnapshot.key;
             const userEmail = usersData[userId]?.email || 'Unknown';
             const events = userHistorySnapshot.val();
-            Object.keys(events).forEach(key => {
-              allHistory.push({
-                id: `${userId}-${key}`,
-                ...events[key],
-                userEmail: userEmail,
-              });
-            });
+            
+            // Get the last 50 events for each user
+            const userEvents = Object.keys(events).map(key => ({
+              id: `${userId}-${key}`,
+              ...events[key],
+              userEmail: userEmail,
+            })).sort((a, b) => b.loginTime - a.loginTime).slice(0, MAX_HISTORY_ITEMS);
+            
+            allHistory.push(...userEvents);
           });
 
+          // Sort the combined history from all users
           setHistory(allHistory.sort((a, b) => b.loginTime - a.loginTime));
           setIsLoading(false);
         }, (error) => {
@@ -88,14 +91,16 @@ export default function HistoryPage() {
 
       } else {
         // --- Single User Data Fetching ---
-        const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'));
+        // Query for the last 50 login events for the current user
+        const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(MAX_HISTORY_ITEMS));
+        
         unsubscribe = onValue(historyQuery, (snapshot) => {
           const data = snapshot.val();
           if (data) {
             const events: LoginEvent[] = Object.keys(data).map(key => ({
               id: key,
               ...data[key],
-            })).sort((a, b) => b.loginTime - a.loginTime);
+            })).sort((a, b) => b.loginTime - a.loginTime); // Sort descending
             setHistory(events);
           } else {
             setHistory([]);
@@ -112,7 +117,7 @@ export default function HistoryPage() {
     return () => {
       unsubscribe();
     };
-  }, [user, db, isUserAuthLoading]); // Effect depends on user and db availability
+  }, [user, db, isUserAuthLoading]);
   
   const toDate = (timestamp: number) => new Date(timestamp);
   
@@ -133,8 +138,8 @@ export default function HistoryPage() {
           <CardTitle>Login History</CardTitle>
           <CardDescription>
             {isAdmin 
-              ? "Showing login history for all users." 
-              : "Here is a list of your most recent login and logout times."
+              ? `Showing the last ${MAX_HISTORY_ITEMS} login events for all users.` 
+              : `Here is a list of your last ${MAX_HISTORY_ITEMS} login and logout times.`
             }
           </CardDescription>
         </CardHeader>
