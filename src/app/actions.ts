@@ -18,7 +18,7 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
         
       // 3. Predict Binding Affinities for each combination
       // We use a random value to simulate the output of a more complex upstream calculation.
-      const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish energy in kcal/mol
+      const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish negative energy in kcal/mol
 
       const predictionInput = {
         quantumRefinedEnergy: mockQuantumRefinedEnergy,

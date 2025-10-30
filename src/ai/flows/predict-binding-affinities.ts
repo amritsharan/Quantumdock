@@ -67,11 +67,11 @@ Protein Target: {{{proteinTargetName}}}
 
 Consider known interactions, chemical properties, and any relevant data to estimate the binding affinity. The binding affinity should be a number (in nM or pM), the confidence score should be a number between 0 and 1, and the rationale should be a text explanation.
 
-Here's a sample:
+Here's an example of the required JSON output format:
 {
     "bindingAffinity": 15.2, 
     "confidenceScore": 0.85,
-    "rationale": "The molecule exhibits strong hydrogen bonding with key residues in the binding site, indicating a high binding affinity."
+    "rationale": "The molecule exhibits strong hydrogen bonding with key residues in the binding site, which correlates with the provided quantum energy to indicate a high binding affinity."
 }
 `,
 });
