@@ -6,7 +6,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { getProteinSuggestions } from '@/app/actions';
@@ -14,6 +14,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { dockingSchema } from '@/lib/schema';
 import { Card, CardContent } from '../ui/card';
 import { molecules } from '@/lib/molecules';
+import { proteins } from '@/lib/proteins';
 
 interface DockingFormProps {
   form: UseFormReturn<z.infer<typeof dockingSchema>>;
@@ -28,11 +29,15 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   
   const diseaseKeywords = form.watch('diseaseKeywords') || [];
   const selectedSmiles = form.watch('smiles') || [];
-  const selectedProteins = form.watch('proteinTargets') || [];
+  const selectedProteinNames = form.watch('proteinTargets') || [];
 
   const selectedMolecules = useMemo(() => {
     return molecules.filter(m => selectedSmiles.includes(m.smiles));
   }, [selectedSmiles]);
+
+  const selectedProteins = useMemo(() => {
+    return proteins.filter(p => selectedProteinNames.includes(p.name));
+  }, [selectedProteinNames]);
   
   const totalCombinations = useMemo(() => {
     return selectedMolecules.length * selectedProteins.length;
@@ -66,7 +71,7 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
           name="smiles"
           render={() => (
             <FormItem>
-              <FormLabel>Selected Molecules</FormLabel>
+              <FormLabel>Selected Molecules ({selectedMolecules.length})</FormLabel>
                 <Card className="min-h-[100px]">
                    <CardContent className="p-2">
                      {selectedMolecules.length > 0 ? (
@@ -88,7 +93,7 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
                 </Card>
                  <Button asChild variant="outline" className="w-full">
                     <Link href={buildLink('/select-molecule')}>
-                        {selectedMolecules.length > 0 ? 'Change Molecule Selection' : 'Select Molecules'}
+                        {selectedMolecules.length > 0 ? `Change Selection (${selectedMolecules.length})` : 'Select Molecules'}
                     </Link>
                 </Button>
               <FormMessage />
@@ -102,7 +107,7 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
           render={() => (
             <FormItem>
               <FormLabel className="flex items-center justify-between">
-                Selected Diseases
+                Selected Diseases ({diseaseKeywords.length})
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               </FormLabel>
                <Card className="min-h-[100px]">
@@ -126,7 +131,7 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
                 </Card>
                  <Button asChild variant="outline" className="w-full">
                     <Link href={buildLink('/select-disease')}>
-                         {diseaseKeywords.length > 0 ? 'Change Disease Selection' : 'Select Diseases'}
+                         {diseaseKeywords.length > 0 ? `Change Selection (${diseaseKeywords.length})` : 'Select Diseases'}
                     </Link>
                 </Button>
               <FormDescription>Get AI-powered protein target suggestions.</FormDescription>
@@ -140,15 +145,15 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
           name="proteinTargets"
           render={() => (
             <FormItem>
-              <FormLabel>Protein Targets</FormLabel>
+              <FormLabel>Protein Targets ({selectedProteins.length})</FormLabel>
                 <Card className="min-h-[100px]">
                    <CardContent className="p-2">
                      {selectedProteins.length > 0 ? (
                         <ScrollArea className="h-24">
                             <ul className="space-y-1">
                                 {selectedProteins.map(p => (
-                                    <li key={p} className="text-sm p-2 bg-muted/50 rounded-md">
-                                        {p}
+                                    <li key={p.name} className="text-sm p-2 bg-muted/50 rounded-md">
+                                        {p.name}
                                     </li>
                                 ))}
                             </ul>
@@ -162,7 +167,7 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
                 </Card>
               <Button asChild variant="outline" className="w-full">
                   <Link href={buildLink('/select-protein')}>
-                      {selectedProteins.length > 0 ? 'Change Protein Targets' : 'Select Protein Targets'}
+                      {selectedProteins.length > 0 ? `Change Selection (${selectedProteins.length})` : 'Select Protein Targets'}
                   </Link>
               </Button>
                <FormMessage />
