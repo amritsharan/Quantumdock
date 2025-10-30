@@ -98,13 +98,13 @@ export default function SelectDiseasePage() {
 
   const handleConfirm = () => {
     const queryString = buildQueryString();
-    router.push(`/?${queryString}`);
+    router.push(`/dashboard?${queryString}`);
   };
 
   const backLink = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     // On "back", we don't change the parameters
-    return `/?${params.toString()}`;
+    return `/dashboard?${params.toString()}`;
   }, [searchParams]);
 
   return (
@@ -149,6 +149,7 @@ export default function SelectDiseasePage() {
                         checked={isAllOnPageSelected}
                         onCheckedChange={handleSelectAllOnPage}
                         aria-label="Select all on page"
+                        suppressHydrationWarning
                       />
                     </TableHead>
                     <TableHead>Disease Name</TableHead>
@@ -161,6 +162,7 @@ export default function SelectDiseasePage() {
                         <Checkbox
                           checked={selectedDiseases.has(disease)}
                           onCheckedChange={(checked) => handleSelect(disease, checked)}
+                          suppressHydrationWarning
                         />
                       </TableCell>
                       <TableCell className="font-medium">{disease}</TableCell>

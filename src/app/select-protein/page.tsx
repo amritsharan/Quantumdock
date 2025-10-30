@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,6 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { proteins as proteinOptions } from '@/lib/proteins';
-import { Suspense } from 'react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -93,13 +92,13 @@ function SelectProteinContent() {
 
   const handleConfirm = () => {
     const queryString = buildQueryString();
-    router.push(`/?${queryString}`);
+    router.push(`/dashboard?${queryString}`);
   };
 
   const backLink = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     // On "back", we don't change the parameters
-    return `/?${params.toString()}`;
+    return `/dashboard?${params.toString()}`;
   }, [searchParams]);
 
   return (
@@ -144,6 +143,7 @@ function SelectProteinContent() {
                                 checked={isAllOnPageSelected}
                                 onCheckedChange={handleSelectAllOnPage}
                                 aria-label="Select all on page"
+                                suppressHydrationWarning
                             />
                         </TableHead>
                         <TableHead>Name</TableHead>
@@ -158,6 +158,7 @@ function SelectProteinContent() {
                                 checked={selectedProteins.has(protein.name)}
                                 onCheckedChange={(checked) => handleSelect(protein.name, checked)}
                                 id={protein.name}
+                                suppressHydrationWarning
                                 />
                           </TableCell>
                           <TableCell>

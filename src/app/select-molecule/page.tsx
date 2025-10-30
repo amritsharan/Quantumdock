@@ -88,13 +88,13 @@ export default function SelectMoleculePage() {
   
   const handleConfirm = () => {
     const queryString = buildQueryString();
-    router.push(`/?${queryString}`);
+    router.push(`/dashboard?${queryString}`);
   };
 
   const backLink = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     // On "back", we don't change the parameters
-    return `/?${params.toString()}`;
+    return `/dashboard?${params.toString()}`;
   }, [searchParams]);
 
   return (
