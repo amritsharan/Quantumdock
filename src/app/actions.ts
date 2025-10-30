@@ -21,7 +21,7 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
       // In a real application, this would involve complex computations.
       // Here, we just call the flows with mock data to simulate the process.
       
-      const mockLigandPoseData = 'data:text/plain;base64,' + Buffer.from('mock ligand data from classical docking').toString('base64');
+      const mockLigandPoseData = 'data:text/plain;base64,bW9jayBsaWdhbmQgZGF0YSBmcm9tIGNsYXNzaWNhbCBkb2NraW5n'; // "mock ligand data from classical docking"
       
       await refineDockingPosesWithVQE({
         proteinStructure: 'mock protein data in PDB format for ' + protein,
