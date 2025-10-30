@@ -124,7 +124,7 @@ export const molecules: Molecule[] = [
     { name: 'Anastrozole', smiles: 'CC(C)(c1ccc(cn1)CN)c2ccc(cn2)C#N', formula: 'C17H19N5' },
     { name: 'Letrozole', smiles: 'c1ccc(cc1)C(c2ccc(cn2)C#N)(c3ncncn3)c4ncncn4', formula: 'C17H11N5' },
     { name: 'Exemestane', smiles: 'C[C@]12CC[C@H]3[C@H]([C@@H]1CCC2=C)CCC4=CC(=O)C=C[C@]34C', formula: 'C20H24O2' },
-    { name: 'Leuprolide', smiles: 'CC[C@H](C)C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N1)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C', formula: 'C59H84N16O12' },
+    { name: 'Leuprolide', smiles: 'CC[C@H](C)C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N1)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C)CC(C)C', formula: 'C59H84N16O12' },
     { name: 'Goserelin', smiles: 'CC(C)C[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N1)CCCNC(=N)N)CC2=CNC=N2)CC3=CC=C(O)C=C3)CC(=O)N)CC(=O)O)CO)CC4=CNC5=CC=CC=C54)C(=O)N[C@H](C(=O)O)CC(C)C)NC(=O)C1CCCC1', formula: 'C60H86N18O14' },
     { name: 'Triptorelin', smiles: 'CC(C)C[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N[C@H](C(=O)N1)CCCNC(=N)N)CC2=CNC=N2)CC3=CC=C(O)C=C3)CC(=O)N)CC(=O)O)CO)CC4=CNC5=CC=CC=C54)C(=O)N[C@H](C(=O)O)CC(C)C)NC(=O)C1CCCC1', formula: 'C64H82N18O13' },
     { name: 'Bicalutamide', smiles: 'CC(C)(C(=O)NC1=CC(=C(C=C1)S(=O)(=O)C(F)(F)F)C#N)O', formula: 'C18H14F3N3O4S' },
@@ -314,7 +314,7 @@ export const molecules: Molecule[] = [
     { name: 'Cinnamaldehyde', smiles: 'c1ccccc1C=CC=O', formula: 'C9H8O' },
     { name: 'Eugenol', smiles: 'COc1cc(ccc1O)CC=C', formula: 'C10H12O2' },
     { name: 'Zingiberene', smiles: 'CC(C)c1ccc(c(c1)C)CC[C@H]2C=C(C)CC2', formula: 'C15H24' },
-    { name: 'Progesterone', smiles: 'C[C@H]1CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@]4(C)[C@H]3CC[C@]12C', formula: 'C21H30O2' },
+    { name: 'Progesterone', smiles: 'C[C@H]1CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@]4(C)[C@H]3CC[C@]12C(=O)C', formula: 'C21H30O2' },
     { name: 'Cortisol', smiles: 'C[C@]12C[C@H](C3[C@H]([C@@H]1C[C@H]4[C@H]2C(=O)C=C4)CCC3=O)O', formula: 'C21H30O5' },
     { name: 'Aldosterone', smiles: 'C[C@]12C[C@H](C3[C@H]([C@@H]1C[C@H]4[C@H]2C(=O)C=C4)CC(=O)C3=O)O', formula: 'C21H28O5' },
     { name: 'Prednisolone', smiles: 'C[C@H]1[C@H]2[C@@H](C[C@H]3[C@@]1(C(=O)C=C2)C[C@H](C3=O)[C@H]4C(=O)CO)O', formula: 'C21H28O5' },
@@ -425,3 +425,5 @@ export const molecules: Molecule[] = [
     { name: 'Povidone-iodine', smiles: '[I-].[I-].c1ccc(cc1)C(=O)N1CCCC1=O', formula: 'C6H9INO' }
 ].concat((Array.from({length: 16088 - 500}).map((_, i) => ({ name: `Molecule ${i + 501}`, smiles: 'C', formula: 'CH4' }))))
 ;
+
+    
