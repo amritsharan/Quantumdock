@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,7 +47,7 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
 };
 
-function DashboardPageContent() {
+export default function DashboardPage() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [isDocked, setIsDocked] = useState(false);
@@ -198,20 +198,3 @@ function DashboardPageContent() {
     </>
   );
 }
-
-function DashboardPage() {
-  const searchParams = useSearchParams();
-  // By adding a key that depends on the search params, we force React to
-  // re-create the DashboardPageContent component whenever the URL query changes.
-  // This is a robust way to ensure the form state is re-initialized correctly.
-  const key = searchParams.toString();
-
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <DashboardPageContent key={key} />
-    </Suspense>
-  )
-}
-
-
-export default DashboardPage;
