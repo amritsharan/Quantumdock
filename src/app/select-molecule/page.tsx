@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { molecules, type Molecule } from '@/lib/molecules';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +19,12 @@ const ITEMS_PER_PAGE = 10;
 
 export default function SelectMoleculePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSmiles, setSelectedSmiles] = useState<Set<string>>(new Set());
+  const [selectedSmiles, setSelectedSmiles] = useState<Set<string>>(() => {
+    const smiles = searchParams.get('smiles');
+    return smiles ? new Set(JSON.parse(smiles)) : new Set();
+  });
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredMolecules = useMemo(() => {
@@ -64,10 +68,26 @@ export default function SelectMoleculePage() {
 
   const isAllOnPageSelected = paginatedMolecules.length > 0 && paginatedMolecules.every(m => selectedSmiles.has(m.smiles));
 
-  const handleConfirm = () => {
-    const smilesQuery = encodeURIComponent(JSON.stringify(Array.from(selectedSmiles)));
-    router.push(`/?smiles=${smilesQuery}`);
+  const buildQueryString = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    const smilesArray = Array.from(selectedSmiles);
+    if (smilesArray.length > 0) {
+      params.set('smiles', JSON.stringify(smilesArray));
+    } else {
+      params.delete('smiles');
+    }
+    return params.toString();
   };
+  
+  const handleConfirm = () => {
+    const queryString = buildQueryString();
+    router.push(`/?${queryString}`);
+  };
+
+  const backLink = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    return `/?${params.toString()}`;
+  }, [searchParams]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -77,7 +97,7 @@ export default function SelectMoleculePage() {
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
         <Button asChild variant="outline">
-            <Link href="/">
+            <Link href={backLink}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Simulation
             </Link>
@@ -171,7 +191,7 @@ export default function SelectMoleculePage() {
                 </Button>
               </div>
             </div>
-            <Button onClick={handleConfirm} disabled={selectedSmiles.size === 0}>
+            <Button onClick={handleConfirm} >
               Confirm Selection ({selectedSmiles.size})
             </Button>
           </div>

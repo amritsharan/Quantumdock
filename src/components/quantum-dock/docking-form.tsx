@@ -30,7 +30,13 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   const selectedSmiles = form.watch('smiles') || [];
   const selectedProteins = form.watch('proteinTargets') || [];
 
-  const selectedMolecules = molecules.filter(m => selectedSmiles.includes(m.smiles));
+  const selectedMolecules = useMemo(() => {
+    return molecules.filter(m => selectedSmiles.includes(m.smiles));
+  }, [selectedSmiles]);
+  
+  const totalCombinations = useMemo(() => {
+    return selectedMolecules.length * selectedProteins.length;
+  }, [selectedMolecules, selectedProteins]);
 
   const fetchSuggestions = useCallback((keywords: string[]) => {
     if (keywords && keywords.length > 0) {
@@ -164,9 +170,9 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isLoading || selectedMolecules.length === 0 || selectedProteins.length === 0} className="w-full">
+        <Button type="submit" disabled={isLoading || totalCombinations === 0} className="w-full">
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {isLoading ? 'Running Simulation...' : `Run Docking for ${selectedMolecules.length * selectedProteins.length} Combination(s)`}
+          {isLoading ? 'Running Simulation...' : `Run Docking for ${totalCombinations} Combination(s)`}
         </Button>
       </form>
     </Form>
