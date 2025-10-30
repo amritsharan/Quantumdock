@@ -23,7 +23,8 @@ const RefineDockingPosesWithVQEInputSchema = z.object({
   ligandPose: z
     .string()
     .describe(
-      'The ligand pose generated from classical docking as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'    ),
+      "The ligand pose generated from classical docking, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
   numPosesToRefine: z
     .number()
     .describe('The number of top poses to refine using VQE.')
@@ -59,7 +60,7 @@ const refineDockingPosesPrompt = ai.definePrompt({
 you will refine the ligand pose using Variational Quantum Eigensolver (VQE) to calculate more accurate binding energies.
 
 Protein Structure:
-{{proteinStructure}}
+{{{proteinStructure}}}
 
 Ligand Pose:
 {{media url=ligandPose}}
