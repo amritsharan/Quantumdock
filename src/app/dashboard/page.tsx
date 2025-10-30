@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +12,6 @@ import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
-import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -69,6 +67,15 @@ function DashboardPageContent() {
       diseaseKeywords: [],
     },
   });
+
+  const selectedSmiles = form.watch('smiles');
+  const selectedProteins = form.watch('proteinTargets');
+
+  const totalCombinations = useMemo(() => {
+    const numSmiles = selectedSmiles?.length || 0;
+    const numProteins = selectedProteins?.length || 0;
+    return numSmiles * numProteins;
+  }, [selectedSmiles, selectedProteins]);
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -173,7 +180,12 @@ function DashboardPageContent() {
                 <CardDescription>Input your molecule(s) and target(s) to begin.</CardDescription>
               </CardHeader>
               <CardContent>
-                <DockingForm form={form} onSubmit={onSubmit} isLoading={step !== 'idle' && step !== 'done' && step !== 'error'} />
+                <DockingForm 
+                  form={form} 
+                  onSubmit={onSubmit} 
+                  isLoading={step !== 'idle' && step !== 'done' && step !== 'error'}
+                  totalCombinations={totalCombinations}
+                />
               </CardContent>
             </Card>
           </div>
