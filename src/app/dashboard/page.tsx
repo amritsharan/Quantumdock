@@ -17,7 +17,7 @@ import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 
 
-type ProcessStep = 'idle' | 'classical' | 'quantum' | 'predicting' | 'done' | 'error';
+type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
 
 const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: string; description: string }> = {
   idle: {
@@ -28,17 +28,12 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   classical: {
     icon: <Dna className="h-12 w-12 animate-spin text-accent" />,
     title: 'Performing Classical Docking...',
-    description: 'Generating initial poses using AutoDock. This may take a moment.',
-  },
-  quantum: {
-    icon: <BrainCircuit className="h-12 w-12 animate-pulse text-accent" />,
-    title: 'Running Quantum Refinement...',
-    description: 'Refining docking poses with VQE for higher accuracy.',
+    description: 'Generating initial poses. This may take a moment.',
   },
   predicting: {
     icon: <FlaskConical className="h-12 w-12 text-accent" />,
     title: 'Predicting Binding Affinity...',
-    description: 'Analyzing quantum-refined energies to predict binding strength.',
+    description: 'Analyzing energies to predict binding strength.',
   },
   done: {
     icon: <Box className="h-12 w-12 text-accent" />,
@@ -121,9 +116,8 @@ function DashboardPageContent() {
     try {
       // Simulate the steps for UI feedback, but run the full batch process.
       await new Promise(resolve => setTimeout(resolve, 1500));
-      setStep('quantum');
-      await new Promise(resolve => setTimeout(resolve, 2000));
       setStep('predicting');
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Send all combinations to the server action at once.
       const finalResults = await runFullDockingProcess(data);
@@ -183,7 +177,7 @@ function DashboardPageContent() {
                 />
               </CardContent>
 
-              {(step === 'classical' || step === 'quantum' || step === 'predicting') && (
+              {(step === 'classical' || step === 'predicting') && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
                   {currentStepInfo.icon}
                   <div className="text-center">

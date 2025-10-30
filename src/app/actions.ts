@@ -2,7 +2,6 @@
 'use server';
 
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
-import { refineDockingPosesWithVQE } from '@/ai/flows/refine-docking-poses-with-vqe';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { z } from 'zod';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
@@ -17,20 +16,8 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
         
-      // 3. Simulate Classical Docking and Quantum Refinement for each combination
-      // In a real application, this would involve complex computations.
-      // Here, we just call the flows with mock data to simulate the process.
-      
-      const mockLigandPoseData = 'data:text/plain;base64,bW9jayBsaWdhbmQgZGF0YSBmcm9tIGNsYXNzaWNhbCBkb2NraW5n'; // "mock ligand data from classical docking"
-      
-      await refineDockingPosesWithVQE({
-        proteinStructure: 'mock protein data in PDB format for ' + protein,
-        ligandPose: mockLigandPoseData,
-        numPosesToRefine: 5,
-      });
-
-      // 4. Predict Binding Affinities for each combination
-      // We use a random value to simulate the output of the VQE calculation.
+      // 3. Predict Binding Affinities for each combination
+      // We use a random value to simulate the output of a more complex upstream calculation.
       const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish energy in kcal/mol
 
       const predictionInput = {
@@ -42,10 +29,11 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
       const predictionResult = await predictBindingAffinities(predictionInput);
       
       if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
-        throw new Error(`Failed to predict binding affinities for ${smile} with ${protein}.`);
+        // Provide a more descriptive error if the AI flow fails
+        throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
       }
 
-      // 5. Add the combined result to our results array
+      // 4. Add the combined result to our results array
       allResults.push({
           ...predictionResult,
           moleculeSmiles: smile,
