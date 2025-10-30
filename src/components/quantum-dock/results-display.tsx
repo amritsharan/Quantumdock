@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Info, CheckCircle, TrendingUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Download, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { DockingResults } from '@/lib/schema';
 import {
@@ -18,6 +18,7 @@ import { molecules } from '@/lib/molecules';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
+import Image from 'next/image';
 
 interface ResultsDisplayProps {
   results: DockingResults[];
@@ -31,8 +32,8 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const getAffinityBadge = (affinity: number) => {
-    if (affinity < 10) return <Badge variant="default" className='bg-green-500'>High</Badge>;
-    if (affinity < 100) return <Badge variant="secondary" className='bg-yellow-500 text-black'>Moderate</Badge>;
+    if (affinity < 10) return <Badge variant="default" className='bg-green-500 hover:bg-green-600'>High</Badge>;
+    if (affinity < 100) return <Badge variant="secondary" className='bg-yellow-500 text-black hover:bg-yellow-600'>Moderate</Badge>;
     return <Badge variant="destructive">Low</Badge>;
   }
 
@@ -197,7 +198,7 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
                  <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
               </TableHead>
               <TableHead>Affinity Level</TableHead>
-              <TableHead>Rationale</TableHead>
+              <TableHead>Structure</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -208,7 +209,16 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
                 <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
                 <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
                 <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-                <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{result.rationale}</TableCell>
+                <TableCell>
+                  <Image
+                    src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(result.moleculeSmiles)}/image?width=100&height=100`}
+                    alt={`Structure of ${result.name}`}
+                    width={50}
+                    height={50}
+                    className="rounded-md bg-white p-1"
+                    unoptimized
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

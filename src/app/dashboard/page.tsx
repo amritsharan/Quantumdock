@@ -69,6 +69,8 @@ function DashboardPageContent() {
     },
   });
 
+  const selectedSmiles = form.watch('smiles');
+
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
     if (smilesParam) {
@@ -175,7 +177,10 @@ function DashboardPageContent() {
                 <CardDescription>Interactive 3D view of the molecular complex.</CardDescription>
               </CardHeader>
               <CardContent className="h-full">
-                <MoleculeViewer isDocked={isDocked} />
+                <MoleculeViewer 
+                  isDocked={isDocked} 
+                  selectedSmiles={selectedSmiles}
+                />
               </CardContent>
 
               {(step === 'classical' || step === 'quantum' || step === 'predicting') && (
