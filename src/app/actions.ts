@@ -6,19 +6,38 @@ import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { z } from 'zod';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 
-export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
-  // 1. Validate the full input against the main schema
-  const validatedData = dockingSchema.parse(data);
+// Helper function for retrying promises with exponential backoff
+async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
+  let lastError: Error | undefined;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      // Check for specific 503 error to retry
+      if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded'))) {
+        console.log(`Attempt ${i + 1} failed. Retrying in ${delay}ms...`);
+        await new Promise(res => setTimeout(res, delay * (i + 1))); // Incremental delay
+      } else {
+        // Don't retry on other errors
+        break;
+      }
+    }
+  }
+  // If all retries fail, throw a more specific error
+  if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded'))) {
+      throw new Error("The AI model is currently overloaded. Please try the simulation again in a few moments.");
+  }
+  throw lastError || new Error(finalErr);
+}
 
+export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
+  const validatedData = dockingSchema.parse(data);
   const allResults: DockingResults[] = [];
 
-  // 2. Iterate through each molecule and each protein target to create all combinations
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
-        
-      // 3. Predict Binding Affinities for each combination
-      // We use a random value to simulate the output of a more complex upstream calculation.
-      const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish negative energy in kcal/mol
+      const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3);
 
       const predictionInput = {
         quantumRefinedEnergy: mockQuantumRefinedEnergy,
@@ -26,19 +45,24 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
         proteinTargetName: protein,
       };
 
-      const predictionResult = await predictBindingAffinities(predictionInput);
-      
-      if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
-        // Provide a more descriptive error if the AI flow fails
-        throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
-      }
+      try {
+        const predictionResult = await retryPromise(() => predictBindingAffinities(predictionInput));
 
-      // 4. Add the combined result to our results array
-      allResults.push({
+        if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
+          throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
+        }
+
+        allResults.push({
           ...predictionResult,
           moleculeSmiles: smile,
           proteinTarget: protein,
-      });
+        });
+
+      } catch (error) {
+          console.error(`Error processing combination: ${smile} + ${protein}. Error:`, error);
+          // Re-throw the specific error to be displayed on the client
+          throw error;
+      }
     }
   }
 
@@ -47,17 +71,15 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
 
 export async function getProteinSuggestions(keywords: string[]): Promise<string[]> {
   if (!keywords || keywords.length === 0) {
-      return [];
+    return [];
   }
   try {
-      const suggestionsPromises = keywords.map(keyword => suggestTargetProteins({ keyword }));
-      const results = await Promise.all(suggestionsPromises);
-      const allProteins = results.flatMap(result => result.proteins || []);
-      // Return unique proteins
-      return [...new Set(allProteins)];
+    const suggestionsPromises = keywords.map(keyword => suggestTargetProteins({ keyword }));
+    const results = await Promise.all(suggestionsPromises);
+    const allProteins = results.flatMap(result => result.proteins || []);
+    return [...new Set(allProteins)];
   } catch (error) {
-      console.error("Error suggesting proteins:", error);
-      // In case of an API error, return an empty array to prevent UI crashing.
-      return [];
+    console.error("Error suggesting proteins:", error);
+    return [];
   }
 }
