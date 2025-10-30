@@ -18,7 +18,6 @@ import { molecules } from '@/lib/molecules';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 
 interface ResultsDisplayProps {
   results: DockingResults[];
@@ -198,7 +197,6 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
                  <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
               </TableHead>
               <TableHead>Affinity Level</TableHead>
-              <TableHead>Structure</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -209,16 +207,6 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
                 <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
                 <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
                 <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-                <TableCell>
-                  <Image
-                    src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(result.moleculeSmiles)}/image?width=100&height=100`}
-                    alt={`Structure of ${result.name}`}
-                    width={50}
-                    height={50}
-                    className="rounded-md bg-white p-1"
-                    unoptimized
-                  />
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>

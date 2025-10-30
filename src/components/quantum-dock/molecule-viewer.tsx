@@ -3,33 +3,23 @@
 
 import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import Image from 'next/image';
-import { Card, CardContent } from '../ui/card';
+import { BrainCircuit } from 'lucide-react';
 
 interface MoleculeViewerProps {
   isDocked: boolean;
   selectedSmiles?: string[];
 }
 
-export function MoleculeViewer({ isDocked, selectedSmiles = [] }: MoleculeViewerProps) {
+export function MoleculeViewer({ isDocked }: MoleculeViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number>();
 
   useEffect(() => {
     // Only run the 3D animation if docking is complete
-    if (!isDocked || !mountRef.current) {
-        if (animationFrameId.current) {
-            cancelAnimationFrame(animationFrameId.current);
-        }
-        if (mountRef.current) {
-            // Clear any previous renderer
-            mountRef.current.innerHTML = '';
-        }
-        return;
-    }
+    if (!isDocked || !mountRef.current) return;
 
     const currentMount = mountRef.current;
-    currentMount.innerHTML = ''; // Clear out the 2D images
+    currentMount.innerHTML = ''; // Clear out the placeholder
 
     // Scene
     const scene = new THREE.Scene();
@@ -104,7 +94,7 @@ export function MoleculeViewer({ isDocked, selectedSmiles = [] }: MoleculeViewer
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+      if(animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
       if (currentMount && renderer.domElement) {
         // Check if the domElement is still a child before removing
         if (currentMount.contains(renderer.domElement)) {
@@ -119,24 +109,10 @@ export function MoleculeViewer({ isDocked, selectedSmiles = [] }: MoleculeViewer
     <div ref={mountRef} className="h-full w-full">
       {!isDocked && (
         <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
-          {selectedSmiles.length === 0 ? (
-            <p className="text-muted-foreground">Select molecules to see a preview</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full">
-              {selectedSmiles.map((smiles) => (
-                <Card key={smiles} className="p-2 aspect-square flex items-center justify-center bg-muted/50">
-                  <Image
-                    src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(smiles)}/image?width=150&height=150`}
-                    alt={`Structure for SMILES: ${smiles}`}
-                    width={100}
-                    height={100}
-                    className="rounded-md bg-white p-1"
-                    unoptimized
-                  />
-                </Card>
-              ))}
-            </div>
-          )}
+          <BrainCircuit className="h-24 w-24 text-muted-foreground" />
+          <p className="text-center text-muted-foreground">
+            The 3D visualization of the docked molecular complex will appear here after the simulation is complete.
+          </p>
         </div>
       )}
     </div>
