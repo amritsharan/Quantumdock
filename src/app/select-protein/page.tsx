@@ -23,12 +23,16 @@ function SelectProteinContent() {
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProteins, setSelectedProteins] = useState<Set<string>>(() => {
-    const proteins = searchParams.get('proteins');
-    try {
-      return proteins ? new Set(JSON.parse(proteins)) : new Set();
-    } catch {
-      return new Set();
+    const proteinsParam = searchParams.get('proteins');
+    if (proteinsParam) {
+        try {
+            return new Set(JSON.parse(proteinsParam));
+        } catch {
+            return new Set();
+        }
     }
+    const proteinParam = searchParams.get('protein'); // Legacy support
+    return proteinParam ? new Set([proteinParam]) : new Set();
   });
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -94,9 +98,7 @@ function SelectProteinContent() {
 
   const backLink = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
-    // Don't persist the new selection on 'back'
-    params.delete('proteins');
-    params.delete('protein'); 
+    // On "back", we don't change the parameters
     return `/?${params.toString()}`;
   }, [searchParams]);
 

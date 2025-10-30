@@ -34,8 +34,15 @@ export default function SelectDiseasePage() {
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDiseases, setSelectedDiseases] = useState<Set<string>>(() => {
-     const diseases = searchParams.get('diseases');
-     return diseases ? new Set(JSON.parse(diseases)) : new Set();
+     const diseasesParam = searchParams.get('diseases');
+     if (diseasesParam) {
+        try {
+            return new Set(JSON.parse(diseasesParam));
+        } catch {
+            return new Set();
+        }
+     }
+     return new Set();
   });
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -94,12 +101,11 @@ export default function SelectDiseasePage() {
     router.push(`/?${queryString}`);
   };
 
-  const backLink = () => {
-      const params = new URLSearchParams(searchParams.toString());
-      // We don't want to persist the newly selected diseases on 'back'
-      params.delete('diseases');
-      return `/?${params.toString()}`;
-  }
+  const backLink = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    // On "back", we don't change the parameters
+    return `/?${params.toString()}`;
+  }, [searchParams]);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -109,7 +115,7 @@ export default function SelectDiseasePage() {
           <h1 className="text-2xl font-semibold text-foreground">QuantumDock</h1>
         </div>
         <Button asChild variant="outline">
-            <Link href={backLink()}>
+            <Link href={backLink}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Simulation
             </Link>

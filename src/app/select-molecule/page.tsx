@@ -22,8 +22,15 @@ export default function SelectMoleculePage() {
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSmiles, setSelectedSmiles] = useState<Set<string>>(() => {
-    const smiles = searchParams.get('smiles');
-    return smiles ? new Set(JSON.parse(smiles)) : new Set();
+    const smilesParam = searchParams.get('smiles');
+    if (smilesParam) {
+        try {
+            return new Set(JSON.parse(smilesParam));
+        } catch {
+            return new Set();
+        }
+    }
+    return new Set();
   });
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -86,6 +93,7 @@ export default function SelectMoleculePage() {
 
   const backLink = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
+    // On "back", we don't change the parameters
     return `/?${params.toString()}`;
   }, [searchParams]);
 

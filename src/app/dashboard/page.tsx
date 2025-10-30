@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -200,9 +201,15 @@ function DashboardPageContent() {
 }
 
 function DashboardPage() {
+  const searchParams = useSearchParams();
+  // By adding a key that depends on the search params, we force React to
+  // re-create the DashboardPageContent component whenever the URL query changes.
+  // This is a robust way to ensure the form state is re-initialized correctly.
+  const key = searchParams.toString();
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <DashboardPageContent />
+      <DashboardPageContent key={key} />
     </Suspense>
   )
 }

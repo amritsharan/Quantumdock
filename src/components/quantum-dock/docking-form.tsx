@@ -27,9 +27,9 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   const [suggestedTargets, setSuggestedTargets] = useState<string[]>([]);
   const searchParams = useSearchParams();
   
-  const diseaseKeywords = form.watch('diseaseKeywords') || [];
-  const selectedSmiles = form.watch('smiles') || [];
-  const selectedProteinNames = form.watch('proteinTargets') || [];
+  const diseaseKeywords = form.watch('diseaseKeywords');
+  const selectedSmiles = form.watch('smiles');
+  const selectedProteinNames = form.watch('proteinTargets');
 
   const totalCombinations = useMemo(() => {
     const numSmiles = selectedSmiles?.length || 0;
@@ -61,7 +61,15 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   }, [diseaseKeywords, fetchSuggestions]);
 
   const buildLink = (pathname: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
+    const smiles = form.getValues('smiles');
+    const diseases = form.getValues('diseaseKeywords');
+    const proteins = form.getValues('proteinTargets');
+
+    if (smiles?.length) params.set('smiles', JSON.stringify(smiles));
+    if (diseases?.length) params.set('diseases', JSON.stringify(diseases));
+    if (proteins?.length) params.set('proteins', JSON.stringify(proteins));
+
     return `${pathname}?${params.toString()}`;
   }
 
