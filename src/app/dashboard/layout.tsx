@@ -18,6 +18,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+type UserProfile = {
+  isAdmin?: boolean;
+};
+
 
 export default function DashboardLayout({
   children,
@@ -28,6 +34,20 @@ export default function DashboardLayout({
   const auth = useAuth();
   const db = useDatabase();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user && db) {
+      const userProfileRef = ref(db, 'users/' + user.uid);
+      get(userProfileRef).then(snapshot => {
+        if (snapshot.exists()) {
+          const profile = snapshot.val() as UserProfile;
+          setIsAdmin(profile.isAdmin || false);
+        }
+      });
+    }
+  }, [user, db]);
+
 
   const handleSignOut = async () => {
     // Immediately sign out and redirect for a responsive UI
@@ -95,10 +115,12 @@ export default function DashboardLayout({
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                   <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
-                    <History className="mr-2 h-4 w-4" />
-                    <span>Login History</span>
-                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
+                      <History className="mr-2 h-4 w-4" />
+                      <span>Login History</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     Log out
