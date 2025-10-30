@@ -113,32 +113,18 @@ function DashboardPageContent() {
     setResults(null);
     setIsDocked(false);
 
-    let combinationsProcessed = 0;
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
-    const finalResults : DockingResults[] = [];
 
     try {
-      for (const proteinTarget of data.proteinTargets) {
-        for (const smile of data.smiles) {
-          combinationsProcessed++;
-          const progress = `(${combinationsProcessed}/${totalCombinations})`
+      // Simulate the steps for UI feedback, but run the full batch process.
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setStep('quantum');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setStep('predicting');
 
-          setStep('classical');
-          stepDescriptions.classical.title = `Classical Docking ${progress}`
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          setStep('quantum');
-          stepDescriptions.quantum.title = `Quantum Refinement ${progress}`
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          setStep('predicting');
-          stepDescriptions.predicting.title = `Predicting Affinity ${progress}`
-          const singleCombinationData = { ...data, smiles: [smile], proteinTarget };
-          const result = await runFullDockingProcess(singleCombinationData);
-          finalResults.push(...result);
-        }
-      }
-
+      // Send all combinations to the server action at once.
+      const finalResults = await runFullDockingProcess(data);
+      
       setResults(finalResults);
       setStep('done');
       setIsDocked(true);
@@ -147,13 +133,14 @@ function DashboardPageContent() {
         title: 'Simulations Complete',
         description: `Binding affinity predictions for ${totalCombinations} molecule-protein combinations were successful.`,
       });
+
     } catch (error) {
       console.error(error);
       setStep('error');
       toast({
         variant: 'destructive',
         title: 'Simulation Failed',
-        description: 'An error occurred while running the docking process.',
+        description: (error as Error).message || 'An error occurred while running the docking process.',
       });
     }
   };

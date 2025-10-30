@@ -5,59 +5,56 @@ import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities'
 import { refineDockingPosesWithVQE } from '@/ai/flows/refine-docking-poses-with-vqe';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { z } from 'zod';
-import { dockingSchema, type DockingResults } from '@/lib/schema';
+import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 
-// We create a temporary schema for the single-protein action
-const singleProteinDockingSchema = dockingSchema.extend({
-    proteinTarget: z.string(),
-    proteinTargets: z.array(z.string()).optional(), // make the array optional
-});
-type SingleProteinDockingInput = z.infer<typeof singleProteinDockingSchema>;
+export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
+  // 1. Validate the full input against the main schema
+  const validatedData = dockingSchema.parse(data);
 
+  const allResults: DockingResults[] = [];
 
-export async function runFullDockingProcess(data: SingleProteinDockingInput): Promise<DockingResults[]> {
-  // 1. Validate input for a single protein target
-   const validatedData = singleProteinDockingSchema.parse(data);
-
-  const resultsArray: DockingResults[] = [];
-
+  // 2. Iterate through each molecule and each protein target to create all combinations
   for (const smile of validatedData.smiles) {
-    // 2. Simulate Classical Docking and Quantum Refinement for each molecule
-    // In a real application, this would involve complex computations.
-    // Here, we just call the flows with mock data to simulate the process.
-    
-    const mockLigandPoseData = 'data:text/plain;base64,' + Buffer.from('mock ligand data from classical docking').toString('base64');
-    
-    await refineDockingPosesWithVQE({
-      proteinStructure: 'mock protein data in PDB format',
-      ligandPose: mockLigandPoseData,
-      numPosesToRefine: 5,
-    });
+    for (const protein of validatedData.proteinTargets) {
+        
+      // 3. Simulate Classical Docking and Quantum Refinement for each combination
+      // In a real application, this would involve complex computations.
+      // Here, we just call the flows with mock data to simulate the process.
+      
+      const mockLigandPoseData = 'data:text/plain;base64,' + Buffer.from('mock ligand data from classical docking').toString('base64');
+      
+      await refineDockingPosesWithVQE({
+        proteinStructure: 'mock protein data in PDB format for ' + protein,
+        ligandPose: mockLigandPoseData,
+        numPosesToRefine: 5,
+      });
 
-    // 3. Predict Binding Affinities for each molecule
-    // We use a random value to simulate the output of the VQE calculation.
-    const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish energy in kcal/mol
+      // 4. Predict Binding Affinities for each combination
+      // We use a random value to simulate the output of the VQE calculation.
+      const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3); // Random realistic-ish energy in kcal/mol
 
-    const predictionInput = {
-      quantumRefinedEnergy: mockQuantumRefinedEnergy,
-      moleculeSmiles: smile,
-      proteinTargetName: validatedData.proteinTarget,
-    };
+      const predictionInput = {
+        quantumRefinedEnergy: mockQuantumRefinedEnergy,
+        moleculeSmiles: smile,
+        proteinTargetName: protein,
+      };
 
-    const results = await predictBindingAffinities(predictionInput);
-    
-    if (!results || typeof results.bindingAffinity !== 'number') {
-      throw new Error(`Failed to predict binding affinities for ${smile}.`);
+      const predictionResult = await predictBindingAffinities(predictionInput);
+      
+      if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
+        throw new Error(`Failed to predict binding affinities for ${smile} with ${protein}.`);
+      }
+
+      // 5. Add the combined result to our results array
+      allResults.push({
+          ...predictionResult,
+          moleculeSmiles: smile,
+          proteinTarget: protein,
+      });
     }
-
-    resultsArray.push({
-        ...results,
-        proteinTarget: validatedData.proteinTarget,
-    });
   }
 
-
-  return resultsArray;
+  return allResults;
 }
 
 export async function getProteinSuggestions(keywords: string[]): Promise<string[]> {

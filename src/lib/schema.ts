@@ -8,4 +8,4 @@ export const dockingSchema = z.object({
 });
 
 export type DockingInput = z.infer<typeof dockingSchema>;
-export type DockingResults = PredictBindingAffinitiesOutput & { proteinTarget: string };
+export type DockingResults = PredictBindingAffinitiesOutput & { proteinTarget: string, moleculeSmiles: string };
