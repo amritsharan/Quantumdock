@@ -20,10 +20,9 @@ interface DockingFormProps {
   form: UseFormReturn<z.infer<typeof dockingSchema>>;
   onSubmit: (values: z.infer<typeof dockingSchema>) => void;
   isLoading: boolean;
-  totalCombinations: number;
 }
 
-export function DockingForm({ form, onSubmit, isLoading, totalCombinations }: DockingFormProps) {
+export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   const [isPending, startTransition] = useTransition();
   const [suggestedTargets, setSuggestedTargets] = useState<string[]>([]);
   const searchParams = useSearchParams();
@@ -31,6 +30,12 @@ export function DockingForm({ form, onSubmit, isLoading, totalCombinations }: Do
   const diseaseKeywords = form.watch('diseaseKeywords') || [];
   const selectedSmiles = form.watch('smiles') || [];
   const selectedProteinNames = form.watch('proteinTargets') || [];
+
+  const totalCombinations = useMemo(() => {
+    const numSmiles = selectedSmiles?.length || 0;
+    const numProteins = selectedProteinNames?.length || 0;
+    return numSmiles * numProteins;
+  }, [selectedSmiles, selectedProteinNames]);
 
   const selectedMolecules = useMemo(() => {
     return molecules.filter(m => selectedSmiles.includes(m.smiles));

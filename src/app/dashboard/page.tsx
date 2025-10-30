@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -67,15 +67,6 @@ function DashboardPageContent() {
       diseaseKeywords: [],
     },
   });
-
-  const selectedSmiles = form.watch('smiles');
-  const selectedProteins = form.watch('proteinTargets');
-
-  const totalCombinations = useMemo(() => {
-    const numSmiles = selectedSmiles?.length || 0;
-    const numProteins = selectedProteins?.length || 0;
-    return numSmiles * numProteins;
-  }, [selectedSmiles, selectedProteins]);
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -184,7 +175,6 @@ function DashboardPageContent() {
                   form={form} 
                   onSubmit={onSubmit} 
                   isLoading={step !== 'idle' && step !== 'done' && step !== 'error'}
-                  totalCombinations={totalCombinations}
                 />
               </CardContent>
             </Card>
