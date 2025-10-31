@@ -12,6 +12,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState('');
@@ -54,7 +55,14 @@ export default function SignUpPage() {
         }
       }
     }
-    router.push('/dashboard');
+    toast({
+        title: "Account Created!",
+        description: "Your account has been created successfully.",
+    });
+
+    setTimeout(() => {
+        router.push('/sign-in');
+    }, 2000); // Wait 2 seconds before redirecting
   };
 
   const handleSignUp = async () => {
@@ -63,11 +71,19 @@ export default function SignUpPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await handleSuccessfulSignUp(userCredential);
     } catch (error: any) {
-       toast({
-        variant: "destructive",
-        title: "Sign-up Failed",
-        description: error.message,
-      });
+       if (error.code === 'auth/email-already-in-use') {
+         toast({
+            variant: "destructive",
+            title: "Sign-up Failed",
+            description: "An account with this email already exists.",
+         });
+       } else {
+         toast({
+          variant: "destructive",
+          title: "Sign-up Failed",
+          description: error.message,
+        });
+       }
     }
   };
 
@@ -98,18 +114,35 @@ export default function SignUpPage() {
             });
         }
       }
-      router.push('/dashboard');
-    } catch (error: any) {
-       toast({
-        variant: "destructive",
-        title: "Google Sign-up Failed",
-        description: error.message,
+      toast({
+          title: "Account Created!",
+          description: "Your account has been created successfully.",
       });
+
+      setTimeout(() => {
+          router.push('/sign-in');
+      }, 2000);
+    } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+            toast({
+                variant: "destructive",
+                title: "Sign-up Failed",
+                description: "An account with this email already exists.",
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Google Sign-up Failed",
+                description: error.message,
+            });
+        }
     }
   };
 
 
   return (
+    <>
+    <Toaster />
     <div className="flex items-center justify-center min-h-screen">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -154,5 +187,6 @@ export default function SignUpPage() {
         </div>
       </Card>
     </div>
+    </>
   );
 }
