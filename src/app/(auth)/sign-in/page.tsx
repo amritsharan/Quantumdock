@@ -109,7 +109,7 @@ export default function SignInPage() {
       console.error('Sign in error:', error);
        if (error.code === 'auth/user-not-found') {
         setAlertTitle('User Not Found');
-        setAlertDescription('No account found with this email. Please create an account to continue.');
+        setAlertDescription("The user isn't found with this credential. Please create the account.");
         setShowErrorAlert(true);
       } else {
         toast({
