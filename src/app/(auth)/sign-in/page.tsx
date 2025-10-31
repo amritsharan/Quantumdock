@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -17,6 +18,16 @@ import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, li
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -27,6 +38,9 @@ type SignInFormValues = z.infer<typeof signInSchema>;
 
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -43,6 +57,21 @@ export default function SignInPage() {
     // Create a login history record
     if (user && firestore) {
       try {
+        const historyQuery = query(
+            collection(firestore, "users", user.uid, "loginHistory"),
+            where("status", "==", "active"),
+            orderBy("loginTime", "desc"),
+            limit(1)
+        );
+        const querySnapshot = await getDocs(historyQuery);
+        if (!querySnapshot.empty) {
+            const activeSessionDoc = querySnapshot.docs[0];
+            await updateDoc(activeSessionDoc.ref, {
+                status: 'inactive',
+                logoutTime: serverTimestamp()
+            });
+        }
+
         await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
           userId: user.uid,
           loginTime: serverTimestamp(),
@@ -78,11 +107,17 @@ export default function SignInPage() {
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       console.error('Sign in error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign In Failed',
-        description: error.message || 'An unexpected error occurred. Please try again.',
-      });
+       if (error.code === 'auth/user-not-found') {
+        setAlertTitle('User Not Found');
+        setAlertDescription('No account found with this email. Please create an account to continue.');
+        setShowErrorAlert(true);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign In Failed',
+          description: error.message || 'An unexpected error occurred. Please try again.',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -136,6 +171,20 @@ export default function SignInPage() {
         </CardContent>
       </Card>
       <Toaster />
+
+      <AlertDialog open={showErrorAlert} onOpenChange={setShowErrorAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{alertDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => router.push('/sign-up')}>
+              Create an Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
