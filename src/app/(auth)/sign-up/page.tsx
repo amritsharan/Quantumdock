@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,13 +10,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -27,6 +37,10 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
+  
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -55,22 +69,24 @@ export default function SignUpPage() {
       
       toast({
         title: 'Account Created',
-        description: 'Your account has been created successfully. Please sign in.',
+        description: 'Your account has been created successfully. Redirecting to sign in...',
       });
 
       router.push('/sign-in');
 
     } catch (error: any) {
       console.error('Sign up error:', error);
-      let errorMessage = 'An unexpected error occurred. Please try again.';
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already in use. Please sign in or use a different email.';
+        setAlertTitle('Email Already In Use');
+        setAlertDescription('An account with this email address already exists. Please sign in to continue.');
+        setShowErrorAlert(true);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: error.message || 'An unexpected error occurred. Please try again.',
+        });
       }
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: errorMessage,
-      });
     } finally {
       setIsLoading(false);
     }
@@ -121,6 +137,20 @@ export default function SignUpPage() {
         </CardContent>
       </Card>
       <Toaster />
+
+      <AlertDialog open={showErrorAlert} onOpenChange={setShowErrorAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{alertDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => router.push('/sign-in')}>
+              Go to Sign In
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
