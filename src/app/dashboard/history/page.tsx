@@ -20,11 +20,7 @@ type LoginHistory = {
   duration?: number;
 };
 
-const calculateDuration = (loginDate: Date, logoutDate?: Date) => {
-    if (logoutDate) {
-        const diffInMinutes = Math.round((logoutDate.getTime() - loginDate.getTime()) / (1000 * 60));
-        return `${diffInMinutes} minute(s)`;
-    }
+const calculateActiveDuration = (loginDate: Date) => {
     return `${formatDistanceToNow(loginDate)} (so far)`;
 };
 
@@ -45,7 +41,8 @@ export default function HistoryPage() {
   const { data: history, isLoading } = useCollection<LoginHistory>(historyQuery);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000); // Update every minute
+    // This timer updates the "active" session's duration every minute.
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
 
@@ -53,13 +50,21 @@ export default function HistoryPage() {
     return history?.map((item) => {
       const loginDate = item.loginTime ? new Date(item.loginTime.seconds * 1000) : null;
       const logoutDate = item.logoutTime ? new Date(item.logoutTime.seconds * 1000) : undefined;
-      const duration = item.duration !== undefined ? `${item.duration} minute(s)` : (loginDate ? calculateDuration(loginDate, logoutDate) : 'N/A');
+      
+      let durationDisplay;
+      if (item.status === 'active' && loginDate) {
+        durationDisplay = calculateActiveDuration(loginDate);
+      } else if (item.duration !== undefined) {
+        durationDisplay = `${item.duration} minute(s)`;
+      } else {
+        durationDisplay = 'N/A';
+      }
 
       return {
         ...item,
         loginTimeFormatted: loginDate ? format(loginDate, 'PPpp') : 'N/A',
-        logoutTimeFormatted: logoutDate ? format(logoutDate, 'PPpp') : 'N/A',
-        calculatedDuration: duration,
+        logoutTimeFormatted: logoutDate ? format(logoutDate, 'PPpp') : '—',
+        calculatedDuration: durationDisplay,
       };
     });
   }, [history, currentTime]);
@@ -117,7 +122,7 @@ export default function HistoryPage() {
                 formattedHistory?.map((item: any) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.loginTimeFormatted}</TableCell>
-                    <TableCell>{item.status === 'active' ? '—' : item.logoutTimeFormatted}</TableCell>
+                    <TableCell>{item.logoutTimeFormatted}</TableCell>
                     <TableCell>{item.calculatedDuration}</TableCell>
                     <TableCell>
                       <Badge variant={item.status === 'active' ? 'default' : 'secondary'} className={item.status === 'active' ? 'bg-green-500' : ''}>
