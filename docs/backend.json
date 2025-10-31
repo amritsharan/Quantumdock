@@ -109,12 +109,70 @@
         "dockedPoseData",
         "timestamp"
       ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile information.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique user ID from Firebase Authentication."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the user account was created."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "LoginHistory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LoginHistory",
+      "type": "object",
+      "description": "Represents a single login session for a user.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user for this session."
+        },
+        "loginTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user logged in."
+        },
+        "logoutTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user logged out."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"],
+          "description": "The current status of the session."
+        },
+        "duration": {
+            "type": "number",
+            "description": "The duration of the session in minutes."
+        }
+      },
+      "required": ["userId", "loginTime", "status"]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -122,17 +180,21 @@
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "user",
+          "entityName": "UserProfile",
           "schema": {
-            "$ref": "#/backend/entities/user"
+            "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profiles.  Access is restricted to the user themselves.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            }
-          ]
+          "description": "Stores user profiles. Access is restricted to the user themselves."
+        }
+      },
+      {
+        "path": "/users/{userId}/loginHistory/{historyId}",
+        "definition": {
+          "entityName": "LoginHistory",
+          "schema": {
+            "$ref": "#/backend/entities/LoginHistory"
+          },
+          "description": "Stores login history for a specific user. Access is restricted to the owner."
         }
       },
       {
@@ -142,17 +204,7 @@
           "schema": {
             "$ref": "#/backend/entities/Molecule"
           },
-          "description": "Stores molecules created by a specific user. Access is restricted to the owner of the molecule.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "moleculeId",
-              "description": "The unique ID of the molecule."
-            }
-          ]
+          "description": "Stores molecules created by a specific user. Access is restricted to the owner of the molecule."
         }
       },
       {
@@ -162,17 +214,7 @@
           "schema": {
             "$ref": "#/backend/entities/ProteinTarget"
           },
-          "description": "Stores protein target data uploaded by a specific user.  Access is restricted to the owner.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "proteinTargetId",
-              "description": "The unique ID of the protein target."
-            }
-          ]
+          "description": "Stores protein target data uploaded by a specific user. Access is restricted to the owner."
         }
       },
       {
@@ -182,20 +224,9 @@
           "schema": {
             "$ref": "#/backend/entities/DockingSimulation"
           },
-          "description": "Stores docking simulation data performed by a specific user. Access is restricted to the owner.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "dockingSimulationId",
-              "description": "The unique ID of the docking simulation."
-            }
-          ]
+          "description": "Stores docking simulation data performed by a specific user. Access is restricted to the owner."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the QuantumDock application.  The core principle is to avoid using `get()` calls in security rules by denormalizing authorization data and structuring collections to enforce homogeneous security postures. Path-based ownership is used for user-specific data. \n\n1.  **`/users/{userId}`:** Stores user-specific data.  Authorization is based solely on `request.auth.uid == userId`, ensuring that users can only access their own data. No denormalization needed as the path itself provides ownership context.\n\n2.  **`/users/{userId}/molecules/{moleculeId}`:** Each user owns their molecules. Authorization is directly derived from the path (`request.auth.uid == userId`).\n\n3.  **`/users/{userId}/proteinTargets/{proteinTargetId}`:**  Each user owns their protein targets. Authorization is directly derived from the path (`request.auth.uid == userId`).\n\n4.  **`/users/{userId}/dockingSimulations/{dockingSimulationId}`:** Each user owns their docking simulations. Authorization is directly derived from the path (`request.auth.uid == userId`).\n\nThis structure achieves Authorization Independence because access control can be determined solely from the `request.auth.uid` and the document path. The use of path-based ownership eliminates the need for `get()` calls in security rules.  The design also supports QAPs (Rules are not Filters) because `list` operations can be securely performed based on the path ownership."
+    ]
   }
 }

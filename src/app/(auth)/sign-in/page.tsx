@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword, User } from 'firebase/auth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const {
     register,
@@ -36,15 +38,43 @@ export default function SignInPage() {
     resolver: zodResolver(signInSchema),
   });
 
+  const handleSuccessfulLogin = async (user: User) => {
+    // Create a login history record
+    if (user && firestore) {
+      try {
+        await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
+          userId: user.uid,
+          loginTime: serverTimestamp(),
+          status: 'active',
+        });
+      } catch (error) {
+        console.error("Failed to write login history", error);
+        // Don't block login if history write fails
+      }
+    }
+    
+    toast({
+      title: 'Sign In Successful',
+      description: "Welcome back! You're being redirected to your dashboard.",
+    });
+
+    router.push('/dashboard');
+  };
+
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+    if (!auth) {
       toast({
-        title: 'Sign In Successful',
-        description: "Welcome back! You're being redirected to your dashboard.",
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description: 'Authentication service is not available. Please try again later.',
       });
-      router.push('/dashboard');
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast({

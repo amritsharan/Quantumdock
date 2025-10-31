@@ -1,8 +1,9 @@
 'use client';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { useAuth, useUser, useFirestore } from '@/firebase';
+import { signOut, User } from 'firebase/auth';
+import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardLayout({
   children,
@@ -22,14 +24,59 @@ export default function DashboardLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
+    if (!user || !firestore) {
+      // If for some reason we don't have a user or firestore, just sign out locally
+      await signOut(auth);
+      router.push('/sign-in');
+      return;
+    }
+
+    try {
+      // Find the most recent active session to update it
+      const historyQuery = query(
+        collection(firestore, 'users', user.uid, 'loginHistory'),
+        where('status', '==', 'active'),
+        orderBy('loginTime', 'desc'),
+        limit(1)
+      );
+
+      const querySnapshot = await getDocs(historyQuery);
+      if (!querySnapshot.empty) {
+        const activeSessionDoc = querySnapshot.docs[0];
+        const loginTime = activeSessionDoc.data().loginTime?.toDate();
+        const logoutTime = new Date();
+        const duration = loginTime ? Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)) : 0;
+        
+        await updateDoc(activeSessionDoc.ref, {
+          status: 'inactive',
+          logoutTime: serverTimestamp(),
+          duration: duration, // store duration in minutes
+        });
+      }
+    } catch (error) {
+      console.error('Error updating login history on sign out:', error);
+      // Do not block sign-out if history update fails
+    }
+
     try {
       await signOut(auth);
+      toast({
+        title: 'Signed Out',
+        description: 'You have been successfully signed out.',
+      });
       router.push('/sign-in');
     } catch (error) {
       console.error('Error signing out: ', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign Out Failed',
+        description: 'An error occurred while signing out. Please try again.',
+      });
     }
   };
 
@@ -55,6 +102,9 @@ export default function DashboardLayout({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/history">Login History</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

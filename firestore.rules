@@ -12,16 +12,6 @@
  * - /users/{userId}/molecules/{moleculeId}: Molecules owned by the user.
  * - /users/{userId}/proteinTargets/{proteinTargetId}: Protein targets owned by the user.
  * - /users/{userId}/dockingSimulations/{dockingSimulationId}: Docking simulations owned by the user.
- *
- * Key Security Decisions:
- * - No user listing is allowed.
- * - All data is private to the owner (authenticated user).
- * - No shared access or roles are implemented in this initial version.
- *
- * Denormalization for Authorization:
- * The data structure itself denormalizes the user ID into the path, eliminating the need
- * for get() calls or document-level ownership fields. The path /users/{userId}/...
- * inherently implies ownership by the user with the ID {userId}.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -96,6 +86,18 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
       allow list: if isOwner(userId);
+    }
+    
+    /**
+     * @description Rule for login history under a user's profile.
+     * @path /users/{userId}/loginHistory/{historyId}
+     * @allow (create, list) Signed-in user can create and view their own login history.
+     * @allow (update) Signed-in user can update their own login history (e.g., to set logout time).
+     * @principle Enforces strict ownership for login history data.
+     */
+    match /users/{userId}/loginHistory/{historyId} {
+        allow create, list, update: if isOwner(userId);
+        allow get, delete: if false;
     }
 
     /**
