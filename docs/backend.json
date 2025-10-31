@@ -1,21 +1,6 @@
 
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's public profile information.",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" },
-        "photoURL": { "type": "string", "format": "uri" },
-        "firstName": { "type": "string" },
-        "lastName": { "type": "string" },
-        "phoneNumber": { "type": "string" }
-      },
-      "required": ["uid", "email"]
-    },
     "Molecule": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Molecule",
@@ -114,23 +99,10 @@
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": []
   },
   "firestore": {
     "structure": [
-       {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user profile information."
-        }
-      },
       {
         "path": "/molecules/{moleculeId}",
         "definition": {
@@ -138,7 +110,7 @@
           "schema": {
             "$ref": "#/backend/entities/Molecule"
           },
-          "description": "Stores molecule data. Access is granted to any authenticated user."
+          "description": "Stores molecule data."
         }
       },
       {
@@ -148,7 +120,7 @@
           "schema": {
             "$ref": "#/backend/entities/TargetProtein"
           },
-          "description": "Stores target protein data. Access is granted to any authenticated user."
+          "description": "Stores target protein data."
         }
       },
       {
@@ -158,7 +130,7 @@
           "schema": {
             "$ref": "#/backend/entities/DockingResult"
           },
-          "description": "Stores docking result data. Access is granted to any authenticated user."
+          "description": "Stores docking result data."
         }
       }
     ]
