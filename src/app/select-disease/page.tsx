@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const diseaseOptions = [
   "Alzheimer's Disease", "Amyotrophic Lateral Sclerosis (ALS)", "Ankylosing Spondylitis", "Asthma",
@@ -203,9 +204,30 @@ function SelectDiseaseContent() {
   );
 }
 
+const LoadingSkeleton = () => (
+    <div className="flex min-h-screen w-full flex-col bg-background">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-7 w-40" />
+        </div>
+        <Skeleton className="h-9 w-44" />
+      </header>
+      <main className="flex flex-1 justify-center p-4 md:p-6">
+        <div className="w-full max-w-4xl space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          <Skeleton className="h-[70vh] w-full" />
+        </div>
+      </main>
+    </div>
+  );
+
 export default function SelectDiseasePage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LoadingSkeleton />}>
             <SelectDiseaseContent />
         </Suspense>
     )
