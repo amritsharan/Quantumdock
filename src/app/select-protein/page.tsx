@@ -14,6 +14,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { proteins as proteinOptions } from '@/lib/proteins';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -132,7 +133,6 @@ function SelectProteinContent() {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                suppressHydrationWarning
               />
               <ScrollArea className="h-[50vh] rounded-md border">
                   <Table>
@@ -143,7 +143,6 @@ function SelectProteinContent() {
                                 checked={isAllOnPageSelected}
                                 onCheckedChange={handleSelectAllOnPage}
                                 aria-label="Select all on page"
-                                suppressHydrationWarning
                             />
                         </TableHead>
                         <TableHead>Name</TableHead>
@@ -158,7 +157,6 @@ function SelectProteinContent() {
                                 checked={selectedProteins.has(protein.name)}
                                 onCheckedChange={(checked) => handleSelect(protein.name, checked)}
                                 id={protein.name}
-                                suppressHydrationWarning
                                 />
                           </TableCell>
                           <TableCell>
@@ -205,10 +203,31 @@ function SelectProteinContent() {
   );
 }
 
+const LoadingSkeleton = () => (
+  <div className="flex min-h-screen w-full flex-col bg-background">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-8 w-8" />
+        <Skeleton className="h-7 w-40" />
+      </div>
+      <Skeleton className="h-9 w-44" />
+    </header>
+    <main className="flex flex-1 justify-center p-4 md:p-6">
+      <div className="w-full max-w-4xl space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <Skeleton className="h-[70vh] w-full" />
+      </div>
+    </main>
+  </div>
+);
+
 
 export default function SelectProteinPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LoadingSkeleton />}>
             <SelectProteinContent />
         </Suspense>
     )
