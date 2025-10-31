@@ -90,12 +90,12 @@ export default function SignInPage() {
 
   return (
     <>
-      <div className="flex flex-col items-center gap-4 mb-6">
-        <QuantumDockLogo className="h-14 w-14 text-primary" />
-        <h1 className="text-3xl font-semibold tracking-tight">QuantumDock</h1>
-      </div>
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="text-center">
+            <div className="flex flex-col items-center gap-4 mb-4">
+                <QuantumDockLogo className="h-14 w-14 text-primary" />
+                <h1 className="text-3xl font-semibold tracking-tight">QuantumDock</h1>
+            </div>
           <CardTitle className="text-2xl">Sign In</CardTitle>
           <CardDescription>
             Enter your credentials to access your dashboard.
