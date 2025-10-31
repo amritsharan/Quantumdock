@@ -32,19 +32,19 @@
     }
   ],
   "compositeIndexes": [
-    [
-      {
-        "collectionGroup": "loginHistory",
-        "queryScope": "COLLECTION"
-      },
-      {
-        "fieldPath": "status",
-        "order": "ASCENDING"
-      },
-      {
-        "fieldPath": "loginTime",
-        "order": "DESCENDING"
-      }
-    ]
+    {
+      "collectionGroup": "loginHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "loginTime",
+          "order": "DESCENDING"
+        }
+      ]
+    }
   ]
 }
