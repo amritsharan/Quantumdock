@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, formatDistanceToNow, addMinutes } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -49,23 +49,15 @@ export default function HistoryPage() {
   const formattedHistory = useMemo(() => {
     return history?.map((item) => {
       const loginDate = item.loginTime ? new Date(item.loginTime.seconds * 1000) : null;
+      const logoutDate = item.logoutTime ? new Date(item.logoutTime.seconds * 1000) : null;
       
-      let logoutDate;
       let durationDisplay;
 
       if (item.status === 'active' && loginDate) {
         durationDisplay = calculateActiveDuration(loginDate);
-        logoutDate = null; // No logout time for active sessions
-      } else if (loginDate && item.duration !== undefined) {
-        logoutDate = addMinutes(loginDate, item.duration);
+      } else if (item.duration !== undefined) {
         durationDisplay = `${item.duration} minute(s)`;
-      } else if (item.logoutTime) {
-        // Fallback for any records that might still have logoutTime but not duration
-        logoutDate = new Date(item.logoutTime.seconds * 1000);
-        durationDisplay = item.duration ? `${item.duration} minute(s)` : 'N/A';
-      }
-      else {
-        logoutDate = null;
+      } else {
         durationDisplay = 'N/A';
       }
 

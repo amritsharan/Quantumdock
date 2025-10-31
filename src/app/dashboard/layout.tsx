@@ -49,7 +49,6 @@ export default function DashboardLayout({
       const querySnapshot = await getDocs(historyQuery);
       if (!querySnapshot.empty) {
         const activeSessionDoc = querySnapshot.docs[0];
-        // Firestore timestamps need to be converted to JS Dates
         const loginTime = activeSessionDoc.data().loginTime?.toDate();
         const logoutTime = new Date();
         const duration = loginTime ? Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)) : 0;
