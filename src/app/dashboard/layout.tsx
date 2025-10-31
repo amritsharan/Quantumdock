@@ -29,13 +29,14 @@ export default function DashboardLayout({
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    if (!user || !firestore) {
-      // If for some reason we don't have a user or firestore, just sign out locally
-      await signOut(auth);
-      router.push('/sign-in');
-      return;
+    if (!user || !auth || !firestore) {
+        if (auth) {
+            await signOut(auth);
+        }
+        router.push('/sign-in');
+        return;
     }
-
+  
     try {
       // Find the most recent active session to update it
       const historyQuery = query(
@@ -48,6 +49,7 @@ export default function DashboardLayout({
       const querySnapshot = await getDocs(historyQuery);
       if (!querySnapshot.empty) {
         const activeSessionDoc = querySnapshot.docs[0];
+        // Firestore timestamps need to be converted to JS Dates
         const loginTime = activeSessionDoc.data().loginTime?.toDate();
         const logoutTime = new Date();
         const duration = loginTime ? Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)) : 0;
@@ -55,12 +57,12 @@ export default function DashboardLayout({
         await updateDoc(activeSessionDoc.ref, {
           status: 'inactive',
           logoutTime: serverTimestamp(),
-          duration: duration, // store duration in minutes
+          duration: duration,
         });
       }
     } catch (error) {
       console.error('Error updating login history on sign out:', error);
-      // Do not block sign-out if history update fails
+      // Non-blocking: Do not prevent sign-out if history fails to update
     }
 
     try {
