@@ -68,41 +68,23 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
-    if (smilesParam) {
-      try {
-        const smilesArray = JSON.parse(smilesParam);
-        form.setValue('smiles', smilesArray);
-      } catch (e) {
-        console.error("Failed to parse smiles from URL", e);
-      }
-    }
-    
     const diseasesParam = searchParams.get('diseases');
-    if (diseasesParam) {
-      try {
-        const diseasesArray = JSON.parse(diseasesParam);
-        form.setValue('diseaseKeywords', diseasesArray);
-      } catch (e) {
-        console.error("Failed to parse diseases from URL", e);
-      }
-    }
-    
     const proteinsParam = searchParams.get('proteins');
-    if (proteinsParam) {
-       try {
-        const proteinsArray = JSON.parse(proteinsParam);
-        form.setValue('proteinTargets', proteinsArray);
-      } catch (e) {
-        console.error("Failed to parse proteins from URL", e);
-      }
-    }
+    const proteinParam = searchParams.get('protein'); // Legacy
+
+    const smiles = smilesParam ? JSON.parse(smilesParam) : [];
+    const diseases = diseasesParam ? JSON.parse(diseasesParam) : [];
+    let proteins = proteinsParam ? JSON.parse(proteinsParam) : [];
     
-    // Handle legacy single protein param
-    const proteinParam = searchParams.get('protein');
-    if (proteinParam && !proteinsParam) {
-      form.setValue('proteinTargets', [proteinParam]);
+    if(proteinParam && !proteinsParam) {
+      proteins.push(proteinParam);
     }
 
+    form.reset({
+      smiles,
+      diseaseKeywords: diseases,
+      proteinTargets: proteins,
+    });
   }, [searchParams, form]);
 
 
