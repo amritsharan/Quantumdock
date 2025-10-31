@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const signInSchema = z.object({
@@ -41,6 +42,7 @@ export default function SignInPage() {
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
+  const [hydrated, setHydrated] = useState(false);
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -52,6 +54,11 @@ export default function SignInPage() {
   } = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
   });
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
 
   const handleSuccessfulLogin = async (user: User) => {
     // Create a login history record
@@ -105,7 +112,7 @@ export default function SignInPage() {
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        setAlertTitle('Authentication Failed');
+        setAlertTitle("Authentication Failed");
         setAlertDescription("The user isn't found with this credential. please create the account.");
         setShowErrorAlert(true);
       } else {
@@ -118,6 +125,33 @@ export default function SignInPage() {
       setIsLoading(false);
     }
   };
+
+  if (!hydrated) {
+    return (
+        <Card className="w-full max-w-sm">
+            <CardHeader className="text-center">
+                <div className="flex flex-col items-center gap-4 mb-4">
+                    <Skeleton className="h-14 w-14 rounded-full" />
+                    <Skeleton className="h-8 w-40" />
+                </div>
+                <Skeleton className="h-7 w-24 mx-auto" />
+                <Skeleton className="h-5 w-64 mx-auto" />
+            </CardHeader>
+            <CardContent className="grid gap-4">
+                <div className="grid gap-2">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-2">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-5 w-48 mx-auto" />
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <>
