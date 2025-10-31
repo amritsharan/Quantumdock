@@ -13,9 +13,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, User } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, limit, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -89,6 +90,10 @@ export default function SignInPage() {
 
   return (
     <>
+      <div className="flex flex-col items-center gap-4 mb-6">
+        <QuantumDockLogo className="h-14 w-14 text-primary" />
+        <h1 className="text-3xl font-semibold tracking-tight">QuantumDock</h1>
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Sign In</CardTitle>
