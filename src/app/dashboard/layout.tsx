@@ -1,8 +1,9 @@
 'use client';
+import { useState } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
 import { useAuth, useUser, useFirestore } from '@/firebase';
-import { signOut, User } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
@@ -16,6 +17,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Toaster } from '@/components/ui/toaster';
+
 
 export default function DashboardLayout({
   children,
@@ -27,6 +39,9 @@ export default function DashboardLayout({
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [showSignOutError, setShowSignOutError] = useState(false);
+  const [signOutError, setSignOutError] = useState('');
+
 
   const handleSignOut = async () => {
     if (!user || !auth || !firestore) {
@@ -38,7 +53,6 @@ export default function DashboardLayout({
     }
   
     try {
-      // Find the most recent active session to update it
       const historyQuery = query(
         collection(firestore, 'users', user.uid, 'loginHistory'),
         where('status', '==', 'active'),
@@ -50,21 +64,23 @@ export default function DashboardLayout({
       if (!querySnapshot.empty) {
         const activeSessionDoc = querySnapshot.docs[0];
         const loginTimeData = activeSessionDoc.data().loginTime;
-        // Ensure loginTimeData is not null and has a toDate method
-        const loginTime = loginTimeData?.toDate ? loginTimeData.toDate() : null;
+        const loginTime = loginTimeData?.toDate ? loginTimeData.toDate() : new Date(); // Fallback to now
         
         const logoutTime = new Date();
-        const duration = loginTime ? Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)) : 0;
+        const duration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // in minutes
         
         await updateDoc(activeSessionDoc.ref, {
           status: 'inactive',
           logoutTime: serverTimestamp(),
-          duration: duration,
+          duration: duration > 0 ? duration : 0,
         });
       }
-    } catch (error) {
-      console.error('Error updating login history on sign out:', error);
-      // Non-blocking: Do not prevent sign-out if history fails to update
+    } catch (error: any) {
+        console.error('Error updating login history on sign out:', error);
+        setSignOutError(error.message || 'An unknown error occurred while updating your session.');
+        setShowSignOutError(true);
+        // Do not proceed with sign out if history update fails, to ensure data consistency
+        return;
     }
 
     try {
@@ -120,6 +136,24 @@ export default function DashboardLayout({
         </div>
       </header>
       {children}
+      <Toaster />
+
+      <AlertDialog open={showSignOutError} onOpenChange={setShowSignOutError}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign-Out Error</AlertDialogTitle>
+            <AlertDialogDescription>
+              There was a problem updating your session history. Please try signing out again.
+              <br /><br />
+              <strong className='text-destructive'>Error details:</strong> {signOutError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSignOutError(false)}>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
