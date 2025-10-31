@@ -136,7 +136,7 @@ export default function HistoryPage() {
                     <TableCell>{item.logoutTimeFormatted}</TableCell>
                     <TableCell>{item.calculatedDuration}</TableCell>
                     <TableCell>
-                      <Badge variant={item.status === 'active' ? 'default' : 'secondary'} className={item.status === 'active' ? 'bg-green-500' : ''}>
+                      <Badge variant={item.status === 'active' ? 'default' : 'destructive'} className={item.status === 'active' ? 'bg-green-500' : ''}>
                         {item.status}
                       </Badge>
                     </TableCell>
