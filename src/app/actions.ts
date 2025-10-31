@@ -3,7 +3,6 @@
 
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
-import { z } from 'zod';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 
 // Helper function for retrying promises with exponential backoff
@@ -14,17 +13,14 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
       return await fn();
     } catch (error: any) {
       lastError = error;
-      // Check for specific 503 error to retry
       if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded'))) {
         console.log(`Attempt ${i + 1} failed. Retrying in ${delay}ms...`);
-        await new Promise(res => setTimeout(res, delay * (i + 1))); // Incremental delay
+        await new Promise(res => setTimeout(res, delay * (i + 1)));
       } else {
-        // Don't retry on other errors
         break;
       }
     }
   }
-  // If all retries fail, throw a more specific error
   if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded'))) {
       throw new Error("The AI model is currently overloaded. Please try the simulation again in a few moments.");
   }
@@ -33,7 +29,7 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
 
 export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
-  const allResults: DockingResults[] = [];
+  const predictionPromises: Promise<DockingResults>[] = [];
 
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
@@ -45,28 +41,44 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
         proteinTargetName: protein,
       };
 
-      try {
-        const predictionResult = await retryPromise(() => predictBindingAffinities(predictionInput));
-
-        if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
-          throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
-        }
-
-        allResults.push({
-          ...predictionResult,
-          moleculeSmiles: smile,
-          proteinTarget: protein,
+      const promise = retryPromise(() => predictBindingAffinities(predictionInput))
+        .then(predictionResult => {
+          if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
+            throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
+          }
+          return {
+            ...predictionResult,
+            moleculeSmiles: smile,
+            proteinTarget: protein,
+          };
         });
-
-      } catch (error) {
-          console.error(`Error processing combination: ${smile} + ${protein}. Error:`, error);
-          // Re-throw the specific error to be displayed on the client
-          throw error;
-      }
+      
+      predictionPromises.push(promise);
     }
   }
+  
+  const results = await Promise.allSettled(predictionPromises);
 
-  return allResults;
+  const successfulResults: DockingResults[] = [];
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      successfulResults.push(result.value);
+    } else {
+        const smile = validatedData.smiles[Math.floor(index / validatedData.proteinTargets.length)];
+        const protein = validatedData.proteinTargets[index % validatedData.proteinTargets.length];
+        console.error(`Error processing combination: ${smile} + ${protein}. Error:`, result.reason);
+    }
+  });
+
+  if (successfulResults.length === 0 && results.length > 0) {
+      const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
+      if (firstError) {
+        throw firstError.reason;
+      }
+      throw new Error("All docking simulations failed. Please check the server logs for more details.");
+  }
+
+  return successfulResults;
 }
 
 export async function getProteinSuggestions(keywords: string[]): Promise<string[]> {
