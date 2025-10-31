@@ -108,7 +108,7 @@ export default function SignInPage() {
     } catch (error: any) {
       console.error('Sign in error:', error);
        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        setAlertTitle('User Not Found');
+        setAlertTitle('Authentication Failed');
         setAlertDescription("The user isn't found with this credential. please create the account.");
         setShowErrorAlert(true);
       } else {
