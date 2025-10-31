@@ -104,12 +104,12 @@ export default function SignInPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
-      console.error('Sign in error:', error);
-       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         setAlertTitle('Authentication Failed');
         setAlertDescription("The user isn't found with this credential. please create the account.");
         setShowErrorAlert(true);
       } else {
+        console.error('Sign in error:', error);
         setAlertTitle('Sign In Failed');
         setAlertDescription(error.message || 'An unexpected error occurred. Please try again.');
         setShowErrorAlert(true);
