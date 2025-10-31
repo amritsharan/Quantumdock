@@ -78,19 +78,10 @@ export default function AdminSignInPage() {
         });
         return;
     }
-    
-    // The password will be verified by Firebase Authentication
-    // We only need to check the email after a successful sign-in
-    if (email !== 'amritsr2005@gmail.com') {
-         toast({
-            variant: "destructive",
-            title: "Sign-in Failed",
-            description: "This email is not registered as an administrator.",
-         });
-         return;
-    }
 
     try {
+      // The password will be verified by Firebase Authentication.
+      // We only need to check the email AFTER a successful sign-in.
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
