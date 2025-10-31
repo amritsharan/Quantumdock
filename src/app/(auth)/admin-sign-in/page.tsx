@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useAuth, useDatabase } from '@/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
-import { ref, get, set, push } from "firebase/database";
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, collection, addDoc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -18,11 +18,11 @@ export default function AdminSignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
-  const db = useDatabase();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSuccessfulLogin = (userCredential: UserCredential) => {
+  const handleSuccessfulLogin = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     if (!user) return;
     
@@ -33,38 +33,37 @@ export default function AdminSignInPage() {
             title: "Access Denied",
             description: "You are not authorized to access the admin panel.",
         });
-        if(auth) signOut(auth);
+        if(auth) await signOut(auth);
         return;
     }
     
     // Immediately redirect to make the UI feel responsive
     router.push('/dashboard');
     
-    if (db) {
-      const userRef = ref(db, 'users/' + user.uid);
-      const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+    if (firestore) {
+      const userRef = doc(firestore, 'users', user.uid);
+      const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
 
-      push(loginHistoryRef, {
+      await addDoc(loginHistoryRef, {
         loginTime: Date.now(),
         logoutTime: null,
       }).catch(error => {
           console.error("Error recording login event:", error);
       });
 
-      get(userRef).then((snapshot) => {
-        if (!snapshot.exists()) {
-          set(userRef, {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            isAdmin: true,
-            role: 'admin',
-          }).catch(error => {
-            console.error("Error creating admin user profile:", error);
-          });
-        }
-      });
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          isAdmin: true,
+          role: 'admin',
+        }).catch(error => {
+          console.error("Error creating admin user profile:", error);
+        });
+      }
     }
   };
 
@@ -78,7 +77,7 @@ export default function AdminSignInPage() {
     }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      handleSuccessfulLogin(userCredential);
+      await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -99,7 +98,7 @@ export default function AdminSignInPage() {
     const provider = new GoogleAuthProvider();
     try {
       const userCredential = await signInWithPopup(auth, provider);
-      handleSuccessfulLogin(userCredential);
+      await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",

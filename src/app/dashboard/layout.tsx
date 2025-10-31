@@ -2,9 +2,9 @@
 'use client';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useDatabase, useUser } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { ref, query, orderByChild, limitToLast, get, update, equalTo } from 'firebase/database';
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, limit, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -32,21 +32,21 @@ export default function DashboardLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
-  const db = useDatabase();
+  const firestore = useFirestore();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (user && db) {
-      const userProfileRef = ref(db, 'users/' + user.uid);
-      get(userProfileRef).then(snapshot => {
+    if (user && firestore) {
+      const userProfileRef = doc(firestore, 'users', user.uid);
+      getDoc(userProfileRef).then(snapshot => {
         if (snapshot.exists()) {
-          const profile = snapshot.val() as UserProfile;
+          const profile = snapshot.data() as UserProfile;
           setIsAdmin(profile.isAdmin || false);
         }
       });
     }
-  }, [user, db]);
+  }, [user, firestore]);
 
 
   const handleSignOut = async () => {
@@ -57,24 +57,22 @@ export default function DashboardLayout({
     router.push('/sign-in');
 
     // Perform database operations in the background
-    if (!auth || !user || !db) {
+    if (!auth || !user || !firestore) {
         return;
     };
     
-    // Find the last login event that is still active (no logoutTime) and update it.
-    const userLoginHistoryRef = ref(db, 'loginHistory/' + user.uid);
-    // Correctly query for the session where logoutTime is null.
-    const activeSessionQuery = query(userLoginHistoryRef, orderByChild('logoutTime'), equalTo(null), limitToLast(1));
+    const userLoginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
+    const activeSessionQuery = query(
+      userLoginHistoryRef, 
+      where('logoutTime', '==', null),
+      orderBy('loginTime', 'desc'),
+      limit(1)
+    );
     
-    get(activeSessionQuery).then((snapshot) => {
-      if (snapshot.exists()) {
-        snapshot.forEach((childSnapshot) => {
-          const lastLoginKey = childSnapshot.key;
-          if (lastLoginKey) {
-            const eventRef = ref(db, `loginHistory/${user.uid}/${lastLoginKey}`);
-            update(eventRef, { logoutTime: Date.now() });
-          }
-        });
+    getDocs(activeSessionQuery).then((snapshot) => {
+      if (!snapshot.empty) {
+        const lastLoginDoc = snapshot.docs[0];
+        updateDoc(lastLoginDoc.ref, { logoutTime: Date.now() });
       }
     }).catch(error => {
       console.error("Error updating logout time:", error);

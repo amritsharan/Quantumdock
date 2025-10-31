@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useAuth, useDatabase } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
-import { ref, get, set, push } from "firebase/database";
+import { doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -18,44 +18,43 @@ export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
-  const db = useDatabase();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSuccessfulLogin = (userCredential: UserCredential) => {
+  const handleSuccessfulLogin = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     
     // Immediately redirect to make the UI feel responsive
     router.push('/dashboard');
     
-    if (user && db) {
-      const userRef = ref(db, 'users/' + user.uid);
-      const loginHistoryRef = ref(db, 'loginHistory/' + user.uid);
+    if (user && firestore) {
+      const userRef = doc(firestore, 'users', user.uid);
+      const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
 
       // 1. Record the login event reliably
-      push(loginHistoryRef, {
+      await addDoc(loginHistoryRef, {
         loginTime: Date.now(),
         logoutTime: null,
       }).catch(error => {
           console.error("Error recording login event:", error);
       });
 
-      // 2. Check for and create user profile if it doesn't exist. This is the single source of truth for profile creation.
-      get(userRef).then((snapshot) => {
-        if (!snapshot.exists()) {
-          const isAdmin = user.email === 'amritsr2005@gmail.com';
-          set(userRef, {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            isAdmin: isAdmin,
-            role: isAdmin ? 'admin' : 'user',
-          }).catch(error => {
-            console.error("Error creating user profile in Realtime Database:", error);
-          });
-        }
-      });
+      // 2. Check for and create user profile if it doesn't exist.
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        const isAdmin = user.email === 'amritsr2005@gmail.com';
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          isAdmin: isAdmin,
+          role: isAdmin ? 'admin' : 'user',
+        }).catch(error => {
+          console.error("Error creating user profile in Firestore:", error);
+        });
+      }
     }
   };
 
@@ -70,7 +69,7 @@ export default function SignInPage() {
     }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      handleSuccessfulLogin(userCredential);
+      await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -92,7 +91,7 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
       const userCredential = await signInWithPopup(auth, provider);
-      handleSuccessfulLogin(userCredential);
+      await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -149,4 +148,3 @@ export default function SignInPage() {
     </div>
   );
 }
-

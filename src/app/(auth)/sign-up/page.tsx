@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useAuth, useDatabase } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, UserCredential, updateProfile } from 'firebase/auth';
-import { ref, get, set } from "firebase/database";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -20,46 +20,40 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
-  const db = useDatabase();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSuccessfulSignUp = (userCredential: UserCredential) => {
+  const handleSuccessfulSignUp = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     if (user) {
       const displayName = `${firstName} ${lastName}`.trim();
       
-      // Only update the Firebase Auth profile here. The database profile will be created
-      // by the centralized logic in the sign-in page after the redirect.
-      updateProfile(user, { displayName }).catch(error => {
+      await updateProfile(user, { displayName }).catch(error => {
         console.error("Error updating Firebase Auth profile:", error);
       });
 
-      // Also create the user profile in the database immediately
-      // to ensure all data is present before redirection.
-      if (db) {
-        const userRef = ref(db, 'users/' + user.uid);
+      if (firestore) {
+        const userRef = doc(firestore, 'users', user.uid);
         const isAdmin = user.email === 'amritsr2005@gmail.com';
-        get(userRef).then((snapshot) => {
-          if (!snapshot.exists()) {
-             set(userRef, {
-                uid: user.uid,
-                email: user.email,
-                displayName: displayName,
-                photoURL: user.photoURL,
-                firstName: firstName,
-                lastName: lastName,
-                phoneNumber: phoneNumber,
-                role: isAdmin ? 'admin' : 'user',
-                isAdmin: isAdmin,
-              }).catch(error => {
-                console.error("Error creating user profile in Realtime Database:", error);
-              });
-          }
-        })
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) {
+           await setDoc(userRef, {
+              uid: user.uid,
+              email: user.email,
+              displayName: displayName,
+              photoURL: user.photoURL,
+              firstName: firstName,
+              lastName: lastName,
+              phoneNumber: phoneNumber,
+              role: isAdmin ? 'admin' : 'user',
+              isAdmin: isAdmin,
+            }).catch(error => {
+              console.error("Error creating user profile in Firestore:", error);
+            });
+        }
       }
     }
-    // The redirect will trigger the login flow, which handles history and profile checks.
     router.push('/dashboard');
   };
 
@@ -67,7 +61,7 @@ export default function SignUpPage() {
     if (!auth) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      handleSuccessfulSignUp(userCredential);
+      await handleSuccessfulSignUp(userCredential);
     } catch (error: any) {
        toast({
         variant: "destructive",
@@ -83,28 +77,26 @@ export default function SignUpPage() {
     try {
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
-      if (user && db) {
-        const userRef = ref(db, 'users/' + user.uid);
-        // On first Google sign-in, check if profile exists before creating it.
-        get(userRef).then((snapshot) => {
-            if (!snapshot.exists()) {
-                const nameParts = user.displayName?.split(' ') || [];
-                const isAdmin = user.email === 'amritsr2005@gmail.com';
-                set(userRef, {
-                    uid: user.uid,
-                    email: user.email,
-                    displayName: user.displayName,
-                    photoURL: user.photoURL,
-                    firstName: nameParts[0] || '',
-                    lastName: nameParts.slice(1).join(' ') || '',
-                    phoneNumber: user.phoneNumber || '',
-                    role: isAdmin ? 'admin' : 'user',
-                    isAdmin: isAdmin,
-                }).catch(error => {
-                    console.error("Error creating user profile via Google Sign-Up:", error);
-                });
-            }
-        });
+      if (user && firestore) {
+        const userRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) {
+            const nameParts = user.displayName?.split(' ') || [];
+            const isAdmin = user.email === 'amritsr2005@gmail.com';
+            await setDoc(userRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                firstName: nameParts[0] || '',
+                lastName: nameParts.slice(1).join(' ') || '',
+                phoneNumber: user.phoneNumber || '',
+                role: isAdmin ? 'admin' : 'user',
+                isAdmin: isAdmin,
+            }).catch(error => {
+                console.error("Error creating user profile via Google Sign-Up:", error);
+            });
+        }
       }
       router.push('/dashboard');
     } catch (error: any) {

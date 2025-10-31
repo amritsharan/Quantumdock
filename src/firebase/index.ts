@@ -5,10 +5,8 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getDatabase } from 'firebase/database';
 import {
   useAuth,
-  useDatabase,
   useFirebase,
   useFirebaseApp,
   useFirestore,
@@ -50,7 +48,6 @@ export function getSdks(firebaseApp: FirebaseApp) {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore: getFirestore(firebaseApp),
-    database: getDatabase(firebaseApp),
   };
 }
 
@@ -65,7 +62,6 @@ export * from './error-emitter';
 // Re-export the specific hooks to avoid circular dependency issues
 export {
   useAuth,
-  useDatabase,
   useFirebase,
   useFirebaseApp,
   useFirestore,

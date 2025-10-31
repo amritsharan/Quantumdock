@@ -2,19 +2,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser, useDatabase } from '@/firebase';
-import { ref, query, onValue, get, orderByChild, limitToLast } from 'firebase/database';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collectionGroup, query, orderBy, limit, getDocs, collection } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { doc, getDoc } from 'firebase/firestore';
 
 type LoginEvent = {
   id: string;
   loginTime: number;
   logoutTime?: number;
   userEmail?: string;
+  userId?: string;
 };
 
 type UserProfile = {
@@ -26,13 +28,13 @@ const MAX_HISTORY_ITEMS = 50;
 
 export default function HistoryPage() {
   const { user, isUserLoading: isUserAuthLoading } = useUser();
-  const db = useDatabase();
+  const firestore = useFirestore();
   const [history, setHistory] = useState<LoginEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
-    if (isUserAuthLoading || !db) {
+    if (isUserAuthLoading || !firestore) {
       return; // Wait for auth and db to be ready
     }
 
@@ -42,82 +44,67 @@ export default function HistoryPage() {
       return;
     }
 
-    const userProfileRef = ref(db, 'users/' + user.uid);
-    let unsubscribe: () => void = () => {};
+    const userProfileRef = doc(firestore, 'users', user.uid);
 
-    get(userProfileRef).then(snapshot => {
-      const profile = (snapshot.exists() ? snapshot.val() : {}) as UserProfile;
+    getDoc(userProfileRef).then(async (userDoc) => {
+      const profile = (userDoc.exists() ? userDoc.data() : {}) as UserProfile;
       const userIsAdmin = profile.isAdmin || false;
       setIsAdmin(userIsAdmin);
 
       if (userIsAdmin) {
         // --- Admin Data Fetching ---
-        const loginHistoryRef = ref(db, 'loginHistory');
+        const loginHistoryQuery = query(
+          collectionGroup(firestore, 'loginHistory'), 
+          orderBy('loginTime', 'desc'), 
+          limit(MAX_HISTORY_ITEMS)
+        );
         
-        // Listen for real-time updates on the entire history node for admins
-        unsubscribe = onValue(loginHistoryRef, async (historySnapshot) => {
-          if (!historySnapshot.exists()) {
-            setHistory([]);
-            setIsLoading(false);
-            return;
+        const historySnapshot = await getDocs(loginHistoryQuery);
+
+        const usersCache = new Map<string, string>();
+        const allHistory: LoginEvent[] = [];
+
+        for (const historyDoc of historySnapshot.docs) {
+          const eventData = historyDoc.data();
+          const userId = historyDoc.ref.parent.parent?.id; // Get userId from path 'users/{userId}/loginHistory/{docId}'
+
+          if (!userId) continue;
+
+          let userEmail = usersCache.get(userId);
+          if (!userEmail) {
+            const userRef = doc(firestore, 'users', userId);
+            const fetchedUserDoc = await getDoc(userRef);
+            if (fetchedUserDoc.exists()) {
+              userEmail = fetchedUserDoc.data().email || 'Unknown';
+              usersCache.set(userId, userEmail);
+            } else {
+              userEmail = 'Unknown';
+            }
           }
-          
-          const usersSnapshot = await get(ref(db, 'users'));
-          const usersData = usersSnapshot.val() || {};
-          const allHistory: LoginEvent[] = [];
 
-          historySnapshot.forEach(userHistorySnapshot => {
-            const userId = userHistorySnapshot.key;
-            const userEmail = usersData[userId]?.email || 'Unknown';
-            const events = userHistorySnapshot.val();
-            
-            // Get the last 50 events for each user
-            const userEvents = Object.keys(events).map(key => ({
-              id: `${userId}-${key}`,
-              ...events[key],
-              userEmail: userEmail,
-            })).sort((a, b) => b.loginTime - a.loginTime).slice(0, MAX_HISTORY_ITEMS);
-            
-            allHistory.push(...userEvents);
+          allHistory.push({
+            id: historyDoc.id,
+            loginTime: eventData.loginTime,
+            logoutTime: eventData.logoutTime,
+            userEmail: userEmail,
+            userId: userId,
           });
-
-          // Sort the combined history from all users
-          setHistory(allHistory.sort((a, b) => b.loginTime - a.loginTime));
-          setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching all user history:", error);
-            setIsLoading(false);
-        });
+        }
+        
+        setHistory(allHistory);
+        setIsLoading(false);
 
       } else {
-        // --- Single User Data Fetching ---
-        // Query for the last 50 login events for the current user
-        const historyQuery = query(ref(db, 'loginHistory/' + user.uid), orderByChild('loginTime'), limitToLast(MAX_HISTORY_ITEMS));
-        
-        unsubscribe = onValue(historyQuery, (snapshot) => {
-          const data = snapshot.val();
-          if (data) {
-            const events: LoginEvent[] = Object.keys(data).map(key => ({
-              id: key,
-              ...data[key],
-            })).sort((a, b) => b.loginTime - a.loginTime); // Sort descending
-            setHistory(events);
-          } else {
-            setHistory([]);
-          }
-          setIsLoading(false);
-        }, (error) => {
-          console.error("Error fetching login history:", error);
-          setIsLoading(false);
-        });
+         // Non-admins don't see history for now
+         setHistory([]);
+         setIsLoading(false);
       }
+    }).catch(error => {
+        console.error("Error fetching user profile or history:", error);
+        setIsLoading(false);
     });
 
-    // Cleanup function for onValue listener
-    return () => {
-      unsubscribe();
-    };
-  }, [user, db, isUserAuthLoading]);
+  }, [user, firestore, isUserAuthLoading]);
   
   const toDate = (timestamp: number) => new Date(timestamp);
   
@@ -139,7 +126,7 @@ export default function HistoryPage() {
           <CardDescription>
             {isAdmin 
               ? `Showing the last ${MAX_HISTORY_ITEMS} login events for all users.` 
-              : `Here is a list of your last ${MAX_HISTORY_ITEMS} login and logout times.`
+              : 'Login history is available for administrators.'
             }
           </CardDescription>
         </CardHeader>
@@ -165,7 +152,7 @@ export default function HistoryPage() {
                 ))}
               </TableBody>
             </Table>
-          ) : history.length > 0 ? (
+          ) : history.length > 0 && isAdmin ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -196,7 +183,7 @@ export default function HistoryPage() {
             </Table>
           ) : (
             <div className="text-center text-muted-foreground py-12">
-              No login history found.
+              {isAdmin ? 'No login history found.' : 'You do not have permission to view login history.'}
             </div>
           )}
         </CardContent>
