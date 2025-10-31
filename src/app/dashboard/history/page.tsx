@@ -9,6 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 type LoginHistory = {
   loginTime: { seconds: number; nanoseconds: number };
@@ -77,11 +80,19 @@ export default function HistoryPage() {
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-10">
       <Card>
-        <CardHeader>
-          <CardTitle>Login History</CardTitle>
-          <CardDescription>
-            Here is a record of your recent login activity.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <div className="space-y-1.5">
+                <CardTitle>Login History</CardTitle>
+                <CardDescription>
+                    Here is a record of your recent login activity.
+                </CardDescription>
+            </div>
+            <Button asChild variant="outline">
+                <Link href="/dashboard">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Dashboard
+                </Link>
+            </Button>
         </CardHeader>
         <CardContent>
           <Table>
