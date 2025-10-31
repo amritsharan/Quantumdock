@@ -1,110 +1,87 @@
-
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "type": "object",
-      "description": "Represents a user's profile.",
-      "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The user's unique ID from Firebase Auth."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the user profile was created."
-        }
-      },
-      "required": ["uid", "email", "createdAt"]
-    },
     "Molecule": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Molecule",
       "type": "object",
-      "description": "Represents a molecule structure.",
+      "description": "Represents a molecule used in docking simulations.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the molecule."
         },
+        "name": {
+          "type": "string",
+          "description": "Name of the molecule."
+        },
         "smiles": {
           "type": "string",
           "description": "SMILES string representation of the molecule."
         },
-        "pdbFile": {
+        "pdbData": {
           "type": "string",
-          "description": "File path or content of the PDB file for the molecule, if available."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the molecule."
-        }
-      },
-      "required": [
-        "id"
-      ]
-    },
-    "TargetProtein": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TargetProtein",
-      "type": "object",
-      "description": "Represents a biological target protein.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the target protein."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the target protein."
-        },
-        "sequence": {
-          "type": "string",
-          "description": "Amino acid sequence of the target protein."
-        },
-        "pdbFile": {
-          "type": "string",
-          "description": "File path or content of the PDB file for the target protein."
+          "description": "PDB file data of the molecule (optional)."
         }
       },
       "required": [
         "id",
-        "name"
+        "name",
+        "smiles"
       ]
     },
-    "DockingResult": {
+    "ProteinTarget": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DockingResult",
+      "title": "ProteinTarget",
       "type": "object",
-      "description": "Represents the result of a molecular docking simulation.",
+      "description": "Represents a biological target (protein) for docking simulations.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the docking result."
+          "description": "Unique identifier for the protein target."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the protein target."
+        },
+        "pdbData": {
+          "type": "string",
+          "description": "PDB file data of the protein target."
+        },
+        "sequence": {
+          "type": "string",
+          "description": "Amino acid sequence of the protein target."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "pdbData",
+        "sequence"
+      ]
+    },
+    "DockingSimulation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DockingSimulation",
+      "type": "object",
+      "description": "Represents a docking simulation between a molecule and a protein target.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the docking simulation."
         },
         "moleculeId": {
           "type": "string",
-          "description": "Reference to the Molecule. (Relationship: Molecule 1:N DockingResult)"
+          "description": "Reference to Molecule. (Relationship: Molecule 1:N DockingSimulation)"
         },
-        "targetProteinId": {
+        "proteinTargetId": {
           "type": "string",
-          "description": "Reference to the TargetProtein. (Relationship: TargetProtein 1:N DockingResult)"
+          "description": "Reference to ProteinTarget. (Relationship: ProteinTarget 1:N DockingSimulation)"
         },
         "classicalDockingScore": {
           "type": "number",
-          "description": "Score from classical molecular docking (e.g., AutoDock)."
+          "description": "Score from classical molecular docking."
         },
-        "quantumRefinementScore": {
+        "quantumRefinedScore": {
           "type": "number",
           "description": "Score after quantum refinement with VQE/QAOA."
         },
@@ -112,45 +89,113 @@
           "type": "number",
           "description": "Predicted binding affinity based on quantum-refined energies."
         },
-        "poseFile": {
+        "dockedPoseData": {
           "type": "string",
-          "description": "File path or content of the pose file (e.g., PDB) representing the docked complex."
+          "description": "Data representing the docked pose of the molecule and target."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the docking simulation was performed.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "moleculeId",
-        "targetProteinId"
+        "proteinTargetId",
+        "classicalDockingScore",
+        "quantumRefinedScore",
+        "bindingAffinity",
+        "dockedPoseData",
+        "timestamp"
       ]
     }
   },
   "auth": {
-    "providers": ["password"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/UserProfile"
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "user",
+          "schema": {
+            "$ref": "#/backend/entities/user"
+          },
+          "description": "Stores user profiles.  Access is restricted to the user themselves.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            }
+          ]
+        }
       },
-      "description": "Stores user profile information."
-    },
-    "/molecules/{moleculeId}": {
-      "schema": {
-        "$ref": "#/entities/Molecule"
+      {
+        "path": "/users/{userId}/molecules/{moleculeId}",
+        "definition": {
+          "entityName": "Molecule",
+          "schema": {
+            "$ref": "#/backend/entities/Molecule"
+          },
+          "description": "Stores molecules created by a specific user. Access is restricted to the owner of the molecule.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            },
+            {
+              "name": "moleculeId",
+              "description": "The unique ID of the molecule."
+            }
+          ]
+        }
       },
-      "description": "Stores molecule data."
-    },
-    "/target_proteins/{targetProteinId}": {
-      "schema": {
-        "$ref": "#/entities/TargetProtein"
+      {
+        "path": "/users/{userId}/proteinTargets/{proteinTargetId}",
+        "definition": {
+          "entityName": "ProteinTarget",
+          "schema": {
+            "$ref": "#/backend/entities/ProteinTarget"
+          },
+          "description": "Stores protein target data uploaded by a specific user.  Access is restricted to the owner.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            },
+            {
+              "name": "proteinTargetId",
+              "description": "The unique ID of the protein target."
+            }
+          ]
+        }
       },
-      "description": "Stores target protein data."
-    },
-    "/docking_results/{dockingResultId}": {
-      "schema": {
-        "$ref": "#/entities/DockingResult"
-      },
-      "description": "Stores docking result data."
-    }
+      {
+        "path": "/users/{userId}/dockingSimulations/{dockingSimulationId}",
+        "definition": {
+          "entityName": "DockingSimulation",
+          "schema": {
+            "$ref": "#/backend/entities/DockingSimulation"
+          },
+          "description": "Stores docking simulation data performed by a specific user. Access is restricted to the owner.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            },
+            {
+              "name": "dockingSimulationId",
+              "description": "The unique ID of the docking simulation."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the QuantumDock application.  The core principle is to avoid using `get()` calls in security rules by denormalizing authorization data and structuring collections to enforce homogeneous security postures. Path-based ownership is used for user-specific data. \n\n1.  **`/users/{userId}`:** Stores user-specific data.  Authorization is based solely on `request.auth.uid == userId`, ensuring that users can only access their own data. No denormalization needed as the path itself provides ownership context.\n\n2.  **`/users/{userId}/molecules/{moleculeId}`:** Each user owns their molecules. Authorization is directly derived from the path (`request.auth.uid == userId`).\n\n3.  **`/users/{userId}/proteinTargets/{proteinTargetId}`:**  Each user owns their protein targets. Authorization is directly derived from the path (`request.auth.uid == userId`).\n\n4.  **`/users/{userId}/dockingSimulations/{dockingSimulationId}`:** Each user owns their docking simulations. Authorization is directly derived from the path (`request.auth.uid == userId`).\n\nThis structure achieves Authorization Independence because access control can be determined solely from the `request.auth.uid` and the document path. The use of path-based ownership eliminates the need for `get()` calls in security rules.  The design also supports QAPs (Rules are not Filters) because `list` operations can be securely performed based on the path ownership."
   }
 }
