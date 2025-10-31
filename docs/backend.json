@@ -1,6 +1,32 @@
 
 {
   "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "type": "object",
+      "description": "Represents a user's profile.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique ID from Firebase Auth."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user profile was created."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
     "Molecule": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Molecule",
@@ -99,40 +125,32 @@
     }
   },
   "auth": {
-    "providers": []
+    "providers": ["password"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/molecules/{moleculeId}",
-        "definition": {
-          "entityName": "Molecule",
-          "schema": {
-            "$ref": "#/backend/entities/Molecule"
-          },
-          "description": "Stores molecule data."
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
       },
-      {
-        "path": "/target_proteins/{targetProteinId}",
-        "definition": {
-          "entityName": "TargetProtein",
-          "schema": {
-            "$ref": "#/backend/entities/TargetProtein"
-          },
-          "description": "Stores target protein data."
-        }
+      "description": "Stores user profile information."
+    },
+    "/molecules/{moleculeId}": {
+      "schema": {
+        "$ref": "#/entities/Molecule"
       },
-      {
-        "path": "/docking_results/{dockingResultId}",
-        "definition": {
-          "entityName": "DockingResult",
-          "schema": {
-            "$ref": "#/backend/entities/DockingResult"
-          },
-          "description": "Stores docking result data."
-        }
-      }
-    ]
+      "description": "Stores molecule data."
+    },
+    "/target_proteins/{targetProteinId}": {
+      "schema": {
+        "$ref": "#/entities/TargetProtein"
+      },
+      "description": "Stores target protein data."
+    },
+    "/docking_results/{dockingResultId}": {
+      "schema": {
+        "$ref": "#/entities/DockingResult"
+      },
+      "description": "Stores docking result data."
+    }
   }
 }

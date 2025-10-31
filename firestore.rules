@@ -1,119 +1,25 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Enforces user-ownership for user profiles.
-     * @path /users/{userId}
-     * @allow (create) User with uid 'user123' can create their own profile.
-     * @allow (get) User with uid 'user123' can read their own profile.
-     * @allow (update) User with uid 'user123' can update their own profile.
-     * @allow (delete) User with uid 'user123' can delete their own profile.
-     * @deny (create) User with uid 'user123' cannot create a profile with userId 'otherUser'.
-     * @deny (get) User with uid 'user123' cannot read the profile of userId 'otherUser'.
-     * @principle Enforces document ownership for writes.
-     */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-          return request.auth != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId) && isSignedIn();
-      allow delete: if isOwner(userId) && isSignedIn();
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
-    /**
-     * @description Enforces user-ownership for login history.
-     * @path /users/{userId}/loginHistory/{loginHistoryId}
-     * @allow (create) User with uid 'user123' can create login history for their profile.
-     * @allow (get) User with uid 'user123' can read login history for their profile.
-     * @allow (update) User with uid 'user123' can update login history for their profile.
-     * @allow (delete) User with uid 'user123' can delete login history for their profile.
-     * @deny (create) User with uid 'user123' cannot create login history for userId 'otherUser'.
-     * @deny (get) User with uid 'user123' cannot read login history of userId 'otherUser'.
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId}/loginHistory/{loginHistoryId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-          return request.auth != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // Listing login history is generally not useful and could be a privacy concern.
-      allow create: if isOwner(userId) && isSignedIn();
-      allow update: if isOwner(userId) && isSignedIn();
-      allow delete: if isOwner(userId) && isSignedIn();
-    }
-
-    /**
-     * @description Allows public read and authenticated write access to molecules.
-     * @path /molecules/{moleculeId}
-     * @allow (get) Any user can read molecule data.
-     * @allow (list) Any user can list molecule data.
-     * @allow (create) Authenticated user can create molecule data.
-     * @deny (create) Unauthenticated user cannot create molecule data.
-     * @principle Public read, authenticated writes.
-     */
     match /molecules/{moleculeId} {
-        function isSignedIn() {
-          return request.auth != null;
-        }
-        allow get: if true;
-        allow list: if true;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn();
-        allow delete: if isSignedIn();
+      allow read, list: if true;
+      allow create, update, delete: if request.auth != null;
     }
 
-    /**
-     * @description Allows public read and authenticated write access to target proteins.
-     * @path /target_proteins/{targetProteinId}
-     * @allow (get) Any user can read target protein data.
-     * @allow (list) Any user can list target protein data.
-     * @allow (create) Authenticated user can create target protein data.
-     * @deny (create) Unauthenticated user cannot create target protein data.
-     * @principle Public read, authenticated writes.
-     */
     match /target_proteins/{targetProteinId} {
-        function isSignedIn() {
-          return request.auth != null;
-        }
-        allow get: if true;
-        allow list: if true;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn();
-        allow delete: if isSignedIn();
+      allow read, list: if true;
+      allow create, update, delete: if request.auth != null;
     }
 
-    /**
-     * @description Allows public read and authenticated write access to docking results.
-     * @path /docking_results/{dockingResultId}
-     * @allow (get) Any user can read docking result data.
-     * @allow (list) Any user can list docking result data.
-     * @allow (create) Authenticated user can create docking result data.
-     * @deny (create) Unauthenticated user cannot create docking result data.
-     * @principle Public read, authenticated writes.
-     */
     match /docking_results/{dockingResultId} {
-        function isSignedIn() {
-          return request.auth != null;
-        }
-        allow get: if true;
-        allow list: if true;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn();
-        allow delete: if isSignedIn();
+      allow read, list: if true;
+      allow create, update, delete: if request.auth != null;
     }
   }
 }
