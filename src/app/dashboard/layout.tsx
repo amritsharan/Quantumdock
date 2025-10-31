@@ -49,7 +49,10 @@ export default function DashboardLayout({
       const querySnapshot = await getDocs(historyQuery);
       if (!querySnapshot.empty) {
         const activeSessionDoc = querySnapshot.docs[0];
-        const loginTime = activeSessionDoc.data().loginTime?.toDate();
+        const loginTimeData = activeSessionDoc.data().loginTime;
+        // Ensure loginTimeData is not null and has a toDate method
+        const loginTime = loginTimeData?.toDate ? loginTimeData.toDate() : null;
+        
         const logoutTime = new Date();
         const duration = loginTime ? Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)) : 0;
         
