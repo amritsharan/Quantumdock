@@ -26,7 +26,7 @@ export default function AdminSignInPage() {
     const user = userCredential.user;
     if (!user) return;
     
-    // Check if the user is an admin
+    // Check if the user is the specific admin
     if (user.email !== 'amritsr2005@gmail.com') {
         toast({
             variant: "destructive",
@@ -38,7 +38,7 @@ export default function AdminSignInPage() {
     }
     
     // Immediately redirect to make the UI feel responsive
-    router.push('/dashboard');
+    router.push('/welcome-admin');
     
     if (firestore) {
       const userRef = doc(firestore, 'users', user.uid);
@@ -56,13 +56,16 @@ export default function AdminSignInPage() {
         await setDoc(userRef, {
           uid: user.uid,
           email: user.email,
-          displayName: user.displayName,
+          displayName: user.displayName || 'Admin',
           photoURL: user.photoURL,
           isAdmin: true,
           role: 'admin',
-        }).catch(error => {
-          console.error("Error creating admin user profile:", error);
+        }, { merge: true }).catch(error => {
+          console.error("Error creating/updating admin user profile:", error);
         });
+      } else {
+        // Ensure isAdmin is set even if profile exists
+        await setDoc(userRef, { isAdmin: true, role: 'admin' }, { merge: true });
       }
     }
   };
@@ -75,6 +78,18 @@ export default function AdminSignInPage() {
         });
         return;
     }
+    
+    // The password will be verified by Firebase Authentication
+    // We only need to check the email after a successful sign-in
+    if (email !== 'amritsr2005@gmail.com') {
+         toast({
+            variant: "destructive",
+            title: "Sign-in Failed",
+            description: "This email is not registered as an administrator.",
+         });
+         return;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleSuccessfulLogin(userCredential);
@@ -82,7 +97,7 @@ export default function AdminSignInPage() {
       toast({
         variant: "destructive",
         title: "Sign-in Failed",
-        description: error.message,
+        description: "Invalid credentials. Please check your email and password.",
       });
     }
   };
