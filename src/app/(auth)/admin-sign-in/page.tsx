@@ -27,24 +27,21 @@ export default function AdminSignInPage() {
     if (!user) return;
     
     // Check if the user is the specific admin
-    if (user.email !== 'amritsr2005@gmail.com') {
-        toast({
-            variant: "destructive",
-            title: "Access Denied",
-            description: "You are not authorized to access the admin panel.",
+    if (user.email === 'amritsr2005@gmail.com') {
+      router.push('/welcome-admin');
+    } else {
+       toast({
+            title: "Redirecting",
+            description: "This is the admin sign-in page. Redirecting you to the user dashboard.",
         });
-        if(auth) await signOut(auth);
-        return;
+      router.push('/dashboard');
     }
-    
-    // Immediately redirect to make the UI feel responsive
-    router.push('/welcome-admin');
     
     if (firestore) {
       const userRef = doc(firestore, 'users', user.uid);
       const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
 
-      await addDoc(loginHistoryRef, {
+      addDoc(loginHistoryRef, {
         loginTime: Date.now(),
         logoutTime: null,
       }).catch(error => {
@@ -80,8 +77,6 @@ export default function AdminSignInPage() {
     }
 
     try {
-      // The password will be verified by Firebase Authentication.
-      // We only need to check the email AFTER a successful sign-in.
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleSuccessfulLogin(userCredential);
     } catch (error: any) {
@@ -125,18 +120,18 @@ export default function AdminSignInPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="admin@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} suppressHydrationWarning />
+            <Input id="email" type="email" placeholder="admin@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="space-y-2">
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
             </div>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} suppressHydrationWarning />
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button onClick={handleSignIn} className="w-full" suppressHydrationWarning>
+          <Button onClick={handleSignIn} className="w-full">
             Sign In as Admin
           </Button>
-          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" suppressHydrationWarning>
+          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
             Sign in with Google
           </Button>
         </CardContent>

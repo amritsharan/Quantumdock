@@ -25,15 +25,19 @@ export default function SignInPage() {
   const handleSuccessfulLogin = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     
-    // Immediately redirect to make the UI feel responsive
-    router.push('/dashboard');
+    // Immediately redirect based on role
+    if (user && user.email === 'amritsr2005@gmail.com') {
+        router.push('/welcome-admin');
+    } else {
+        router.push('/dashboard');
+    }
     
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
       const loginHistoryRef = collection(firestore, 'users', user.uid, 'loginHistory');
 
       // 1. Record the login event reliably
-      await addDoc(loginHistoryRef, {
+      addDoc(loginHistoryRef, {
         loginTime: Date.now(),
         logoutTime: null,
       }).catch(error => {
@@ -44,7 +48,7 @@ export default function SignInPage() {
       const userDoc = await getDoc(userRef);
       if (!userDoc.exists()) {
         const isAdmin = user.email === 'amritsr2005@gmail.com';
-        await setDoc(userRef, {
+        setDoc(userRef, {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
@@ -74,7 +78,7 @@ export default function SignInPage() {
       toast({
         variant: "destructive",
         title: "Sign-in Failed",
-        description: error.message,
+        description: "Invalid credentials. Please check your email and password.",
       });
     }
   };
@@ -112,7 +116,7 @@ export default function SignInPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} suppressHydrationWarning />
+            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="space-y-2">
             <div className="flex items-center">
@@ -121,12 +125,12 @@ export default function SignInPage() {
                 Forgot your password?
               </Link>
             </div>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} suppressHydrationWarning />
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button onClick={handleSignIn} className="w-full" suppressHydrationWarning>
+          <Button onClick={handleSignIn} className="w-full">
             Sign In
           </Button>
-          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" suppressHydrationWarning>
+          <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
             Sign in with Google
           </Button>
         </CardContent>

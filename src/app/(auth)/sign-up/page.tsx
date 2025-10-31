@@ -60,9 +60,7 @@ export default function SignUpPage() {
         description: "Your account has been created successfully.",
     });
 
-    setTimeout(() => {
-        router.push('/sign-in');
-    }, 2000); // Wait 2 seconds before redirecting
+    router.push('/sign-in');
   };
 
   const handleSignUp = async () => {
@@ -119,9 +117,7 @@ export default function SignUpPage() {
           description: "Your account has been created successfully.",
       });
 
-      setTimeout(() => {
-          router.push('/sign-in');
-      }, 2000);
+      router.push('/sign-in');
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
             toast({
