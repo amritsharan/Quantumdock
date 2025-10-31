@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 
 const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -55,6 +56,16 @@ export default function SignUpPage() {
 
   const onSubmit = async (data: SignUpFormValues) => {
     setIsLoading(true);
+    if (!auth || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: 'Authentication service not available.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
@@ -95,7 +106,11 @@ export default function SignUpPage() {
   return (
     <>
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="text-center">
+          <div className="flex flex-col items-center gap-4 mb-4">
+                <QuantumDockLogo className="h-14 w-14 text-primary" />
+                <h1 className="text-3xl font-semibold tracking-tight">QuantumDock</h1>
+            </div>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
             Create an account to get started.
