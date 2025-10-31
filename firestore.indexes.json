@@ -1,19 +1,50 @@
 
 {
-  "indexes": [
+  "indexes": [],
+  "fieldOverrides": [
     {
       "collectionGroup": "loginHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
+      "fieldPath": "loginTime",
+      "indexes": [
         {
-          "fieldPath": "status",
-          "order": "ASCENDING"
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
         },
         {
-          "fieldPath": "loginTime",
-          "order": "DESCENDING"
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "loginHistory",
+      "fieldPath": "status",
+      "indexes": [
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
         }
       ]
     }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "collectionGroup": "loginHistory",
+        "queryScope": "COLLECTION"
+      },
+      {
+        "fieldPath": "status",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "loginTime",
+        "order": "DESCENDING"
+      }
+    ]
   ]
 }
