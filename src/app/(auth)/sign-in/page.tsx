@@ -94,11 +94,9 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
     if (!auth) {
-      toast({
-        variant: 'destructive',
-        title: 'Sign In Failed',
-        description: 'Authentication service is not available. Please try again later.',
-      });
+      setAlertTitle('Sign In Failed');
+      setAlertDescription('Authentication service is not available. Please try again later.');
+      setShowErrorAlert(true);
       setIsLoading(false);
       return;
     }
@@ -112,11 +110,9 @@ export default function SignInPage() {
         setAlertDescription("The user isn't found with this credential. please create the account.");
         setShowErrorAlert(true);
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Sign In Failed',
-          description: error.message || 'An unexpected error occurred. Please try again.',
-        });
+        setAlertTitle('Sign In Failed');
+        setAlertDescription(error.message || 'An unexpected error occurred. Please try again.');
+        setShowErrorAlert(true);
       }
     } finally {
       setIsLoading(false);
