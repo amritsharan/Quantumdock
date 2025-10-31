@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ const diseaseOptions = [
 
 const ITEMS_PER_PAGE = 10;
 
-export default function SelectDiseasePage() {
+function SelectDiseaseContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,7 +138,6 @@ export default function SelectDiseasePage() {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              suppressHydrationWarning
             />
             <ScrollArea className="h-[50vh] rounded-md border">
               <Table>
@@ -149,7 +148,6 @@ export default function SelectDiseasePage() {
                         checked={isAllOnPageSelected}
                         onCheckedChange={handleSelectAllOnPage}
                         aria-label="Select all on page"
-                        suppressHydrationWarning
                       />
                     </TableHead>
                     <TableHead>Disease Name</TableHead>
@@ -162,7 +160,6 @@ export default function SelectDiseasePage() {
                         <Checkbox
                           checked={selectedDiseases.has(disease)}
                           onCheckedChange={(checked) => handleSelect(disease, checked)}
-                          suppressHydrationWarning
                         />
                       </TableCell>
                       <TableCell className="font-medium">{disease}</TableCell>
@@ -204,4 +201,12 @@ export default function SelectDiseasePage() {
       </main>
     </div>
   );
+}
+
+export default function SelectDiseasePage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SelectDiseaseContent />
+        </Suspense>
+    )
 }

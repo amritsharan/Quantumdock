@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { molecules, type Molecule } from '@/lib/molecules';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import Image from 'next/image';
 
 const ITEMS_PER_PAGE = 10;
 
-export default function SelectMoleculePage() {
+function SelectMoleculeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,7 +128,6 @@ export default function SelectMoleculePage() {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1); // Reset to first page on new search
               }}
-              suppressHydrationWarning
             />
             <ScrollArea className="h-[50vh] rounded-md border">
               <Table>
@@ -139,7 +138,6 @@ export default function SelectMoleculePage() {
                         checked={isAllOnPageSelected}
                         onCheckedChange={handleSelectAllOnPage}
                         aria-label="Select all on page"
-                        suppressHydrationWarning
                       />
                     </TableHead>
                     <TableHead>Name</TableHead>
@@ -154,7 +152,6 @@ export default function SelectMoleculePage() {
                         <Checkbox
                           checked={selectedSmiles.has(molecule.smiles)}
                           onCheckedChange={(checked) => handleSelect(molecule.smiles, checked)}
-                          suppressHydrationWarning
                         />
 
                       </TableCell>
@@ -208,4 +205,13 @@ export default function SelectMoleculePage() {
       </main>
     </div>
   );
+}
+
+
+export default function SelectMoleculePage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SelectMoleculeContent />
+        </Suspense>
+    )
 }
