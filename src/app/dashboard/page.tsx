@@ -181,8 +181,8 @@ export default function DashboardPage() {
               <CardContent className="grid gap-6">
                 <div className="min-h-[400px] lg:min-h-[500px] relative">
                     <MoleculeViewer 
-                    isDocked={isDocked} 
-                    selectedSmiles={selectedSmiles}
+                      isDocked={isDocked} 
+                      selectedSmiles={selectedSmiles}
                     />
                     {(step === 'classical' || step === 'predicting') && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
@@ -194,6 +194,23 @@ export default function DashboardPage() {
                     </div>
                     )}
                 </div>
+                
+                {isDocked && (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm text-muted-foreground">Molecular Weight</p>
+                      <p className="text-2xl font-bold">489.4 g/mol</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm text-muted-foreground">H-Bond Donors</p>
+                      <p className="text-2xl font-bold">5</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm text-muted-foreground">H-Bond Acceptors</p>
+                      <p className="text-2xl font-bold">8</p>
+                    </div>
+                  </div>
+                )}
 
                 {results && step === 'done' && (
                   <div>
