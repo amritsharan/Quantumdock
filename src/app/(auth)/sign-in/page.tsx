@@ -115,6 +115,18 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
     setIsUserNotFound(false);
+
+    // Hardcoded user check
+    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
+        toast({
+            title: 'Sign In Successful',
+            description: "Welcome back! You're being redirected to your dashboard.",
+        });
+        router.push('/dashboard');
+        setIsLoading(false);
+        return;
+    }
+
     if (!auth) {
       setAlertTitle('Sign In Failed');
       setAlertDescription('Authentication service is not available. Please try again later.');
