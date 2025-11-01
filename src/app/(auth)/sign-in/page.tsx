@@ -14,9 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit } from 'firebase/firestore';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import {
   AlertDialog,
@@ -47,6 +47,7 @@ export default function SignInPage() {
   const [alertDescription, setAlertDescription] = useState('');
   const [errorType, setErrorType] = useState<'user-not-found' | 'wrong-password' | 'generic'>('generic');
   const [hydrated, setHydrated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -77,14 +78,7 @@ export default function SignInPage() {
         }, { merge: true });
       }
 
-      // Create the new active session first
-      const newSessionRef = await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
-        userId: user.uid,
-        loginTime: serverTimestamp(),
-        status: 'active',
-      });
-      
-      // Then, query for any OTHER active sessions and deactivate them.
+      // Query for any OTHER active sessions and deactivate them first.
       const historyQuery = query(
           collection(firestore, "users", user.uid, "loginHistory"),
           where("status", "==", "active"),
@@ -92,15 +86,21 @@ export default function SignInPage() {
       );
 
       const querySnapshot = await getDocs(historyQuery);
-      for (const doc of querySnapshot.docs) {
-          // Make sure we don't deactivate the session we just created
-          if (doc.id !== newSessionRef.id) {
-              updateDocumentNonBlocking(doc.ref, {
-                  status: 'inactive',
-                  logoutTime: serverTimestamp()
-              });
-          }
+      
+      // Deactivate all old active sessions.
+      for (const sessionDoc of querySnapshot.docs) {
+          updateDocumentNonBlocking(sessionDoc.ref, {
+              status: 'inactive',
+              logoutTime: serverTimestamp()
+          });
       }
+
+      // After deactivating old ones, create the new active session.
+      await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
+        userId: user.uid,
+        loginTime: serverTimestamp(),
+        status: 'active',
+      });
     }
     
     toast({
@@ -120,54 +120,6 @@ export default function SignInPage() {
       setShowErrorAlert(true);
       setIsLoading(false);
       return;
-    }
-
-    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-            await handleSuccessfulLogin(userCredential.user);
-        } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
-                try {
-                    const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-                    await handleSuccessfulLogin(newUserCredential.user);
-                } catch (creationError: any) {
-                    console.error('Special user creation error:', creationError);
-                    if (creationError.code === 'auth/email-already-in-use') {
-                        // This case can happen in a race condition or if logic is faulty.
-                        // We assume the user exists and try to sign them in again.
-                        try {
-                            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-                            await handleSuccessfulLogin(userCredential.user);
-                        } catch (signInError: any) {
-                            setAlertTitle('Sign In Failed');
-                            setAlertDescription(signInError.message || 'Could not sign in special user after creation attempt.');
-                            setErrorType('generic');
-                            setShowErrorAlert(true);
-                        }
-                    } else {
-                        setAlertTitle('Sign In Failed');
-                        setAlertDescription(creationError.message || 'Could not create special user account.');
-                        setErrorType('generic');
-                        setShowErrorAlert(true);
-                    }
-                }
-            } else if (error.code === 'auth/invalid-credential') {
-                setAlertTitle("Authentication Failed");
-                setAlertDescription("Invalid credentials. Please check your email and password and try again.");
-                setErrorType('wrong-password');
-                setShowErrorAlert(true);
-            } else {
-                 console.error('Special user sign in error:', error);
-                 setAlertTitle('Sign In Failed');
-                 setAlertDescription(error.message || 'An unexpected error occurred.');
-                 setErrorType('generic');
-                 setShowErrorAlert(true);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-        return;
     }
 
     try {
@@ -281,7 +233,22 @@ export default function SignInPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register('password')} />
+               <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password')}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
@@ -346,5 +313,3 @@ export default function SignInPage() {
     </>
   );
 }
-
-    
