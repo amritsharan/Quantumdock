@@ -1,10 +1,11 @@
+
 'use client';
 import { useState } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -27,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Toaster } from '@/components/ui/toaster';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 export default function DashboardLayout({
@@ -66,28 +68,28 @@ export default function DashboardLayout({
       const querySnapshot = await getDocs(historyQuery);
       if (!querySnapshot.empty) {
         const activeSessionDoc = querySnapshot.docs[0];
-        const loginTimeData = activeSessionDoc.data().loginTime;
+        const loginTimeData = activeSessionDoc.data().loginTime as Timestamp | undefined;
         
-        if (loginTimeData) {
-            const loginTime = loginTimeData.toDate ? loginTimeData.toDate() : new Date(loginTimeData.seconds * 1000);
+        let duration = 0;
+        if (loginTimeData && typeof loginTimeData.toDate === 'function') {
+            const loginTime = loginTimeData.toDate();
             const logoutTime = new Date();
-            const duration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // in minutes
-            
-            await updateDoc(activeSessionDoc.ref, {
-              status: 'inactive',
-              logoutTime: serverTimestamp(),
-              duration: duration > 0 ? duration : 0,
-            });
-        } else {
-             await updateDoc(activeSessionDoc.ref, {
-              status: 'inactive',
-              logoutTime: serverTimestamp(),
-              duration: 0,
-            });
+            const calculatedDuration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // in minutes
+            duration = calculatedDuration > 0 ? calculatedDuration : 0;
         }
+        
+        const updateData = {
+          status: 'inactive',
+          logoutTime: serverTimestamp(),
+          duration: duration,
+        };
+
+        // Use the non-blocking update function with contextual error handling
+        updateDocumentNonBlocking(activeSessionDoc.ref, updateData);
       }
     } catch (error: any) {
-        console.error('Error updating login history on sign out:', error);
+        // This outer try/catch now only handles errors from `getDocs`
+        console.error('Error querying login history on sign out:', error);
         setSignOutError(error.message || 'An unknown error occurred while updating your session.');
         setShowSignOutError(true);
         return;
@@ -155,14 +157,4 @@ export default function DashboardLayout({
               There was a problem updating your session history. Please try signing out again.
               <br /><br />
               <strong className='text-destructive'>Error details:</strong> {signOutError}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowSignOutError(false)}>Close</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-    </div>
-  );
-}
+            </D
