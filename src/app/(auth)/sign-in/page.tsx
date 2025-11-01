@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,9 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit } from 'firebase/firestore';
+import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -66,8 +65,24 @@ export default function SignInPage() {
 
   const handleSuccessfulLogin = async (user: User) => {
     if (user && firestore) {
-       // First, create the new active session.
-       const newSessionPromise = addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
+      const historyQuery = query(
+        collection(firestore, "users", user.uid, "loginHistory"),
+        where("status", "==", "active"),
+        orderBy("loginTime", "desc")
+      );
+  
+      const querySnapshot = await getDocs(historyQuery);
+      
+      const updates = querySnapshot.docs.map(doc => 
+        updateDoc(doc.ref, {
+          status: 'inactive',
+          logoutTime: serverTimestamp()
+        })
+      );
+      await Promise.all(updates);
+  
+      // Now, create the new active session.
+      await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
         userId: user.uid,
         loginTime: serverTimestamp(),
         status: 'active',
@@ -82,26 +97,6 @@ export default function SignInPage() {
             displayName: user.displayName,
             createdAt: serverTimestamp(),
         }, { merge: true });
-      }
-
-      await newSessionPromise;
-
-      // After the new session is securely created, query for any OTHER active sessions and deactivate them.
-      const historyQuery = query(
-          collection(firestore, "users", user.uid, "loginHistory"),
-          where("status", "==", "active"),
-          orderBy("loginTime", "desc")
-      );
-
-      const querySnapshot = await getDocs(historyQuery);
-      
-      // Deactivate all old active sessions, skipping the very first result (which is the one we just created).
-      const sessionsToDeactivate = querySnapshot.docs.slice(1);
-      for (const sessionDoc of sessionsToDeactivate) {
-          updateDocumentNonBlocking(sessionDoc.ref, {
-              status: 'inactive',
-              logoutTime: serverTimestamp()
-          });
       }
     }
     
@@ -141,13 +136,19 @@ export default function SignInPage() {
                    setAlertDescription(creationError.message || 'Could not create the special user account.');
                    setShowErrorAlert(true);
                 }
-            } else {
+            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
                 // For any other sign-in error (like wrong password after creation), treat as normal.
                 console.error('Special user sign in error:', error);
                 setAlertTitle("Authentication Failed");
                 setAlertDescription("Invalid credentials for the special user. Please check and try again.");
                 setErrorType('wrong-password');
                 setShowErrorAlert(true);
+            } else {
+                 console.error('An unexpected error occurred for special user:', error);
+                 setAlertTitle('Sign In Failed');
+                 setAlertDescription(error.message || 'An unexpected error occurred.');
+                 setErrorType('generic');
+                 setShowErrorAlert(true);
             }
         } finally {
             setIsLoading(false);
@@ -347,5 +348,3 @@ export default function SignInPage() {
     </>
   );
 }
-
-    
