@@ -142,12 +142,18 @@ export default function SignInPage() {
                    setShowErrorAlert(true);
                 }
             } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                // For any other sign-in error (like wrong password after creation), treat as normal.
-                console.error('Special user sign in error:', error);
-                setAlertTitle("Authentication Failed");
-                setAlertDescription("Invalid credentials for the special user. Please check and try again.");
-                setErrorType('wrong-password');
-                setShowErrorAlert(true);
+                // For the special user, if the password is "wrong", we still log them in
+                // as per the request, assuming the account exists.
+                if (auth.currentUser) {
+                  await handleSuccessfulLogin(auth.currentUser);
+                } else {
+                  // This case is unlikely but handles if user becomes null somehow
+                  console.error('Special user sign in error:', error);
+                  setAlertTitle("Authentication Failed");
+                  setAlertDescription("Could not verify special user. Please try again.");
+                  setErrorType('wrong-password');
+                  setShowErrorAlert(true);
+                }
             } else {
                  console.error('An unexpected error occurred for special user:', error);
                  setAlertTitle('Sign In Failed');
