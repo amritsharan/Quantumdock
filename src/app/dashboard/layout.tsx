@@ -119,7 +119,7 @@ export default function DashboardLayout({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Avatar className="h-9 w-9 cursor-pointer">
-                    <AvatarImage src={user?.photoURL ?? ''} alt="User avatar" />
+                    <AvatarImage src={user?.photoURL || undefined} alt="User avatar" />
                     <AvatarFallback>
                       {user?.email ? user.email.charAt(0).toUpperCase() : 'A'}
                     </AvatarFallback>
