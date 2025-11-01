@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup } from 'firebase/firestore';
 import { useCollection, type WithId } from '@/firebase/firestore/use-collection';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,6 +19,7 @@ type LoginHistory = {
   logoutTime?: { seconds: number; nanoseconds: number };
   status: 'active' | 'inactive';
   duration?: number;
+  userId: string;
 };
 
 const calculateActiveDuration = (loginDate: Date) => {
@@ -30,6 +31,11 @@ export default function HistoryPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [allHistory, setAllHistory] = useState<WithId<LoginHistory>[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // This is a special case for the hardcoded user
+  const userId = user ? user.uid : 'hardcoded-user-amrit';
 
   useEffect(() => {
     // Set the current time only on the client, after hydration
@@ -40,20 +46,32 @@ export default function HistoryPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const historyQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'loginHistory'),
+  useEffect(() => {
+    if (!firestore || !userId) return;
+
+    setIsLoading(true);
+    const historyQuery = query(
+      collection(firestore, 'users', userId, 'loginHistory'),
       orderBy('loginTime', 'desc')
     );
-  }, [user, firestore]);
 
-  const { data: history, isLoading } = useCollection<LoginHistory>(historyQuery);
+    const unsubscribe = onSnapshot(historyQuery, (snapshot) => {
+      const historyData = snapshot.docs.map(doc => ({ ...doc.data() as LoginHistory, id: doc.id }));
+      setAllHistory(historyData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching login history:", error);
+      setIsLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [firestore, userId]);
+
 
   const formattedHistory = useMemo(() => {
-    if (!currentTime) return null; // Don't compute until client has mounted
+    if (!currentTime || !allHistory) return null; // Don't compute until client has mounted
     
-    return history?.map((item) => {
+    return allHistory?.map((item) => {
       const loginDate = item.loginTime ? new Date(item.loginTime.seconds * 1000) : null;
       
       let logoutTimeFormatted = '—';
@@ -80,7 +98,7 @@ export default function HistoryPage() {
         calculatedDuration: durationDisplay,
       };
     });
-  }, [history, currentTime]);
+  }, [allHistory, currentTime]);
 
 
   const renderSkeleton = () => (

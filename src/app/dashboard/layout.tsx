@@ -44,17 +44,20 @@ export default function DashboardLayout({
 
 
   const handleSignOut = async () => {
-    if (!user || !auth || !firestore) {
-        if (auth) {
-            await signOut(auth);
-        }
+    // For the hardcoded user, we can't rely on the auth object,
+    // but we can check if it's the hardcoded user case by checking for lack of a real user
+    // while being on the dashboard. This is brittle. A better check would be needed in a real app.
+    const userId = user ? user.uid : 'hardcoded-user-amrit';
+
+    if (!firestore) {
+        if (auth) await signOut(auth); // Sign out if service available, even if firestore is not
         router.push('/sign-in');
         return;
     }
   
     try {
       const historyQuery = query(
-        collection(firestore, 'users', user.uid, 'loginHistory'),
+        collection(firestore, 'users', userId, 'loginHistory'),
         where('status', '==', 'active'),
         orderBy('loginTime', 'desc'),
         limit(1)
@@ -64,27 +67,37 @@ export default function DashboardLayout({
       if (!querySnapshot.empty) {
         const activeSessionDoc = querySnapshot.docs[0];
         const loginTimeData = activeSessionDoc.data().loginTime;
-        const loginTime = loginTimeData?.toDate ? loginTimeData.toDate() : new Date(); // Fallback to now
         
-        const logoutTime = new Date();
-        const duration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // in minutes
-        
-        await updateDoc(activeSessionDoc.ref, {
-          status: 'inactive',
-          logoutTime: serverTimestamp(),
-          duration: duration > 0 ? duration : 0,
-        });
+        if (loginTimeData) {
+            const loginTime = loginTimeData.toDate ? loginTimeData.toDate() : new Date(loginTimeData.seconds * 1000);
+            const logoutTime = new Date();
+            const duration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // in minutes
+            
+            await updateDoc(activeSessionDoc.ref, {
+              status: 'inactive',
+              logoutTime: serverTimestamp(),
+              duration: duration > 0 ? duration : 0,
+            });
+        } else {
+             await updateDoc(activeSessionDoc.ref, {
+              status: 'inactive',
+              logoutTime: serverTimestamp(),
+              duration: 0,
+            });
+        }
       }
     } catch (error: any) {
         console.error('Error updating login history on sign out:', error);
         setSignOutError(error.message || 'An unknown error occurred while updating your session.');
         setShowSignOutError(true);
-        // Do not proceed with sign out if history update fails, to ensure data consistency
         return;
     }
 
     try {
-      await signOut(auth);
+      // Only call signOut if the user is not the hardcoded one
+      if (user && auth) {
+        await signOut(auth);
+      }
       toast({
         title: 'Signed Out',
         description: 'You have been successfully signed out.',
@@ -109,13 +122,13 @@ export default function DashboardLayout({
         </div>
         <div className="flex items-center gap-4">
           {!isUserLoading &&
-            (user ? (
+            (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Avatar className="h-9 w-9 cursor-pointer">
-                    <AvatarImage src={user.photoURL ?? ''} alt="User avatar" />
+                    <AvatarImage src={user?.photoURL ?? ''} alt="User avatar" />
                     <AvatarFallback>
-                      {user.email ? user.email.charAt(0).toUpperCase() : '?'}
+                      {user?.email ? user.email.charAt(0).toUpperCase() : 'A'}
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
@@ -128,11 +141,7 @@ export default function DashboardLayout({
                   <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <Button asChild variant="outline">
-                <Link href="/sign-in">Sign In</Link>
-              </Button>
-            ))}
+            )}
         </div>
       </header>
       {children}

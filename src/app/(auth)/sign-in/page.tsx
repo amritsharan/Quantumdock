@@ -62,7 +62,7 @@ export default function SignInPage() {
     setHydrated(true);
   }, []);
 
-  const handleSuccessfulLogin = async (user: User) => {
+  const handleSuccessfulLogin = async (user: User | { uid: string, email: string | null, displayName: string | null }) => {
     // Create a login history record
     if (user && firestore) {
       // Check if user profile exists, if not, create it
@@ -118,11 +118,12 @@ export default function SignInPage() {
 
     // Hardcoded user check
     if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
-        toast({
-            title: 'Sign In Successful',
-            description: "Welcome back! You're being redirected to your dashboard.",
-        });
-        router.push('/dashboard');
+        const hardcodedUser = {
+          uid: 'hardcoded-user-amrit',
+          email: data.email,
+          displayName: 'Amrit Vasishta'
+        };
+        await handleSuccessfulLogin(hardcodedUser);
         setIsLoading(false);
         return;
     }
