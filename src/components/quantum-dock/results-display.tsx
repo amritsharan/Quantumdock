@@ -15,9 +15,13 @@ import {
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { molecules } from '@/lib/molecules';
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
+
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+
 
 interface ResultsDisplayProps {
   results: DockingResults[];
@@ -60,6 +64,20 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
       return 0;
     });
   }, [resultsWithNames, sortKey, sortDirection]);
+
+  const chartData = useMemo(() => {
+    return sortedResults.map(res => ({
+      name: `${res.name} + ${res.proteinTarget}`,
+      'Binding Affinity (nM)': res.bindingAffinity,
+    }));
+  }, [sortedResults]);
+
+  const chartConfig = {
+    'Binding Affinity (nM)': {
+      label: 'Binding Affinity (nM)',
+      color: 'hsl(var(--accent))',
+    },
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -180,37 +198,64 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
-      <CardContent className="grid gap-6">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                <div className="flex items-center">Molecule {getSortIcon('name')}</div>
-              </TableHead>
-              <TableHead onClick={() => handleSort('proteinTarget')} className="cursor-pointer">
-                <div className="flex items-center">Protein Target {getSortIcon('proteinTarget')}</div>
-              </TableHead>
-              <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
-                 <div className="flex items-center">Affinity (nM) {getSortIcon('bindingAffinity')}</div>
-              </TableHead>
-              <TableHead onClick={() => handleSort('confidenceScore')} className="cursor-pointer">
-                 <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
-              </TableHead>
-              <TableHead>Affinity Level</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedResults.map((result, index) => (
-              <TableRow key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-                <TableCell className="font-medium">{result.name}</TableCell>
-                <TableCell className="font-medium">{result.proteinTarget}</TableCell>
-                <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
-                <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
-                <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <CardContent className="grid gap-8">
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
+          <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
+          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+            <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
+              <CartesianGrid horizontal={false} />
+              <YAxis
+                dataKey="name"
+                type="category"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+              />
+              <XAxis dataKey="Binding Affinity (nM)" type="number" />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))" }}
+                content={<ChartTooltipContent />}
+              />
+              <Bar dataKey="Binding Affinity (nM)" radius={4} />
+            </BarChart>
+          </ChartContainer>
+        </div>
+
+        <div>
+           <h3 className="text-lg font-semibold mb-4">Detailed Results Table</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                    <div className="flex items-center">Molecule {getSortIcon('name')}</div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('proteinTarget')} className="cursor-pointer">
+                    <div className="flex items-center">Protein Target {getSortIcon('proteinTarget')}</div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
+                    <div className="flex items-center">Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('confidenceScore')} className="cursor-pointer">
+                    <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
+                  </TableHead>
+                  <TableHead>Affinity Level</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedResults.map((result, index) => (
+                  <TableRow key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+                    <TableCell className="font-medium">{result.name}</TableCell>
+                    <TableCell className="font-medium">{result.proteinTarget}</TableCell>
+                    <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
+                    <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
+                    <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+        </div>
       </CardContent>
     </Card>
   );

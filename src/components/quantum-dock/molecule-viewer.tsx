@@ -4,13 +4,14 @@
 import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { BrainCircuit } from 'lucide-react';
+import Image from 'next/image';
 
 interface MoleculeViewerProps {
   isDocked: boolean;
   selectedSmiles?: string[];
 }
 
-export function MoleculeViewer({ isDocked }: MoleculeViewerProps) {
+export function MoleculeViewer({ isDocked, selectedSmiles }: MoleculeViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number>();
 
@@ -104,14 +105,33 @@ export function MoleculeViewer({ isDocked }: MoleculeViewerProps) {
       renderer.dispose();
     };
   }, [isDocked]);
+  
+  const hasSelection = selectedSmiles && selectedSmiles.length > 0;
 
   return (
     <div ref={mountRef} className="h-full w-full">
-      {!isDocked && (
+      {!isDocked && !hasSelection && (
         <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
           <BrainCircuit className="h-24 w-24 text-muted-foreground" />
           <p className="text-center text-muted-foreground">
-            The 3D visualization of the docked molecular complex will appear here after the simulation is complete.
+            Select a molecule to see its structure. After simulation, the 3D docked view will appear here.
+          </p>
+        </div>
+      )}
+      {!isDocked && hasSelection && (
+         <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
+          <Image
+            src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(selectedSmiles[0])}/image?width=250&height=250`}
+            alt={`Structure of ${selectedSmiles[0]}`}
+            width={250}
+            height={250}
+            className="rounded-md bg-white p-2"
+            unoptimized
+          />
+          <p className="text-center text-sm text-muted-foreground">
+            2D structure of the primary selected molecule.
+            <br />
+            Run the simulation to see the 3D docked complex.
           </p>
         </div>
       )}
