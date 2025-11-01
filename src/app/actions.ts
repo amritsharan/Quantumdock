@@ -27,21 +27,42 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
   throw lastError || new Error(finalErr);
 }
 
+/**
+ * Simulates running a classical docking tool like AutoDock.
+ * In a real application, this would be a call to a separate backend service.
+ * @returns A promise that resolves with a mock classical docking score.
+ */
+async function runClassicalDocking(smile: string, protein: string): Promise<number> {
+  console.log(`Running classical docking for ${smile} and ${protein}...`);
+  // Simulate network latency and computation time for a real docking job.
+  await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+  
+  // Return a mock score, typically a negative value indicating binding energy (e.g., in kcal/mol).
+  const mockScore = -5 - (Math.random() * 5); 
+  console.log(`Classical docking complete for ${smile} and ${protein}. Score: ${mockScore}`);
+  return mockScore;
+}
+
+
 export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
   const predictionPromises: Promise<DockingResults>[] = [];
 
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
-      const mockQuantumRefinedEnergy = -7.5 + (Math.random() * -3);
+      const promise = runClassicalDocking(smile, protein)
+        .then(classicalScore => {
+            // The quantum refinement simulation improves upon the classical score.
+            const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2); // Makes it slightly better
 
-      const predictionInput = {
-        quantumRefinedEnergy: mockQuantumRefinedEnergy,
-        moleculeSmiles: smile,
-        proteinTargetName: protein,
-      };
+            const predictionInput = {
+                quantumRefinedEnergy: mockQuantumRefinedEnergy,
+                moleculeSmiles: smile,
+                proteinTargetName: protein,
+            };
 
-      const promise = retryPromise(() => predictBindingAffinities(predictionInput))
+            return retryPromise(() => predictBindingAffinities(predictionInput));
+        })
         .then(predictionResult => {
           if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
             throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);

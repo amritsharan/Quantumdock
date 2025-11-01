@@ -31,12 +31,12 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   classical: {
     icon: <Dna className="h-12 w-12 animate-spin text-accent" />,
     title: 'Performing Classical Docking...',
-    description: 'Generating initial poses. This may take a moment.',
+    description: 'Simulating AutoDock to generate initial poses. This may take a moment.',
   },
   predicting: {
     icon: <FlaskConical className="h-12 w-12 text-accent" />,
-    title: 'Predicting Binding Affinity...',
-    description: 'Analyzing energies to predict binding strength.',
+    title: 'Quantum Refinement & Affinity Prediction...',
+    description: 'Simulating quantum analysis to predict binding strength.',
   },
   done: {
     icon: <Box className="h-12 w-12 text-accent" />,
@@ -97,15 +97,20 @@ export default function DashboardPage() {
     setIsDocked(false);
 
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
+    toast({
+      title: 'Starting Simulation...',
+      description: `Running classical and quantum simulations for ${totalCombinations} combinations.`,
+    });
 
     try {
-      // Simulate the steps for UI feedback, but run the full batch process.
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setStep('predicting');
+      // The server action now internally handles the different steps.
+      // We'll update the UI step after a delay to give a sense of progress.
+      const processPromise = runFullDockingProcess(data);
+      
       await new Promise(resolve => setTimeout(resolve, 2000));
+      setStep('predicting');
 
-      // Send all combinations to the server action at once.
-      const finalResults = await runFullDockingProcess(data);
+      const finalResults = await processPromise;
       
       setResults(finalResults);
       setStep('done');
