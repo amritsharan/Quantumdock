@@ -83,6 +83,7 @@ export default function SignUpPage() {
         description: 'Your account is set up. Redirecting to sign in...',
     });
 
+    // Redirect to the sign-in page as requested.
     router.push('/sign-in');
   }
 
