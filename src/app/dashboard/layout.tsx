@@ -157,4 +157,13 @@ export default function DashboardLayout({
               There was a problem updating your session history. Please try signing out again.
               <br /><br />
               <strong className='text-destructive'>Error details:</strong> {signOutError}
-            </D
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSignOutError(false)}>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
