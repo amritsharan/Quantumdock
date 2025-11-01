@@ -17,7 +17,7 @@ import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { molecules } from '@/lib/molecules';
+import { molecules, type Molecule } from '@/lib/molecules';
 
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
@@ -68,6 +68,13 @@ export default function DashboardPage() {
   });
 
   const selectedSmiles = form.watch('smiles');
+  
+  const primaryMolecule = useMemo(() => {
+    if (selectedSmiles && selectedSmiles.length > 0) {
+      return molecules.find(m => m.smiles === selectedSmiles[0]);
+    }
+    return null;
+  }, [selectedSmiles]);
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -200,19 +207,19 @@ export default function DashboardPage() {
                     )}
                 </div>
                 
-                {isDocked && (
+                {isDocked && primaryMolecule && (
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="rounded-lg border p-3">
                       <p className="text-sm text-muted-foreground">Molecular Weight</p>
-                      <p className="text-2xl font-bold">489.4 g/mol</p>
+                      <p className="text-2xl font-bold">{primaryMolecule.molecularWeight.toFixed(2)}</p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-sm text-muted-foreground">H-Bond Donors</p>
-                      <p className="text-2xl font-bold">5</p>
+                      <p className="text-2xl font-bold">{primaryMolecule.donors}</p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-sm text-muted-foreground">H-Bond Acceptors</p>
-                      <p className="text-2xl font-bold">8</p>
+                      <p className="text-2xl font-bold">{primaryMolecule.acceptors}</p>
                     </div>
                   </div>
                 )}
