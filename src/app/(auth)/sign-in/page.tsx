@@ -12,9 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, serverTimestamp, getDocs, query, where, orderBy, limit, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const signInSchema = z.object({
@@ -79,7 +78,7 @@ export default function SignInPage() {
       }
 
       // Create the new active session first
-      const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
+      const newSessionRef = await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
         userId: user.uid,
         loginTime: serverTimestamp(),
         status: 'active',
@@ -96,7 +95,7 @@ export default function SignInPage() {
       for (const doc of querySnapshot.docs) {
           // Make sure we don't deactivate the session we just created
           if (doc.id !== newSessionRef.id) {
-              await updateDocumentNonBlocking(doc.ref, {
+              updateDocumentNonBlocking(doc.ref, {
                   status: 'inactive',
                   logoutTime: serverTimestamp()
               });
@@ -121,6 +120,54 @@ export default function SignInPage() {
       setShowErrorAlert(true);
       setIsLoading(false);
       return;
+    }
+
+    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+            await handleSuccessfulLogin(userCredential.user);
+        } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+                try {
+                    const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+                    await handleSuccessfulLogin(newUserCredential.user);
+                } catch (creationError: any) {
+                    console.error('Special user creation error:', creationError);
+                    if (creationError.code === 'auth/email-already-in-use') {
+                        // This case can happen in a race condition or if logic is faulty.
+                        // We assume the user exists and try to sign them in again.
+                        try {
+                            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+                            await handleSuccessfulLogin(userCredential.user);
+                        } catch (signInError: any) {
+                            setAlertTitle('Sign In Failed');
+                            setAlertDescription(signInError.message || 'Could not sign in special user after creation attempt.');
+                            setErrorType('generic');
+                            setShowErrorAlert(true);
+                        }
+                    } else {
+                        setAlertTitle('Sign In Failed');
+                        setAlertDescription(creationError.message || 'Could not create special user account.');
+                        setErrorType('generic');
+                        setShowErrorAlert(true);
+                    }
+                }
+            } else if (error.code === 'auth/invalid-credential') {
+                setAlertTitle("Authentication Failed");
+                setAlertDescription("Invalid credentials. Please check your email and password and try again.");
+                setErrorType('wrong-password');
+                setShowErrorAlert(true);
+            } else {
+                 console.error('Special user sign in error:', error);
+                 setAlertTitle('Sign In Failed');
+                 setAlertDescription(error.message || 'An unexpected error occurred.');
+                 setErrorType('generic');
+                 setShowErrorAlert(true);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+        return;
     }
 
     try {
@@ -256,9 +303,9 @@ export default function SignInPage() {
             ) : (
                 <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
                     <path fill="#4285F4" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 261.8 0 123.3 111.8 11.8 244 11.8c70.3 0 132.3 28.1 176.9 72.3L344.9 160.4c-28.1-26.6-67.5-42.9-100.9-42.9-83.3 0-151.7 68.4-151.7 152.9s68.4 152.9 151.7 152.9c90.8 0 133.5-62.1 137.9-93.7H244v-75.2h243.8c1.3 7.8 2.2 15.6 2.2 23.4z"/>
-                    <path fill="#34A853" d="M488 261.8l-42.7-34.6C435.9 136.2 348.4 11.8 244 11.8 111.8 11.8 0 123.3 0 261.8s111.8 250 244 250c112.5 0 207-68.4 238.2-162.2L488 261.8z" style={{ mixBlendMode: "multiply" }}/>
-                    <path fill="#FBBC05" d="M488 261.8c0-21.6-2.5-42.5-7.3-62.6H244v115.3h136.1c-5.4 35.8-21.7 66.7-45.7 87.9l79.5 61.9c52.3-48.4 82.2-118.5 82.2-192.1z" style={{ mixBlend-mode: "multiply" }}/>
-                    <path fill="#EA4335" d="M244 117.1c-62.9 0-116.6 43.1-137.9 101.4l-79.5-61.9C61.4 69.1 146.3 11.8 244 11.8c70.3 0 132.3 28.1 176.9 72.3L344.9 160.4c-28.1-26.6-67.5-42.9-100.9-42.9z" style={{ mixBlendMode: "multiply" }}/>
+                    <path fill="#34A853" d="M488 261.8l-42.7-34.6C435.9 136.2 348.4 11.8 244 11.8 111.8 11.8 0 123.3 0 261.8s111.8 250 244 250c112.5 0 207-68.4 238.2-162.2L488 261.8z" style={{ mixBlendMode: 'multiply' }}/>
+                    <path fill="#FBBC05" d="M488 261.8c0-21.6-2.5-42.5-7.3-62.6H244v115.3h136.1c-5.4 35.8-21.7 66.7-45.7 87.9l79.5 61.9c52.3-48.4 82.2-118.5 82.2-192.1z" style={{ mixBlendMode: 'multiply' }}/>
+                    <path fill="#EA4335" d="M244 117.1c-62.9 0-116.6 43.1-137.9 101.4l-79.5-61.9C61.4 69.1 146.3 11.8 244 11.8c70.3 0 132.3 28.1 176.9 72.3L344.9 160.4c-28.1-26.6-67.5-42.9-100.9-42.9z" style={{ mixBlendMode: 'multiply' }}/>
                 </svg>
             )}
             Sign in with Google
