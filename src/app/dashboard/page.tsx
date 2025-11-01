@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,6 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { molecules } from '@/lib/molecules';
 
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
@@ -126,6 +129,29 @@ export default function DashboardPage() {
 
   const currentStepInfo = stepDescriptions[step];
 
+  const chartData = useMemo(() => {
+    if (!results) return [];
+    const resultsWithNames = results.map(result => {
+        const molecule = molecules.find(m => m.smiles === result.moleculeSmiles);
+        return {
+            ...result,
+            name: molecule ? molecule.name : 'Unknown Molecule',
+        };
+    });
+    return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
+      name: `${res.name} + ${res.proteinTarget}`,
+      'Binding Affinity (nM)': res.bindingAffinity,
+    }));
+  }, [results]);
+
+  const chartConfig = {
+    'Binding Affinity (nM)': {
+      label: 'Binding Affinity (nM)',
+      color: 'hsl(var(--accent))',
+    },
+  };
+
+
   return (
     <>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -147,27 +173,54 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid auto-rows-max items-start gap-6">
-            <Card className="relative min-h-[500px] lg:min-h-[600px]">
+            <Card className="relative">
               <CardHeader>
                 <CardTitle>Visualization</CardTitle>
-                <CardDescription>Interactive 3D view of the molecular complex.</CardDescription>
+                <CardDescription>Interactive 3D view and binding affinity results.</CardDescription>
               </CardHeader>
-              <CardContent className="h-full">
-                <MoleculeViewer 
-                  isDocked={isDocked} 
-                  selectedSmiles={selectedSmiles}
-                />
-              </CardContent>
-
-              {(step === 'classical' || step === 'predicting') && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
-                  {currentStepInfo.icon}
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-                    <p className="text-muted-foreground">{currentStepInfo.description}</p>
-                  </div>
+              <CardContent className="grid gap-6">
+                <div className="min-h-[400px] lg:min-h-[500px] relative">
+                    <MoleculeViewer 
+                    isDocked={isDocked} 
+                    selectedSmiles={selectedSmiles}
+                    />
+                    {(step === 'classical' || step === 'predicting') && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
+                        {currentStepInfo.icon}
+                        <div className="text-center">
+                        <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+                        <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                        </div>
+                    </div>
+                    )}
                 </div>
-              )}
+
+                {results && step === 'done' && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
+                    <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+                        <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
+                        <CartesianGrid horizontal={false} />
+                        <YAxis
+                            dataKey="name"
+                            type="category"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                        />
+                        <XAxis dataKey="Binding Affinity (nM)" type="number" />
+                        <Tooltip
+                            cursor={{ fill: "hsl(var(--muted))" }}
+                            content={<ChartTooltipContent />}
+                        />
+                        <Bar dataKey="Binding Affinity (nM)" radius={4} />
+                        </BarChart>
+                    </ChartContainer>
+                  </div>
+                )}
+              </CardContent>
             </Card>
 
             {results && step === 'done' && (
