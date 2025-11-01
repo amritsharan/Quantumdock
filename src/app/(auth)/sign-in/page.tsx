@@ -26,6 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -43,6 +44,7 @@ export default function SignInPage() {
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
+  const [isUserNotFound, setIsUserNotFound] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -112,6 +114,7 @@ export default function SignInPage() {
 
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
+    setIsUserNotFound(false);
     if (!auth) {
       setAlertTitle('Sign In Failed');
       setAlertDescription('Authentication service is not available. Please try again later.');
@@ -123,9 +126,15 @@ export default function SignInPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/user-not-found') {
         setAlertTitle("Authentication Failed");
-        setAlertDescription("The user isn't found with this credential. please create the account.");
+        setAlertDescription("No account found with this email. Would you like to create one?");
+        setIsUserNotFound(true);
+        setShowErrorAlert(true);
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        setAlertTitle("Authentication Failed");
+        setAlertDescription("Invalid credentials. Please check your email and password and try again.");
+        setIsUserNotFound(false);
         setShowErrorAlert(true);
       } else {
         console.error('Sign in error:', error);
@@ -265,12 +274,23 @@ export default function SignInPage() {
             <AlertDialogDescription>{alertDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => router.push('/sign-up')}>
-              Create an Account
-            </AlertDialogAction>
+            {isUserNotFound ? (
+              <>
+                <AlertDialogCancel onClick={() => setShowErrorAlert(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => router.push('/sign-up')}>
+                  Create an Account
+                </AlertDialogAction>
+              </>
+            ) : (
+               <AlertDialogAction onClick={() => setShowErrorAlert(false)}>
+                  Close
+                </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
 }
+
+    
