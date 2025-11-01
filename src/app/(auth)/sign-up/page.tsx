@@ -12,8 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import { Separator } from '@/components/ui/separator';
 
 const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -38,6 +39,7 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
@@ -54,6 +56,30 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
   });
 
+  const handleSuccessfulSignUp = async (user: User, displayName?: string) => {
+    if (!firestore) return;
+    
+    // Check if user profile already exists
+    const userDocRef = doc(firestore, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+        await setDoc(userDocRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: displayName || user.displayName,
+            createdAt: serverTimestamp(),
+        });
+    }
+
+    toast({
+        title: 'Account Ready',
+        description: 'Your account is set up. Redirecting to sign in...',
+    });
+
+    router.push('/sign-in');
+  }
+
   const onSubmit = async (data: SignUpFormValues) => {
     setIsLoading(true);
     if (!auth || !firestore) {
@@ -68,22 +94,7 @@ export default function SignUpPage() {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
-
-      // Create user profile in Firestore
-      await setDoc(doc(firestore, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: data.displayName,
-        createdAt: serverTimestamp(),
-      });
-      
-      toast({
-        title: 'Account Created',
-        description: 'Your account has been created successfully. Redirecting to sign in...',
-      });
-
-      router.push('/sign-in');
+      await handleSuccessfulSignUp(userCredential.user, data.displayName);
 
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -102,6 +113,38 @@ export default function SignUpPage() {
       setIsLoading(false);
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    if (!auth) {
+        setAlertTitle('Sign Up Failed');
+        setAlertDescription('Authentication service is not available. Please try again later.');
+        setShowErrorAlert(true);
+        setIsGoogleLoading(false);
+        return;
+    }
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        await handleSuccessfulSignUp(result.user);
+    } catch (error: any) {
+        console.error("Google sign in error", error);
+         if (error.code === 'auth/email-already-in-use') {
+            setAlertTitle('Email Already In Use');
+            setAlertDescription('This email is already associated with an account. Please sign in.');
+            setShowErrorAlert(true);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Sign Up Failed",
+                description: error.message || "An unexpected error occurred during Google Sign-In.",
+            });
+        }
+    } finally {
+        setIsGoogleLoading(false);
+    }
+  };
+
 
   return (
     <>
@@ -138,11 +181,28 @@ export default function SignUpPage() {
               <Input id="password" type="password" {...register('password')} />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Create Account
             </Button>
           </form>
+
+           <div className="relative my-4">
+            <Separator />
+            <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-card px-2 text-sm text-muted-foreground">OR</span>
+          </div>
+
+          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
+            {isGoogleLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                    <path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 264.4 0 128.6 111.8 16.8 244 16.8c70.3 0 129.8 27.8 174.4 72.4l-63.1 61.9C333.3 128.4 293.1 106 244 106c-73.2 0-132.3 59.2-132.3 132.3s59.1 132.3 132.3 132.3c78.2 0 114.5-56.3 118.8-85.3H244V261.8h244z"></path>
+                </svg>
+            )}
+            Sign up with Google
+          </Button>
+
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
             <Link href="/sign-in" className="underline">
