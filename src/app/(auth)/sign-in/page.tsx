@@ -66,8 +66,14 @@ export default function SignInPage() {
 
   const handleSuccessfulLogin = async (user: User) => {
     if (user && firestore) {
+       // First, create the new active session.
+       const newSessionPromise = addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
+        userId: user.uid,
+        loginTime: serverTimestamp(),
+        status: 'active',
+      });
+
       const userDocRef = doc(firestore, 'users', user.uid);
-      
       const userDoc = await getDoc(userDocRef);
       if (!userDoc.exists()) {
         await setDoc(userDocRef, {
@@ -78,7 +84,9 @@ export default function SignInPage() {
         }, { merge: true });
       }
 
-      // Query for any OTHER active sessions and deactivate them first.
+      await newSessionPromise;
+
+      // After the new session is securely created, query for any OTHER active sessions and deactivate them.
       const historyQuery = query(
           collection(firestore, "users", user.uid, "loginHistory"),
           where("status", "==", "active"),
@@ -87,20 +95,14 @@ export default function SignInPage() {
 
       const querySnapshot = await getDocs(historyQuery);
       
-      // Deactivate all old active sessions.
-      for (const sessionDoc of querySnapshot.docs) {
+      // Deactivate all old active sessions, skipping the very first result (which is the one we just created).
+      const sessionsToDeactivate = querySnapshot.docs.slice(1);
+      for (const sessionDoc of sessionsToDeactivate) {
           updateDocumentNonBlocking(sessionDoc.ref, {
               status: 'inactive',
               logoutTime: serverTimestamp()
           });
       }
-
-      // After deactivating old ones, create the new active session.
-      await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
-        userId: user.uid,
-        loginTime: serverTimestamp(),
-        status: 'active',
-      });
     }
     
     toast({
@@ -122,6 +124,38 @@ export default function SignInPage() {
       return;
     }
 
+    // Special user case
+    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+            await handleSuccessfulLogin(userCredential.user);
+        } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+                // If the user doesn't exist, create it.
+                try {
+                    const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+                    await handleSuccessfulLogin(newUserCredential.user);
+                } catch (creationError: any) {
+                   console.error('Special user creation error:', creationError);
+                   setAlertTitle('Sign In Failed');
+                   setAlertDescription(creationError.message || 'Could not create the special user account.');
+                   setShowErrorAlert(true);
+                }
+            } else {
+                // For any other sign-in error (like wrong password after creation), treat as normal.
+                console.error('Special user sign in error:', error);
+                setAlertTitle("Authentication Failed");
+                setAlertDescription("Invalid credentials for the special user. Please check and try again.");
+                setErrorType('wrong-password');
+                setShowErrorAlert(true);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+        return; // Stop execution for the special user case
+    }
+    
+    // Normal user case
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await handleSuccessfulLogin(userCredential.user);
@@ -313,3 +347,5 @@ export default function SignInPage() {
     </>
   );
 }
+
+    
