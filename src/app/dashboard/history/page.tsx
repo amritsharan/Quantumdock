@@ -51,6 +51,8 @@ export default function HistoryPage() {
   const { data: history, isLoading } = useCollection<LoginHistory>(historyQuery);
 
   const formattedHistory = useMemo(() => {
+    if (!currentTime) return null; // Don't compute until client has mounted
+    
     return history?.map((item) => {
       const loginDate = item.loginTime ? new Date(item.loginTime.seconds * 1000) : null;
       
@@ -64,7 +66,7 @@ export default function HistoryPage() {
 
       let durationDisplay;
       if (item.status === 'active' && loginDate) {
-        durationDisplay = currentTime ? calculateActiveDuration(loginDate) : 'Calculating...';
+        durationDisplay = calculateActiveDuration(loginDate);
       } else if (item.duration !== undefined) {
         durationDisplay = `${item.duration} minute(s)`;
       } else {
@@ -121,7 +123,7 @@ export default function HistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && renderSkeleton()}
+              {(isLoading || !formattedHistory) && renderSkeleton()}
               {!isLoading && formattedHistory?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center">
