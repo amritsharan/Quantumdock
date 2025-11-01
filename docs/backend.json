@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Molecule": {
@@ -129,6 +130,10 @@
           "type": "string",
           "description": "The user's display name."
         },
+        "phoneNumber": {
+            "type": "string",
+            "description": "The user's phone number."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -231,3 +236,5 @@
     ]
   }
 }
+
+    

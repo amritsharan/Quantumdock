@@ -31,8 +31,13 @@ import { Separator } from '@/components/ui/separator';
 
 const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
   displayName: z.string().min(2, 'Display name must be at least 2 characters'),
+  phoneNumber: z.string().optional(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match. Please enter the same password in both fields.",
+    path: ["confirmPassword"], // path of error
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -51,15 +56,15 @@ export default function SignUpPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
   });
 
-  const handleSuccessfulSignUp = async (user: User, displayName?: string) => {
+  const handleSuccessfulSignUp = async (user: User, displayName?: string, phoneNumber?: string) => {
     if (!firestore) return;
     
-    // Check if user profile already exists
     const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
@@ -68,6 +73,7 @@ export default function SignUpPage() {
             uid: user.uid,
             email: user.email,
             displayName: displayName || user.displayName,
+            phoneNumber: phoneNumber || user.phoneNumber || '',
             createdAt: serverTimestamp(),
         });
     }
@@ -81,6 +87,15 @@ export default function SignUpPage() {
   }
 
   const onSubmit = async (data: SignUpFormValues) => {
+    // This check is now redundant because of zod refinement, but good as a secondary check.
+    if (data.newPassword !== data.confirmPassword) {
+      setAlertTitle('Password Mismatch');
+      setAlertDescription('New password and confirm password are not the same, please give same passwords.');
+      setShowErrorAlert(true);
+      setError("confirmPassword", { type: "manual", message: "Passwords do not match" });
+      return;
+    }
+
     setIsLoading(true);
     if (!auth || !firestore) {
       toast({
@@ -93,8 +108,8 @@ export default function SignUpPage() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await handleSuccessfulSignUp(userCredential.user, data.displayName);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.newPassword);
+      await handleSuccessfulSignUp(userCredential.user, data.displayName, data.phoneNumber);
 
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -176,10 +191,20 @@ export default function SignUpPage() {
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
+             <div className="grid gap-2">
+              <Label htmlFor="phoneNumber">Phone Number (Optional)</Label>
+              <Input id="phoneNumber" type="tel" {...register('phoneNumber')} />
+              {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
+            </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register('password')} />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input id="newPassword" type="password" {...register('newPassword')} />
+              {errors.newPassword && <p className="text-sm text-destructive">{errors.newPassword.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
+              {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -220,12 +245,20 @@ export default function SignUpPage() {
             <AlertDialogDescription>{alertDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => router.push('/sign-in')}>
-              Go to Sign In
-            </AlertDialogAction>
+            {alertTitle === 'Email Already In Use' ? (
+                 <AlertDialogAction onClick={() => router.push('/sign-in')}>
+                    Go to Sign In
+                </AlertDialogAction>
+            ) : (
+                 <AlertDialogAction onClick={() => setShowErrorAlert(false)}>
+                    Close
+                </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
 }
+
+    
