@@ -92,7 +92,7 @@ export default function DashboardLayout({
         console.error('Error querying login history on sign out:', error);
         setSignOutError(error.message || 'An unknown error occurred while updating your session.');
         setShowSignOutError(true);
-        return;
+        // Do not return here, allow sign-out to proceed
     }
 
     try {
@@ -152,9 +152,9 @@ export default function DashboardLayout({
       <AlertDialog open={showSignOutError} onOpenChange={setShowSignOutError}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign-Out Error</AlertDialogTitle>
+            <AlertDialogTitle>Session Update Error</AlertDialogTitle>
             <AlertDialogDescription>
-              There was a problem updating your session history. Please try signing out again.
+              Could not update your session history, but you will be signed out. This might be due to a permissions issue.
               <br /><br />
               <strong className='text-destructive'>Error details:</strong> {signOutError}
             </AlertDialogDescription>
