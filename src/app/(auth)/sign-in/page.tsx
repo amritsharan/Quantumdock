@@ -62,14 +62,12 @@ export default function SignInPage() {
     setHydrated(true);
   }, []);
 
-  const handleSuccessfulLogin = async (user: User | { uid: string, email: string | null, displayName: string | null }) => {
+  const handleSuccessfulLogin = async (user: User) => {
     if (user && firestore) {
       const userDocRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        // Use setDoc which has its own non-blocking error handling if needed,
-        // but for user creation, await is often desired to ensure profile exists before proceeding.
         await setDoc(userDocRef, {
           uid: user.uid,
           email: user.email,
@@ -85,18 +83,15 @@ export default function SignInPage() {
           limit(1)
       );
 
-      // We need to fetch the docs to know if there's an active session
       const querySnapshot = await getDocs(historyQuery);
       if (!querySnapshot.empty) {
           const activeSessionDoc = querySnapshot.docs[0];
-          // Use the non-blocking update with proper error handling
           updateDocumentNonBlocking(activeSessionDoc.ref, {
               status: 'inactive',
               logoutTime: serverTimestamp()
           });
       }
       
-      // Use the non-blocking add with proper error handling
       addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
         userId: user.uid,
         loginTime: serverTimestamp(),
@@ -115,19 +110,6 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
     setIsUserNotFound(false);
-
-    // Hardcoded user check
-    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
-        const hardcodedUser = {
-          uid: 'hardcoded-user-amrit',
-          email: data.email,
-          displayName: 'Amrit Vasishta'
-        };
-        await handleSuccessfulLogin(hardcodedUser);
-        setIsLoading(false);
-        return;
-    }
-
     if (!auth) {
       setAlertTitle('Sign In Failed');
       setAlertDescription('Authentication service is not available. Please try again later.');
@@ -139,7 +121,7 @@ export default function SignInPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
         setAlertTitle("Authentication Failed");
         setAlertDescription("No account found with this email. Would you like to create one?");
         setIsUserNotFound(true);
@@ -177,7 +159,7 @@ export default function SignInPage() {
         console.error("Google sign in error", error);
         setAlertTitle("Google Sign-In Failed");
         setAlertDescription(error.message || "An error occurred during Google Sign-In. Please try again.");
-        setShowErrorAlert(true); // Re-use the same alert dialog for simplicity
+        setShowErrorAlert(true);
     } finally {
         setIsGoogleLoading(false);
     }

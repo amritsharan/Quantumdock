@@ -32,8 +32,7 @@ export default function HistoryPage() {
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   
-  // This is a special case for the hardcoded user
-  const userId = user ? user.uid : 'hardcoded-user-amrit';
+  const userId = user ? user.uid : null;
 
   const historyQuery = useMemoFirebase(() => {
     if (!firestore || !userId) return null;

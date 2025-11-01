@@ -46,12 +46,7 @@ export default function DashboardLayout({
 
 
   const handleSignOut = async () => {
-    // For the hardcoded user, we can't rely on the auth object,
-    // but we can check if it's the hardcoded user case by checking for lack of a real user
-    // while being on the dashboard. This is brittle. A better check would be needed in a real app.
-    const userId = user ? user.uid : 'hardcoded-user-amrit';
-
-    if (!firestore) {
+    if (!user || !firestore) {
         if (auth) await signOut(auth); // Sign out if service available, even if firestore is not
         router.push('/sign-in');
         return;
@@ -59,7 +54,7 @@ export default function DashboardLayout({
   
     try {
       const historyQuery = query(
-        collection(firestore, 'users', userId, 'loginHistory'),
+        collection(firestore, 'users', user.uid, 'loginHistory'),
         where('status', '==', 'active'),
         orderBy('loginTime', 'desc'),
         limit(1)
@@ -84,20 +79,16 @@ export default function DashboardLayout({
           duration: duration,
         };
 
-        // Use the non-blocking update function with contextual error handling
         updateDocumentNonBlocking(activeSessionDoc.ref, updateData);
       }
     } catch (error: any) {
-        // This outer try/catch now only handles errors from `getDocs`
         console.error('Error querying login history on sign out:', error);
         setSignOutError(error.message || 'An unknown error occurred while updating your session.');
         setShowSignOutError(true);
-        // Do not return here, allow sign-out to proceed
     }
 
     try {
-      // Only call signOut if the user is not the hardcoded one
-      if (user && auth) {
+      if (auth) {
         await signOut(auth);
       }
       toast({
