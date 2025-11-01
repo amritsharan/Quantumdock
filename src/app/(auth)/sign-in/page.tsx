@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, limit, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, getDocs, query, where, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -44,7 +44,7 @@ export default function SignInPage() {
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
-  const [isUserNotFound, setIsUserNotFound] = useState(false);
+  const [errorType, setErrorType] = useState<'user-not-found' | 'wrong-password' | 'generic'>('generic');
   const [hydrated, setHydrated] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -68,12 +68,12 @@ export default function SignInPage() {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
+        setDocumentNonBlocking(userDocRef, {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
           createdAt: serverTimestamp(),
-        });
+        }, { merge: true });
       }
       
       const historyQuery = query(
@@ -109,7 +109,7 @@ export default function SignInPage() {
 
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
-    setIsUserNotFound(false);
+    setErrorType('generic');
     if (!auth) {
       setAlertTitle('Sign In Failed');
       setAlertDescription('Authentication service is not available. Please try again later.');
@@ -122,19 +122,20 @@ export default function SignInPage() {
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
-        setAlertTitle("Authentication Failed");
+        setAlertTitle("Account Not Found");
         setAlertDescription("No account found with this email. Would you like to create one?");
-        setIsUserNotFound(true);
+        setErrorType('user-not-found');
         setShowErrorAlert(true);
       } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
         setAlertTitle("Authentication Failed");
         setAlertDescription("Invalid credentials. Please check your email and password and try again.");
-        setIsUserNotFound(false);
+        setErrorType('wrong-password');
         setShowErrorAlert(true);
       } else {
         console.error('Sign in error:', error);
         setAlertTitle('Sign In Failed');
         setAlertDescription(error.message || 'An unexpected error occurred. Please try again.');
+        setErrorType('generic');
         setShowErrorAlert(true);
       }
     } finally {
@@ -247,7 +248,7 @@ export default function SignInPage() {
             {isGoogleLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#34A853" d="M46.98 24.55c0-1.57-.15-3.09-.42-4.55H24v8.51h12.8c-.57 2.84-2.34 5.23-4.9 6.84l7.98 6.19c4.63-4.28 7.4-10.32 7.4-17z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#EA4335" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.98-6.19c-2.11 1.42-4.82 2.24-7.91 2.24-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
+                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="#4285F4" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 261.8 0 123.3 111.8 11.8 244 11.8c70.3 0 132.3 28.1 176.9 72.3L344.9 160.4c-28.1-26.6-67.5-42.9-100.9-42.9-83.3 0-151.7 68.4-151.7 152.9s68.4 152.9 151.7 152.9c90.8 0 133.5-62.1 137.9-93.7H244v-75.2h243.8c1.3 7.8 2.2 15.6 2.2 23.4z"></path><path fill="#34A853" d="M244 488c132.2 0 240-107.8 240-240S376.2 8 244 8 4 115.8 4 248s107.8 240 240 240z" style={{fill: 'transparent'}}></path><g><path fill="#FBBC05" d="M107.6 182.2c-15.1 30.6-24.1 65-24.1 101.4s9 70.8 24.1 101.4L28.1 454.4c-23.5-46.7-37.1-99.7-37.1-156.2s13.6-109.5 37.1-156.2l79.5 60.2z" style={{fill:'transparent'}}></path><path fill="#EA4335" d="M488 261.8c0-21.6-2.5-42.5-7.3-62.6H244v115.3h136.1c-5.4 35.8-21.7 66.7-45.7 87.9l79.5 61.9c52.3-48.4 82.2-118.5 82.2-192.1z" style={{fill:'transparent'}}></path></g></svg>
             )}
             Sign in with Google
           </Button>
@@ -269,11 +270,11 @@ export default function SignInPage() {
             <AlertDialogDescription>{alertDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            {isUserNotFound ? (
+            {errorType === 'user-not-found' ? (
               <>
-                <AlertDialogCancel onClick={() => setShowErrorAlert(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={() => router.push('/sign-up')}>
-                  Create an Account
+                  Create Account
                 </AlertDialogAction>
               </>
             ) : (
@@ -287,3 +288,5 @@ export default function SignInPage() {
     </>
   );
 }
+
+    
