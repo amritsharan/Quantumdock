@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, limit, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
@@ -63,12 +63,13 @@ export default function SignInPage() {
   }, []);
 
   const handleSuccessfulLogin = async (user: User | { uid: string, email: string | null, displayName: string | null }) => {
-    // Create a login history record
     if (user && firestore) {
-      // Check if user profile exists, if not, create it
       const userDocRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
+
       if (!userDoc.exists()) {
+        // Use setDoc which has its own non-blocking error handling if needed,
+        // but for user creation, await is often desired to ensure profile exists before proceeding.
         await setDoc(userDocRef, {
           uid: user.uid,
           email: user.email,
@@ -77,31 +78,30 @@ export default function SignInPage() {
         });
       }
       
-      try {
-        const historyQuery = query(
-            collection(firestore, "users", user.uid, "loginHistory"),
-            where("status", "==", "active"),
-            orderBy("loginTime", "desc"),
-            limit(1)
-        );
-        const querySnapshot = await getDocs(historyQuery);
-        if (!querySnapshot.empty) {
-            const activeSessionDoc = querySnapshot.docs[0];
-            await updateDoc(activeSessionDoc.ref, {
-                status: 'inactive',
-                logoutTime: serverTimestamp()
-            });
-        }
+      const historyQuery = query(
+          collection(firestore, "users", user.uid, "loginHistory"),
+          where("status", "==", "active"),
+          orderBy("loginTime", "desc"),
+          limit(1)
+      );
 
-        await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
-          userId: user.uid,
-          loginTime: serverTimestamp(),
-          status: 'active',
-        });
-      } catch (error) {
-        console.error("Failed to write login history", error);
-        // Don't block login if history write fails
+      // We need to fetch the docs to know if there's an active session
+      const querySnapshot = await getDocs(historyQuery);
+      if (!querySnapshot.empty) {
+          const activeSessionDoc = querySnapshot.docs[0];
+          // Use the non-blocking update with proper error handling
+          updateDocumentNonBlocking(activeSessionDoc.ref, {
+              status: 'inactive',
+              logoutTime: serverTimestamp()
+          });
       }
+      
+      // Use the non-blocking add with proper error handling
+      addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
+        userId: user.uid,
+        loginTime: serverTimestamp(),
+        status: 'active',
+      });
     }
     
     toast({
@@ -305,5 +305,3 @@ export default function SignInPage() {
     </>
   );
 }
-
-    
