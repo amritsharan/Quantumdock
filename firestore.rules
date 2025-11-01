@@ -91,12 +91,13 @@ service cloud.firestore {
     /**
      * @description Rule for login history under a user's profile.
      * @path /users/{userId}/loginHistory/{historyId}
-     * @allow (create, list) Signed-in user can create and view their own login history.
+     * @allow (create) Signed-in user can create their own login history.
+     * @allow (list) Signed-in user can view their own login history.
      * @allow (update) Signed-in user can update their own login history (e.g., to set logout time).
      * @principle Enforces strict ownership for login history data.
      */
     match /users/{userId}/loginHistory/{historyId} {
-        allow create, list, update: if isOwner(userId);
+        allow create, update, list: if isOwner(userId);
         allow get, delete: if false;
     }
 
