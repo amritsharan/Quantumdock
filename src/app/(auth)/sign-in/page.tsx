@@ -12,8 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth, useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, serverTimestamp, getDocs, query, where, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
@@ -30,6 +30,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -62,19 +64,20 @@ export default function SignInPage() {
     setHydrated(true);
   }, []);
 
-  const handleSuccessfulLogin = async (user: User) => {
+  const handleSuccessfulLogin = (user: User) => {
     if (user && firestore) {
       const userDocRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (!userDoc.exists()) {
-        setDocumentNonBlocking(userDocRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          createdAt: serverTimestamp(),
-        }, { merge: true });
-      }
+      
+      getDoc(userDocRef).then(userDoc => {
+        if (!userDoc.exists()) {
+          setDocumentNonBlocking(userDocRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            createdAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      });
       
       const historyQuery = query(
           collection(firestore, "users", user.uid, "loginHistory"),
@@ -83,14 +86,15 @@ export default function SignInPage() {
           limit(1)
       );
 
-      const querySnapshot = await getDocs(historyQuery);
-      if (!querySnapshot.empty) {
-          const activeSessionDoc = querySnapshot.docs[0];
-          updateDocumentNonBlocking(activeSessionDoc.ref, {
-              status: 'inactive',
-              logoutTime: serverTimestamp()
-          });
-      }
+      getDocs(historyQuery).then(querySnapshot => {
+        if (!querySnapshot.empty) {
+            const activeSessionDoc = querySnapshot.docs[0];
+            updateDocumentNonBlocking(activeSessionDoc.ref, {
+                status: 'inactive',
+                logoutTime: serverTimestamp()
+            });
+        }
+      });
       
       addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
         userId: user.uid,
@@ -117,9 +121,45 @@ export default function SignInPage() {
       setIsLoading(false);
       return;
     }
+
+    // Special case for the specified user
+    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
+      try {
+        // Attempt to sign in first
+        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+        handleSuccessfulLogin(userCredential.user);
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          // If the user doesn't exist, create it.
+          try {
+            const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+            handleSuccessfulLogin(newUserCredential.user);
+          } catch (creationError: any) {
+             console.error('Special user creation error:', creationError);
+             setAlertTitle('Sign In Failed');
+             setAlertDescription(creationError.message || 'Could not create the special user account.');
+             setErrorType('generic');
+             setShowErrorAlert(true);
+          }
+        } else {
+          // Other sign-in error for the special user
+          console.error('Special user sign in error:', error);
+          setAlertTitle('Sign In Failed');
+          setAlertDescription(error.message || 'An unexpected error occurred. Please try again.');
+          setErrorType('generic');
+          setShowErrorAlert(true);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+
+    // Normal user flow
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      await handleSuccessfulLogin(userCredential.user);
+      handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
         setAlertTitle("Account Not Found");
@@ -155,7 +195,7 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        await handleSuccessfulLogin(result.user);
+        handleSuccessfulLogin(result.user);
     } catch (error: any) {
         console.error("Google sign in error", error);
         setAlertTitle("Google Sign-In Failed");
