@@ -65,6 +65,14 @@ export default function SignInPage() {
 
   const handleSuccessfulLogin = async (user: User) => {
     if (user && firestore) {
+      // First, add the new active session.
+      const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
+        userId: user.uid,
+        loginTime: serverTimestamp(),
+        status: 'active',
+      });
+  
+      // Then, query for any *other* active sessions to deactivate.
       const historyQuery = query(
         collection(firestore, "users", user.uid, "loginHistory"),
         where("status", "==", "active"),
@@ -73,20 +81,17 @@ export default function SignInPage() {
   
       const querySnapshot = await getDocs(historyQuery);
       
-      const updates = querySnapshot.docs.map(doc => 
-        updateDoc(doc.ref, {
-          status: 'inactive',
-          logoutTime: serverTimestamp()
-        })
-      );
-      await Promise.all(updates);
-  
-      // Now, create the new active session.
-      await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
-        userId: user.uid,
-        loginTime: serverTimestamp(),
-        status: 'active',
+      const updates: Promise<void>[] = [];
+      querySnapshot.forEach(doc => {
+        // Make sure we don't deactivate the session we just created.
+        if (doc.id !== newSessionRef.id) {
+          updates.push(updateDoc(doc.ref, {
+            status: 'inactive',
+            logoutTime: serverTimestamp()
+          }));
+        }
       });
+      await Promise.all(updates);
 
       const userDocRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
