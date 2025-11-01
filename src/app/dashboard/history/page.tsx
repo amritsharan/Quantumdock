@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, type WithId } from '@/firebase/firestore/use-collection';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -31,11 +31,19 @@ export default function HistoryPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [allHistory, setAllHistory] = useState<WithId<LoginHistory>[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+  
   // This is a special case for the hardcoded user
   const userId = user ? user.uid : 'hardcoded-user-amrit';
+
+  const historyQuery = useMemoFirebase(() => {
+    if (!firestore || !userId) return null;
+    return query(
+        collection(firestore, 'users', userId, 'loginHistory'),
+        orderBy('loginTime', 'desc')
+    );
+  }, [firestore, userId]);
+
+  const { data: allHistory, isLoading, error } = useCollection<LoginHistory>(historyQuery);
 
   useEffect(() => {
     // Set the current time only on the client, after hydration
@@ -45,28 +53,6 @@ export default function HistoryPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (!firestore || !userId) return;
-
-    setIsLoading(true);
-    const historyQuery = query(
-      collection(firestore, 'users', userId, 'loginHistory'),
-      orderBy('loginTime', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(historyQuery, (snapshot) => {
-      const historyData = snapshot.docs.map(doc => ({ ...doc.data() as LoginHistory, id: doc.id }));
-      setAllHistory(historyData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching login history:", error);
-      setIsLoading(false);
-    });
-    
-    return () => unsubscribe();
-  }, [firestore, userId]);
-
 
   const formattedHistory = useMemo(() => {
     if (!currentTime || !allHistory) return null; // Don't compute until client has mounted
@@ -141,15 +127,22 @@ export default function HistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(isLoading || !formattedHistory) && renderSkeleton()}
-              {!isLoading && formattedHistory?.length === 0 && (
+              {(isLoading || !formattedHistory) && !error && renderSkeleton()}
+              {error && (
+                <TableRow>
+                    <TableCell colSpan={4} className="text-center text-destructive">
+                        Error loading history: Insufficient permissions.
+                    </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && !error && formattedHistory?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center">
                     No login history found.
                   </TableCell>
                 </TableRow>
               )}
-              {!isLoading &&
+              {!isLoading && !error &&
                 formattedHistory?.map((item: any) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.loginTimeFormatted}</TableCell>
