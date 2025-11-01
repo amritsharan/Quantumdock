@@ -129,7 +129,7 @@ export default function SignInPage() {
         const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
         handleSuccessfulLogin(userCredential.user);
       } catch (error: any) {
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        if (error.code === 'auth/user-not-found') {
           // If the user doesn't exist, create it.
           try {
             const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -141,6 +141,11 @@ export default function SignInPage() {
              setErrorType('generic');
              setShowErrorAlert(true);
           }
+        } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+            setAlertTitle("Authentication Failed");
+            setAlertDescription("Invalid credentials. Please check your email and password and try again.");
+            setErrorType('wrong-password');
+            setShowErrorAlert(true);
         } else {
           // Other sign-in error for the special user
           console.error('Special user sign in error:', error);
