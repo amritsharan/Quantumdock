@@ -31,11 +31,11 @@ import { Separator } from '@/components/ui/separator';
 
 const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
-  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
   displayName: z.string().min(2, 'Display name must be at least 2 characters'),
   phoneNumber: z.string().optional(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
+}).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match. Please enter the same password in both fields.",
     path: ["confirmPassword"], // path of error
 });
@@ -88,7 +88,7 @@ export default function SignUpPage() {
 
   const onSubmit = async (data: SignUpFormValues) => {
     // This check is now redundant because of zod refinement, but good as a secondary check.
-    if (data.newPassword !== data.confirmPassword) {
+    if (data.password !== data.confirmPassword) {
       setAlertTitle('Password Mismatch');
       setAlertDescription('New password and confirm password are not the same, please give same passwords.');
       setShowErrorAlert(true);
@@ -108,7 +108,7 @@ export default function SignUpPage() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.newPassword);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       await handleSuccessfulSignUp(userCredential.user, data.displayName, data.phoneNumber);
 
     } catch (error: any) {
@@ -197,9 +197,9 @@ export default function SignUpPage() {
               {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <Input id="newPassword" type="password" {...register('newPassword')} />
-              {errors.newPassword && <p className="text-sm text-destructive">{errors.newPassword.message}</p>}
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" {...register('password')} />
+              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -258,4 +258,3 @@ export default function SignUpPage() {
     </>
   );
 }
-    
