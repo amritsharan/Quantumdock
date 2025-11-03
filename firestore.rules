@@ -1,166 +1,17 @@
 /**
  * @fileoverview Firestore Security Rules for QuantumDock application.
  *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model, where each user has full control over their own data (molecules, target proteins, and docking results).
- *
- * Data Structure:
- * All data is nested under /users/{userId}, ensuring clear ownership. Specifically:
- * - /users/{userId}: Stores user profiles.
- * - /users/{userId}/molecules/{moleculeId}: Stores molecule data.
- * - /users/{userId}/targetProteins/{targetProteinId}: Stores target protein data.
- * - /users/{userId}/dockingResults/{dockingResultId}: Stores docking result data.
- *
- * Key Security Decisions:
- * - Users can only access their own data.
- * - Data consistency is enforced by matching user IDs in the path with document fields.
- * - Listing operations are scoped to a specific user's data.
- *
- * Denormalization for Authorization:
- * - The `userId` field is included in each document to simplify ownership checks. This denormalization avoids the need for expensive `get()` operations to retrieve user information.
- *
- * Structural Segregation:
- * - This ruleset assumes that all data under a user's path is private. If there's a need for public data, it should be stored in separate, top-level collections with appropriate access controls.
+ * WARNING: These rules have been modified to grant broad access.
+ * Any authenticated user can read or write to any part of the database.
+ * This is not recommended for production environments.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Defines the isOwner helper function.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Provides reusable ownership check.
-     */
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    /**
-     * @description Defines the isExistingOwner helper function, which checks both ownership and document existence.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Combines ownership and existence checks for safer updates and deletes.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(/databases/$(database)/documents/$(resource.path));
-    }
-
-
-    /**
-     * @description Security rules for user profiles.
-     * @path /users/{userId}
-     * @allow (create) - User with ID 'user_abc' can create their profile if authenticated as 'user_abc'.
-     * @allow (get) - User with ID 'user_abc' can read their profile if authenticated as 'user_abc'.
-     * @allow (update) - User with ID 'user_abc' can update their profile if authenticated as 'user_abc' and the document exists.
-     * @allow (delete) - User with ID 'user_abc' can delete their profile if authenticated as 'user_abc' and the document exists.
-     * @deny (create) - User with ID 'user_xyz' cannot create a profile for 'user_abc'.
-     * @deny (update) - User with ID 'user_xyz' cannot update the profile of 'user_abc'.
-     * @deny (delete) - User with ID 'user_xyz' cannot delete the profile of 'user_abc'.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Security rules for molecules under a user's profile.
-     * @path /users/{userId}/molecules/{moleculeId}
-     * @allow (create) - User with ID 'user_abc' can create a molecule if authenticated as 'user_abc'.
-     * @allow (get) - User with ID 'user_abc' can read a molecule if authenticated as 'user_abc'.
-     * @allow (list) - User with ID 'user_abc' can list molecules if authenticated as 'user_abc'.
-     * @allow (update) - User with ID 'user_abc' can update a molecule if authenticated as 'user_abc' and the document exists.
-     * @allow (delete) - User with ID 'user_abc' can delete a molecule if authenticated as 'user_abc' and the document exists.
-     * @deny (create) - User with ID 'user_xyz' cannot create a molecule for 'user_abc'.
-     * @deny (update) - User with ID 'user_xyz' cannot update the molecule of 'user_abc'.
-     * @deny (delete) - User with ID 'user_xyz' cannot delete the molecule of 'user_abc'.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/molecules/{moleculeId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Security rules for target proteins under a user's profile.
-     * @path /users/{userId}/targetProteins/{targetProteinId}
-     * @allow (create) - User with ID 'user_abc' can create a target protein if authenticated as 'user_abc'.
-     * @allow (get) - User with ID 'user_abc' can read a target protein if authenticated as 'user_abc'.
-     * @allow (list) - User with ID 'user_abc' can list target proteins if authenticated as 'user_abc'.
-     * @allow (update) - User with ID 'user_abc' can update a target protein if authenticated as 'user_abc' and the document exists.
-     * @allow (delete) - User with ID 'user_abc' can delete a target protein if authenticated as 'user_abc' and the document exists.
-     * @deny (create) - User with ID 'user_xyz' cannot create a target protein for 'user_abc'.
-     * @deny (update) - User with ID 'user_xyz' cannot update the target protein of 'user_abc'.
-     * @deny (delete) - User with ID 'user_xyz' cannot delete the target protein of 'user_abc'.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/targetProteins/{targetProteinId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Security rules for docking results under a user's profile.
-     * @path /users/{userId}/dockingResults/{dockingResultId}
-     * @allow (create) - User with ID 'user_abc' can create a docking result if authenticated as 'user_abc'.
-     * @allow (get) - User with ID 'user_abc' can read a docking result if authenticated as 'user_abc'.
-     * @allow (list) - User with ID 'user_abc' can list docking results if authenticated as 'user_abc'.
-     * @allow (update) - User with ID 'user_abc' can update a docking result if authenticated as 'user_abc' and the document exists.
-     * @allow (delete) - User with ID 'user_abc' can delete a docking result if authenticated as 'user_abc' and the document exists.
-     * @deny (create) - User with ID 'user_xyz' cannot create a docking result for 'user_abc'.
-     * @deny (update) - User with ID 'user_xyz' cannot update the docking result of 'user_abc'.
-     * @deny (delete) - User with ID 'user_xyz' cannot delete the docking result of 'user_abc'.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/dockingResults/{dockingResultId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Security rules for user login history.
-     * @path /users/{userId}/loginHistory/{historyId}
-     * @allow (read, list) - Allows users to access their own login history.
-     * @allow (create) - Allows users to create new login history records.
-     * @allow (update, delete) - Allows users to modify their own existing login history records.
-     * @principle Enforces document ownership for all operations on the login history subcollection.
-     */
-    match /users/{userId}/loginHistory/{historyId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-    
-     /**
-     * @description Security rules for user docking simulations.
-     * @path /users/{userId}/dockingSimulations/{simulationId}
-     * @allow (read, list, write) - Allows users to access and manage their own docking simulation data.
-     * @principle Enforces document ownership for all operations on the dockingSimulations subcollection.
-     */
-    match /users/{userId}/dockingSimulations/{simulationId} {
-      allow read, list, write: if isOwner(userId);
+    // Grant read and write access to all documents if the user is authenticated.
+    match /{path=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
