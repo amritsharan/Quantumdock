@@ -63,7 +63,7 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
     }
 
     const handleDownloadPdf = () => {
-        if (!simulations || !date) return;
+        if (!date) return;
 
         const doc = new jsPDF();
         const docTitle = `Docking Activity for ${format(date, 'PPP')}`;
@@ -71,26 +71,31 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
         doc.setFontSize(18);
         doc.text(docTitle, 14, 22);
 
-        const tableColumn = ["Time", "Molecule", "Protein Target", "Binding Affinity (nM)"];
-        const tableRows: any[][] = [];
+        if (!simulations || simulations.length === 0) {
+            doc.setFontSize(12);
+            doc.text("No docking simulations were performed on this day.", 14, 40);
+        } else {
+            const tableColumn = ["Time", "Molecule", "Protein Target", "Binding Affinity (nM)"];
+            const tableRows: any[][] = [];
 
-        simulations.forEach(sim => {
-            const simData = [
-                format(sim.timestamp.toDate(), 'p'),
-                getMoleculeName(sim.moleculeSmiles),
-                sim.proteinTarget,
-                sim.bindingAffinity.toFixed(2),
-            ];
-            tableRows.push(simData);
-        });
+            simulations.forEach(sim => {
+                const simData = [
+                    format(sim.timestamp.toDate(), 'p'),
+                    getMoleculeName(sim.moleculeSmiles),
+                    sim.proteinTarget,
+                    sim.bindingAffinity.toFixed(2),
+                ];
+                tableRows.push(simData);
+            });
 
-        (doc as any).autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 30,
-            theme: 'striped',
-            headStyles: { fillColor: [46, 82, 102] }
-        });
+            (doc as any).autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: 30,
+                theme: 'striped',
+                headStyles: { fillColor: [46, 82, 102] }
+            });
+        }
         
         doc.save(`QuantumDock_Activity_${format(date, 'yyyy-MM-dd')}.pdf`);
     };
@@ -110,9 +115,9 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
                             variant="outline" 
                             size="sm"
                             onClick={handleDownloadPdf}
-                            disabled={isLoading || !simulations || simulations.length === 0}
+                            disabled={isLoading}
                         >
-                            <Download className="mr-2 h-4 w-4" />
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" /> }
                             Download PDF
                         </Button>
                     </div>
