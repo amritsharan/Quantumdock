@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -48,43 +47,61 @@ export default function DashboardLayout({
         hasHandledLogin.current = true; // Mark as handled to prevent re-running
         
         const handleNewLogin = async () => {
+            if (!firestore || !user) return;
+            
             const userDocRef = doc(firestore, 'users', user.uid);
             
             // 1. Create user document if it doesn't exist
-            const userDoc = await getDoc(userDocRef);
-            if (!userDoc.exists()) {
-                setDocumentNonBlocking(userDocRef, {
-                    uid: user.uid,
-                    email: user.email,
-                    displayName: user.displayName,
-                    createdAt: serverTimestamp(),
-                }, { merge: true });
+            try {
+                const userDoc = await getDoc(userDocRef);
+                if (!userDoc.exists()) {
+                    await setDoc(userDocRef, {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                        createdAt: serverTimestamp(),
+                    }, { merge: true });
+                }
+            } catch (error) {
+                console.error("Error ensuring user document exists:", error);
+                // Decide if this is a critical error to halt the process
             }
 
             // 2. Deactivate any previously active sessions
             const historyQuery = query(
               collection(firestore, "users", user.uid, "loginHistory"),
-              where("status", "==", "active"),
-              orderBy("loginTime", "desc")
+              where("status", "==", "active")
             );
         
-            const querySnapshot = await getDocs(historyQuery);
-            for (const docSnapshot of querySnapshot.docs) {
-              updateDocumentNonBlocking(docSnapshot.ref, {
-                  status: 'inactive',
-                  logoutTime: serverTimestamp() // Mark it as logged out now
-              });
+            try {
+                const querySnapshot = await getDocs(historyQuery);
+                for (const docSnapshot of querySnapshot.docs) {
+                  // Use a standard, awaited updateDoc call
+                  await updateDoc(docSnapshot.ref, {
+                      status: 'inactive',
+                      logoutTime: serverTimestamp() // Mark it as logged out now
+                  });
+                }
+            } catch (error) {
+                console.error("Error deactivating old sessions:", error);
+                 // This might fail if rules are strict, but we shouldn't block login
             }
 
-            // 3. Create the new active session
-            addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
-              userId: user.uid,
-              loginTime: serverTimestamp(),
-              status: 'active',
-            });
+
+            // 3. Create the new active session using a standard awaited call
+            try {
+                const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
+                await addDoc(historyCollectionRef, {
+                  userId: user.uid,
+                  loginTime: serverTimestamp(),
+                  status: 'active',
+                });
+            } catch (error) {
+                 console.error("Error creating new login session:", error);
+            }
         };
 
-        handleNewLogin().catch(console.error);
+        handleNewLogin();
     }
   }, [user, firestore, isUserLoading]);
 
@@ -122,14 +139,11 @@ export default function DashboardLayout({
           logoutTime: serverTimestamp(),
           duration: duration,
         };
-
-        // Use a standard, awaited updateDoc call here inside a try/catch
-        // to ensure the session update completes before signing out.
+        
         await updateDoc(activeSessionDoc.ref, updateData);
       }
     } catch (error: any) {
         console.error('Error querying or updating login history on sign out:', error);
-        // We will show an error but still proceed to sign out the user.
         setSignOutError(error.message || 'An unknown error occurred while updating your session.');
         setShowSignOutError(true);
     }
