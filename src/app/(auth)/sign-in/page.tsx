@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -73,13 +73,13 @@ export default function SignInPage() {
         orderBy("loginTime", "desc")
       );
   
-      const querySnapshot = await getDocs(historyQuery);
       const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
         userId: user.uid,
         loginTime: serverTimestamp(),
         status: 'active',
       });
   
+      const querySnapshot = await getDocs(historyQuery);
       for (const docSnapshot of querySnapshot.docs) {
         if (docSnapshot.id !== newSessionRef.id) {
             await updateDoc(docSnapshot.ref, {
