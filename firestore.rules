@@ -45,7 +45,7 @@ service cloud.firestore {
      * @principle Combines ownership and existence checks for safer updates and deletes.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && exists(resource);
+      return isOwner(userId) && exists(/databases/$(database)/documents/$(resource.path));
     }
 
 
@@ -134,6 +134,26 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Security rules for user login history.
+     * @path /users/{userId}/loginHistory/{historyId}
+     * @allow (read, list, write) - Allows users to access and manage their own login history.
+     * @principle Enforces document ownership for all operations on the login history subcollection.
+     */
+    match /users/{userId}/loginHistory/{historyId} {
+      allow read, list, write: if isOwner(userId);
+    }
+    
+     /**
+     * @description Security rules for user docking simulations.
+     * @path /users/{userId}/dockingSimulations/{simulationId}
+     * @allow (read, list, write) - Allows users to access and manage their own docking simulation data.
+     * @principle Enforces document ownership for all operations on the dockingSimulations subcollection.
+     */
+    match /users/{userId}/dockingSimulations/{simulationId} {
+      allow read, list, write: if isOwner(userId);
     }
   }
 }

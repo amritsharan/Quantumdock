@@ -144,6 +144,84 @@
         "email",
         "name"
       ]
+    },
+    "LoginHistory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LoginHistory",
+      "type": "object",
+      "description": "Represents a user's login session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the login history record."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user."
+        },
+        "loginTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of when the user logged in."
+        },
+        "logoutTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of when the user logged out."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"],
+          "description": "The status of the login session."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "loginTime",
+        "status"
+      ]
+    },
+    "DockingSimulation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DockingSimulation",
+      "type": "object",
+      "description": "Represents a single docking simulation event performed by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the simulation record."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who performed the simulation."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of when the simulation was run."
+        },
+        "moleculeSmiles": {
+          "type": "string",
+          "description": "The SMILES string of the molecule used."
+        },
+        "proteinTarget": {
+          "type": "string",
+          "description": "The name of the protein target used."
+        },
+        "bindingAffinity": {
+          "type": "number",
+          "description": "The predicted binding affinity result."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "timestamp",
+        "moleculeSmiles",
+        "proteinTarget",
+        "bindingAffinity"
+      ]
     }
   },
   "auth": {
@@ -229,8 +307,48 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/loginHistory/{historyId}",
+        "definition": {
+          "entityName": "LoginHistory",
+          "schema": {
+            "$ref": "#/backend/entities/LoginHistory"
+          },
+          "description": "Stores login history for a specific user. Path-based ownership ensures only the user can access their own login records.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "historyId",
+              "description": "The unique identifier of the login history record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/dockingSimulations/{simulationId}",
+        "definition": {
+          "entityName": "DockingSimulation",
+          "schema": {
+            "$ref": "#/backend/entities/DockingSimulation"
+          },
+          "description": "Stores docking simulation records for a specific user. Path-based ownership ensures only the user can access their own simulation data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "simulationId",
+              "description": "The unique identifier of the docking simulation record."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between users, molecules, target proteins, and docking results in the QuantumDock application. It leverages path-based ownership for private user data, ensuring clear authorization and efficient queries. The structure prioritizes Authorization Independence by ensuring that each document contains all the necessary information to validate access without needing to perform `get()` operations on parent documents.\n\nSpecifically:\n\n*   **Users Collection:** Stores user profiles.\n*   **User-Owned Data:** Molecules, TargetProteins, and DockingResults are stored as subcollections under each user's document (`/users/{userId}/molecules/{moleculeId}`, `/users/{userId}/targetProteins/{targetProteinId}`, and `/users/{userId}/dockingResults/{dockingResultId}`). This enforces clear ownership and simplifies security rules. Using hierarchical paths automatically ensures that only the owning user has access to their data, eliminating the need for complex authorization logic.\n\nThis design supports the required QAPs (Rules are not Filters) because listing operations will always be scoped to a specific user's data, based on the path. There is no need to filter based on user ID within the rules themselves, as the path inherently provides that context."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between users and their data in the QuantumDock application. It leverages path-based ownership for private user data, ensuring clear authorization and efficient queries. The structure prioritizes Authorization Independence by ensuring that each document contains all the necessary information to validate access without needing to perform `get()` operations on parent documents.\n\nSpecifically:\n\n*   **Users Collection:** Stores user profiles.\n*   **User-Owned Data:** Molecules, TargetProteins, DockingResults, LoginHistory, and DockingSimulations are stored as subcollections under each user's document. This enforces clear ownership and simplifies security rules. Using hierarchical paths automatically ensures that only the owning user has access to their data, eliminating the need for complex authorization logic."
   }
 }
