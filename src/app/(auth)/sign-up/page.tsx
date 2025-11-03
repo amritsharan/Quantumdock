@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/componentsui/card';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
@@ -25,6 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Separator } from '@/components/ui/separator';
@@ -116,10 +117,9 @@ function SignUpForm() {
       await handleSuccessfulSignUp(userCredential.user, data.displayName, data.phoneNumber);
 
     } catch (error: any) {
-      console.error('Sign up error:', error);
       if (error.code === 'auth/email-already-in-use') {
         setAlertTitle('Email Already In Use');
-        setAlertDescription('An account with this email address already exists. Please sign in to continue.');
+        setAlertDescription('An account with this email address already exists. Would you like to sign in instead?');
         setShowErrorAlert(true);
       } else {
         toast({
@@ -284,9 +284,12 @@ function SignUpForm() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             {alertTitle === 'Email Already In Use' ? (
-                 <AlertDialogAction onClick={() => router.push(`/sign-in?email=${encodeURIComponent(getValues('email'))}`)}>
+              <>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => router.push(`/sign-in?email=${encodeURIComponent(getValues('email'))}`)}>
                     Go to Sign In
                 </AlertDialogAction>
+              </>
             ) : (
                  <AlertDialogAction onClick={() => setShowErrorAlert(false)}>
                     Close
@@ -307,3 +310,5 @@ export default function SignUpPage() {
         </Suspense>
     )
 }
+
+    

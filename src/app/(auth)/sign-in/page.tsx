@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useForm as useForgotPasswordForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -70,7 +71,7 @@ export default function SignInPage() {
     resolver: zodResolver(signInSchema),
   });
 
-  const forgotPasswordForm = useForgotPasswordForm<ForgotPasswordFormValues>({
+  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
@@ -125,7 +126,6 @@ export default function SignInPage() {
 
   const onSubmit = async (data: SignInFormValues) => {
     setIsLoading(true);
-    setErrorType('generic');
     if (!auth) {
       setAlertTitle('Sign In Failed');
       setAlertDescription('Authentication service is not available. Please try again later.');
@@ -139,20 +139,19 @@ export default function SignInPage() {
       await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+        setErrorType('user-not-found');
         setAlertTitle("Account Not Found");
         setAlertDescription("No account found with this email. Would you like to create one?");
-        setErrorType('user-not-found');
         setShowErrorAlert(true);
-      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        setErrorType('wrong-password');
         setAlertTitle("Authentication Failed");
         setAlertDescription("Invalid credentials. Please check your email and password and try again.");
-        setErrorType('wrong-password');
         setShowErrorAlert(true);
       } else {
-        console.error('Sign in error:', error);
+        setErrorType('generic');
         setAlertTitle('Sign In Failed');
         setAlertDescription(error.message || 'An unexpected error occurred. Please try again.');
-        setErrorType('generic');
         setShowErrorAlert(true);
       }
     } finally {
@@ -177,6 +176,7 @@ export default function SignInPage() {
         console.error("Google sign in error", error);
         setAlertTitle("Google Sign-In Failed");
         setAlertDescription(error.message || "An error occurred during Google Sign-In. Please try again.");
+        setErrorType('generic');
         setShowErrorAlert(true);
     } finally {
         setIsGoogleLoading(false);
@@ -364,40 +364,42 @@ export default function SignInPage() {
       </AlertDialog>
 
       <AlertDialog open={showForgotPasswordDialog} onOpenChange={setShowForgotPasswordDialog}>
-        <AlertDialogContent>
-          <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reset Your Password</AlertDialogTitle>
-              <AlertDialogDescription>
-                Enter your email address below and we&apos;ll send you a link to reset your password.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="forgot-email">Email</Label>
-                <Input
-                  id="forgot-email"
-                  type="email"
-                  placeholder="m@example.com"
-                  {...forgotPasswordForm.register('email')}
-                />
-                {forgotPasswordForm.formState.errors.email && (
-                  <p className="text-sm text-destructive">
-                    {forgotPasswordForm.formState.errors.email.message}
-                  </p>
-                )}
+        <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset Your Password</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Enter your email address below and we&apos;ll send you a link to reset your password.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="m@example.com"
+                    {...forgotPasswordForm.register('email')}
+                  />
+                  {forgotPasswordForm.formState.errors.email && (
+                    <p className="text-sm text-destructive">
+                      {forgotPasswordForm.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
-              <Button type="submit" disabled={isResettingPassword}>
-                {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Reset Link
-              </Button>
-            </AlertDialogFooter>
-          </form>
-        </AlertDialogContent>
+              <AlertDialogFooter>
+                <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+                <Button type="submit" disabled={isResettingPassword}>
+                  {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Reset Link
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+        </form>
       </AlertDialog>
     </>
   );
 }
+
+    
