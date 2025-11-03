@@ -76,15 +76,12 @@ function SignUpForm() {
   }, [searchParams, setValue]);
 
   useEffect(() => {
-    // Check for redirect result from Google sign-in
     if (auth) {
-        setIsGoogleLoading(true); // Show loader while checking
+        setIsGoogleLoading(true);
         getRedirectResult(auth)
             .then((result) => {
                 if (result && result.user) {
                     handleSuccessfulSignUp(result.user);
-                } else {
-                    setIsGoogleLoading(false); // No redirect result, stop loading
                 }
             })
             .catch((error) => {
@@ -100,6 +97,7 @@ function SignUpForm() {
                         description: error.message || "An unexpected error occurred during Google Sign-Up.",
                     });
                 }
+            }).finally(() => {
                 setIsGoogleLoading(false);
             });
     }
@@ -306,3 +304,5 @@ export default function SignUpPage() {
         </Suspense>
     )
 }
+
+    

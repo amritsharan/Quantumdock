@@ -272,7 +272,7 @@ export default function SignInPage() {
               )}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading || isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Sign In
             </Button>
           </form>
