@@ -108,7 +108,7 @@ function SignUpForm() {
   const handleSuccessfulSignUp = (user: User) => {
     toast({
         title: 'Account Created',
-        description: 'Your account has been successfully created. Redirecting to sign in...',
+        description: 'Your account has been successfully created. Redirecting to dashboard...',
     });
     router.push('/dashboard');
   }
