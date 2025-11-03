@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
-import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -58,7 +57,6 @@ export default function SignInPage() {
   
   const router = useRouter();
   const auth = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
   
   const {
@@ -79,47 +77,11 @@ export default function SignInPage() {
     setHydrated(true);
   }, []);
 
-  const handleSuccessfulLogin = async (user: User) => {
-    if (user && firestore) {
-      const historyQuery = query(
-        collection(firestore, "users", user.uid, "loginHistory"),
-        where("status", "==", "active"),
-        orderBy("loginTime", "desc")
-      );
-  
-      const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
-        userId: user.uid,
-        loginTime: serverTimestamp(),
-        status: 'active',
-      });
-  
-      const querySnapshot = await getDocs(historyQuery);
-      for (const docSnapshot of querySnapshot.docs) {
-        if (docSnapshot.id !== newSessionRef.id) {
-            await updateDoc(docSnapshot.ref, {
-                status: 'inactive',
-                logoutTime: serverTimestamp()
-            });
-        }
-      }
-
-      const userDocRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            createdAt: serverTimestamp(),
-        }, { merge: true });
-      }
-    }
-    
+  const handleSuccessfulLogin = (user: User) => {
     toast({
       title: 'Sign In Successful',
       description: "Welcome back! You're being redirected to your dashboard.",
     });
-
     router.push('/dashboard');
   };
 
@@ -135,7 +97,7 @@ export default function SignInPage() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      await handleSuccessfulLogin(userCredential.user);
+      handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
         setErrorType('user-not-found');
@@ -160,7 +122,7 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    if (!auth || !firestore) {
+    if (!auth) {
         setAlertTitle('Sign In Failed');
         setAlertDescription('Authentication service is not available. Please try again later.');
         setShowErrorAlert(true);
@@ -170,20 +132,7 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-            await setDoc(userDocRef, {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                createdAt: serverTimestamp(),
-            }, { merge: true });
-        }
-        await handleSuccessfulLogin(user);
+        handleSuccessfulLogin(result.user);
     } catch (error: any) {
         console.error("Google sign in error", error);
         setAlertTitle("Google Sign-In Failed");

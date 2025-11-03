@@ -1,11 +1,11 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser, useFirestore } from '@/firebase';
+import { useAuth, useUser, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -28,8 +28,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Toaster } from '@/components/ui/toaster';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
 
 export default function DashboardLayout({
   children,
@@ -43,6 +41,53 @@ export default function DashboardLayout({
   const { toast } = useToast();
   const [showSignOutError, setShowSignOutError] = useState(false);
   const [signOutError, setSignOutError] = useState('');
+  const hasHandledLogin = useRef(false);
+
+  useEffect(() => {
+    if (user && firestore && !isUserLoading && !hasHandledLogin.current) {
+        hasHandledLogin.current = true; // Mark as handled to prevent re-running
+        
+        const handleNewLogin = async () => {
+            const userDocRef = doc(firestore, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            // 1. Create user document if it doesn't exist
+            if (!userDoc.exists()) {
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    createdAt: serverTimestamp(),
+                }, { merge: true });
+            }
+
+            // 2. Manage login history
+            const historyQuery = query(
+              collection(firestore, "users", user.uid, "loginHistory"),
+              where("status", "==", "active"),
+              orderBy("loginTime", "desc")
+            );
+
+            const newSessionRef = await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
+              userId: user.uid,
+              loginTime: serverTimestamp(),
+              status: 'active',
+            });
+        
+            const querySnapshot = await getDocs(historyQuery);
+            for (const docSnapshot of querySnapshot.docs) {
+              if (docSnapshot.id !== newSessionRef.id) {
+                  updateDocumentNonBlocking(docSnapshot.ref, {
+                      status: 'inactive',
+                      logoutTime: serverTimestamp()
+                  });
+              }
+            }
+        };
+
+        handleNewLogin().catch(console.error);
+    }
+  }, [user, firestore, isUserLoading]);
 
 
   const handleSignOut = async () => {
