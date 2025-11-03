@@ -133,26 +133,11 @@ export default function SignInPage() {
             if (error.code === 'auth/user-not-found') {
                 const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
                 await handleSuccessfulLogin(newUserCredential.user);
-            } else if (error.code === 'auth/invalid-credential') {
-                if (auth.currentUser) {
-                  await handleSuccessfulLogin(auth.currentUser);
-                } else {
-                  const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password).catch(() => {
-                      setAlertTitle("Authentication Failed");
-                      setAlertDescription("Could not verify special user credentials. Please try again.");
-                      setShowErrorAlert(true);
-                  });
-                  if (userCredential) {
-                    await handleSuccessfulLogin(userCredential.user);
-                  }
-                }
             } else {
                  setAlertTitle('Sign In Failed');
                  setAlertDescription(error.message || 'An unexpected error occurred for the special user.');
                  setShowErrorAlert(true);
             }
-        } finally {
-            setIsLoading(false);
         }
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
@@ -347,3 +332,5 @@ export default function SignInPage() {
     </>
   );
 }
+
+    
