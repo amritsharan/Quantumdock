@@ -2,9 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -27,6 +27,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Toaster } from '@/components/ui/toaster';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 export default function DashboardLayout({
   children,
@@ -49,9 +51,8 @@ export default function DashboardLayout({
         const handleNewLogin = async () => {
             if (!firestore || !user) return;
             
-            const userDocRef = doc(firestore, 'users', user.uid);
-            
             // 1. Create user document if it doesn't exist
+            const userDocRef = doc(firestore, 'users', user.uid);
             try {
                 const userDoc = await getDoc(userDocRef);
                 if (!userDoc.exists()) {
@@ -64,7 +65,6 @@ export default function DashboardLayout({
                 }
             } catch (error) {
                 console.error("Error ensuring user document exists:", error);
-                // Decide if this is a critical error to halt the process
             }
 
             // 2. Deactivate any previously active sessions
@@ -76,28 +76,38 @@ export default function DashboardLayout({
             try {
                 const querySnapshot = await getDocs(historyQuery);
                 for (const docSnapshot of querySnapshot.docs) {
-                  // Use a standard, awaited updateDoc call
                   await updateDoc(docSnapshot.ref, {
                       status: 'inactive',
-                      logoutTime: serverTimestamp() // Mark it as logged out now
+                      logoutTime: serverTimestamp()
                   });
                 }
-            } catch (error) {
-                console.error("Error deactivating old sessions:", error);
-                 // This might fail if rules are strict, but we shouldn't block login
+            } catch (error: any) {
+                 errorEmitter.emit(
+                    'permission-error',
+                    new FirestorePermissionError({
+                      path: (error as any)?.path || `users/${user.uid}/loginHistory`,
+                      operation: 'update',
+                    })
+                  )
             }
 
-
-            // 3. Create the new active session using a standard awaited call
+            // 3. Create the new active session
             try {
-                const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
-                await addDoc(historyCollectionRef, {
+                const newSessionData = {
                   userId: user.uid,
                   loginTime: serverTimestamp(),
                   status: 'active',
-                });
-            } catch (error) {
-                 console.error("Error creating new login session:", error);
+                };
+                const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
+                await addDoc(historyCollectionRef, newSessionData);
+            } catch (error: any) {
+                 errorEmitter.emit(
+                    'permission-error',
+                    new FirestorePermissionError({
+                      path: `users/${user.uid}/loginHistory`,
+                      operation: 'create',
+                    })
+                  )
             }
         };
 
@@ -108,7 +118,7 @@ export default function DashboardLayout({
 
   const handleSignOut = async () => {
     if (!user || !firestore) {
-        if (auth) await signOut(auth); // Sign out if service available, even if firestore is not
+        if (auth) await signOut(auth); 
         router.push('/sign-in');
         return;
     }
@@ -130,7 +140,7 @@ export default function DashboardLayout({
         if (loginTimeData && typeof loginTimeData.toDate === 'function') {
             const loginTime = loginTimeData.toDate();
             const logoutTime = new Date();
-            const calculatedDuration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60)); // in minutes
+            const calculatedDuration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60));
             duration = calculatedDuration > 0 ? calculatedDuration : 0;
         }
         
@@ -143,9 +153,15 @@ export default function DashboardLayout({
         await updateDoc(activeSessionDoc.ref, updateData);
       }
     } catch (error: any) {
-        console.error('Error querying or updating login history on sign out:', error);
-        setSignOutError(error.message || 'An unknown error occurred while updating your session.');
-        setShowSignOutError(true);
+        // Emit a contextual error instead of showing an alert
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: (error as any)?.path || `users/${user.uid}/loginHistory`,
+            operation: 'update',
+          })
+        );
+        // We will still proceed to sign the user out.
     }
 
     try {
@@ -158,7 +174,6 @@ export default function DashboardLayout({
       });
       router.push('/sign-in');
     } catch (error) {
-      console.error('Error signing out: ', error);
       toast({
         variant: 'destructive',
         title: 'Sign Out Failed',
