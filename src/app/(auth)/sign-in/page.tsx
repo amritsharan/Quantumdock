@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useForm as useForgotPasswordForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -13,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -39,6 +38,12 @@ const signInSchema = z.object({
 
 type SignInFormValues = z.infer<typeof signInSchema>;
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+});
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -48,10 +53,14 @@ export default function SignInPage() {
   const [errorType, setErrorType] = useState<'user-not-found' | 'wrong-password' | 'generic'>('generic');
   const [hydrated, setHydrated] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPasswordDialog, setShowForgotPasswordDialog] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
   const {
     register,
     handleSubmit,
@@ -60,6 +69,11 @@ export default function SignInPage() {
   } = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
   });
+
+  const forgotPasswordForm = useForgotPasswordForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+  });
+
 
   useEffect(() => {
     setHydrated(true);
@@ -168,6 +182,32 @@ export default function SignInPage() {
         setIsGoogleLoading(false);
     }
   };
+  
+  const onForgotPasswordSubmit = async (data: ForgotPasswordFormValues) => {
+    setIsResettingPassword(true);
+    if (!auth) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Authentication service not available.' });
+      setIsResettingPassword(false);
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, data.email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: `If an account exists for ${data.email}, you will receive a password reset link.`,
+      });
+      setShowForgotPasswordDialog(false);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+       toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send password reset email. Please try again.',
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
 
   if (!hydrated) {
@@ -230,7 +270,20 @@ export default function SignInPage() {
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="#"
+                  className="text-sm underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    forgotPasswordForm.setValue('email', getValues('email'));
+                    setShowForgotPasswordDialog(true);
+                  }}
+                >
+                  Forgot Password?
+                </Link>
+              </div>
                <div className="relative">
                 <Input
                   id="password"
@@ -309,8 +362,42 @@ export default function SignInPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={showForgotPasswordDialog} onOpenChange={setShowForgotPasswordDialog}>
+        <AlertDialogContent>
+          <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reset Your Password</AlertDialogTitle>
+              <AlertDialogDescription>
+                Enter your email address below and we&apos;ll send you a link to reset your password.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="m@example.com"
+                  {...forgotPasswordForm.register('email')}
+                />
+                {forgotPasswordForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">
+                    {forgotPasswordForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+              <Button type="submit" disabled={isResettingPassword}>
+                {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Reset Link
+              </Button>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
-
-    
