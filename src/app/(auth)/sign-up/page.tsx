@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
-import { doc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -135,7 +135,7 @@ function SignUpForm() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    if (!auth) {
+    if (!auth || !firestore) {
         setAlertTitle('Sign Up Failed');
         setAlertDescription('Authentication service is not available. Please try again later.');
         setShowErrorAlert(true);
@@ -145,7 +145,18 @@ function SignUpForm() {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        await handleSuccessfulSignUp(result.user);
+        const user = result.user;
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+             await setDoc(userDocRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                createdAt: serverTimestamp(),
+            }, { merge: true });
+        }
+        await handleSuccessfulSignUp(user);
     } catch (error: any) {
         console.error("Google sign in error", error);
          if (error.code === 'auth/account-exists-with-different-credential' || error.code === 'auth/email-already-in-use') {

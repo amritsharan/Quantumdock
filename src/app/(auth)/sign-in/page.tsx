@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -161,7 +160,7 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    if (!auth) {
+    if (!auth || !firestore) {
         setAlertTitle('Sign In Failed');
         setAlertDescription('Authentication service is not available. Please try again later.');
         setShowErrorAlert(true);
@@ -171,7 +170,20 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        await handleSuccessfulLogin(result.user);
+        const user = result.user;
+
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                createdAt: serverTimestamp(),
+            }, { merge: true });
+        }
+        await handleSuccessfulLogin(user);
     } catch (error: any) {
         console.error("Google sign in error", error);
         setAlertTitle("Google Sign-In Failed");
@@ -401,5 +413,3 @@ export default function SignInPage() {
     </>
   );
 }
-
-    
