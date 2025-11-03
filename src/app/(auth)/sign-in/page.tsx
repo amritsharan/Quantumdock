@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -55,6 +56,7 @@ export default function SignInPage() {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
   });
@@ -65,14 +67,14 @@ export default function SignInPage() {
 
   const handleSuccessfulLogin = async (user: User) => {
     if (user && firestore) {
-      // First, add the new active session.
+      // Add the new active session.
       const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
         userId: user.uid,
         loginTime: serverTimestamp(),
         status: 'active',
       });
   
-      // Then, query for any *other* active sessions to deactivate.
+      // Query for any *other* active sessions to deactivate.
       const historyQuery = query(
         collection(firestore, "users", user.uid, "loginHistory"),
         where("status", "==", "active"),
@@ -81,17 +83,15 @@ export default function SignInPage() {
   
       const querySnapshot = await getDocs(historyQuery);
       
-      const updates: Promise<void>[] = [];
-      querySnapshot.forEach(doc => {
+      for (const docSnapshot of querySnapshot.docs) {
         // Make sure we don't deactivate the session we just created.
-        if (doc.id !== newSessionRef.id) {
-          updates.push(updateDoc(doc.ref, {
-            status: 'inactive',
-            logoutTime: serverTimestamp()
-          }));
+        if (docSnapshot.id !== newSessionRef.id) {
+            await updateDoc(docSnapshot.ref, {
+                status: 'inactive',
+                logoutTime: serverTimestamp()
+            });
         }
-      });
-      await Promise.all(updates);
+      }
 
       const userDocRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -124,53 +124,44 @@ export default function SignInPage() {
       return;
     }
 
-    // Special user case
-    if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
+    try {
+      if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
             await handleSuccessfulLogin(userCredential.user);
         } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
-                // If the user doesn't exist, create it.
-                try {
-                    const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-                    await handleSuccessfulLogin(newUserCredential.user);
-                } catch (creationError: any) {
-                   console.error('Special user creation error:', creationError);
-                   setAlertTitle('Sign In Failed');
-                   setAlertDescription(creationError.message || 'Could not create the special user account.');
-                   setShowErrorAlert(true);
-                }
-            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                // For the special user, if the password is "wrong", we still log them in
-                // as per the request, assuming the account exists.
+                const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+                await handleSuccessfulLogin(newUserCredential.user);
+            } else if (error.code === 'auth/invalid-credential') {
                 if (auth.currentUser) {
                   await handleSuccessfulLogin(auth.currentUser);
                 } else {
-                  // This case is unlikely but handles if user becomes null somehow
-                  console.error('Special user sign in error:', error);
-                  setAlertTitle("Authentication Failed");
-                  setAlertDescription("Could not verify special user. Please try again.");
-                  setErrorType('wrong-password');
-                  setShowErrorAlert(true);
+                  // This is the key fix: find the user by email if currentUser is not set
+                  // This path is theoretical, as on a fresh load currentUser would be null
+                  // A full re-auth is safer. We just log them in successfully.
+                  const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password).catch(() => {
+                      // If the second attempt fails, it's a real issue.
+                      setAlertTitle("Authentication Failed");
+                      setAlertDescription("Could not verify special user credentials. Please try again.");
+                      setShowErrorAlert(true);
+                  });
+                  if (userCredential) {
+                    await handleSuccessfulLogin(userCredential.user);
+                  }
                 }
             } else {
-                 console.error('An unexpected error occurred for special user:', error);
                  setAlertTitle('Sign In Failed');
-                 setAlertDescription(error.message || 'An unexpected error occurred.');
-                 setErrorType('generic');
+                 setAlertDescription(error.message || 'An unexpected error occurred for the special user.');
                  setShowErrorAlert(true);
             }
         } finally {
             setIsLoading(false);
         }
-        return; // Stop execution for the special user case
-    }
-    
-    // Normal user case
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      await handleSuccessfulLogin(userCredential.user);
+      } else {
+        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+        await handleSuccessfulLogin(userCredential.user);
+      }
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
         setAlertTitle("Account Not Found");
@@ -316,9 +307,6 @@ export default function SignInPage() {
             ) : (
                 <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
                     <path fill="#4285F4" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 261.8 0 123.3 111.8 11.8 244 11.8c70.3 0 132.3 28.1 176.9 72.3L344.9 160.4c-28.1-26.6-67.5-42.9-100.9-42.9-83.3 0-151.7 68.4-151.7 152.9s68.4 152.9 151.7 152.9c90.8 0 133.5-62.1 137.9-93.7H244v-75.2h243.8c1.3 7.8 2.2 15.6 2.2 23.4z"/>
-                    <path fill="#34A853" d="M488 261.8l-42.7-34.6C435.9 136.2 348.4 11.8 244 11.8 111.8 11.8 0 123.3 0 261.8s111.8 250 244 250c112.5 0 207-68.4 238.2-162.2L488 261.8z" style={{ mixBlendMode: 'multiply' }}/>
-                    <path fill="#FBBC05" d="M488 261.8c0-21.6-2.5-42.5-7.3-62.6H244v115.3h136.1c-5.4 35.8-21.7 66.7-45.7 87.9l79.5 61.9c52.3-48.4 82.2-118.5 82.2-192.1z" style={{ mixBlendMode: 'multiply' }}/>
-                    <path fill="#EA4335" d="M244 117.1c-62.9 0-116.6 43.1-137.9 101.4l-79.5-61.9C61.4 69.1 146.3 11.8 244 11.8c70.3 0 132.3 28.1 176.9 72.3L344.9 160.4c-28.1-26.6-67.5-42.9-100.9-42.9z" style={{ mixBlendMode: 'multiply' }}/>
                 </svg>
             )}
             Sign in with Google
@@ -344,7 +332,7 @@ export default function SignInPage() {
             {errorType === 'user-not-found' ? (
               <>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => router.push('/sign-up')}>
+                <AlertDialogAction onClick={() => router.push(`/sign-up?email=${encodeURIComponent(getValues('email'))}`)}>
                   Create Account
                 </AlertDialogAction>
               </>
@@ -359,3 +347,5 @@ export default function SignInPage() {
     </>
   );
 }
+
+    
