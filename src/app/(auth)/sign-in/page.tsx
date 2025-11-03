@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -52,11 +52,16 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordDialog, setShowForgotPasswordDialog] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
   
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -140,7 +145,7 @@ export default function SignInPage() {
   };
 
 
-  if (!auth) {
+  if (!hydrated) {
     return (
         <Card className="w-full max-w-sm">
             <CardHeader className="text-center">
@@ -306,5 +311,3 @@ export default function SignInPage() {
     </>
   );
 }
-
-    
