@@ -1,8 +1,21 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  // Allow all origins to frame this page
+  response.headers.set('X-Frame-Options', 'ALLOWALL');
+  
+  // Set a permissive Content-Security-Policy for frame-ancestors
+  // This is often needed in development environments or when the app is embedded.
+  response.headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors * 'unsafe-inline' 'unsafe-eval';"
+  );
+  
+  return response;
 }
 
 export const config = {
