@@ -103,7 +103,7 @@ function SignUpForm() {
                 setIsGoogleLoading(false);
             });
     }
-  }, [auth]);
+  }, [auth, toast, router]);
 
   const handleSuccessfulSignUp = (user: User) => {
     toast({

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useUser, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -123,10 +123,13 @@ export default function DashboardLayout({
           duration: duration,
         };
 
-        updateDocumentNonBlocking(activeSessionDoc.ref, updateData);
+        // Use a standard, awaited updateDoc call here inside a try/catch
+        // to ensure the session update completes before signing out.
+        await updateDoc(activeSessionDoc.ref, updateData);
       }
     } catch (error: any) {
-        console.error('Error querying login history on sign out:', error);
+        console.error('Error querying or updating login history on sign out:', error);
+        // We will show an error but still proceed to sign out the user.
         setSignOutError(error.message || 'An unknown error occurred while updating your session.');
         setShowSignOutError(true);
     }
