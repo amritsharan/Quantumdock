@@ -1,15 +1,14 @@
-
 {
   "entities": {
     "Molecule": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Molecule",
       "type": "object",
-      "description": "Represents a molecule used in docking simulations.",
+      "description": "Represents a molecule structure.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the molecule."
+          "description": "Unique identifier for the molecule entity."
         },
         "name": {
           "type": "string",
@@ -19,166 +18,138 @@
           "type": "string",
           "description": "SMILES string representation of the molecule."
         },
-        "pdbData": {
+        "pdbFile": {
           "type": "string",
-          "description": "PDB file data of the molecule (optional)."
+          "description": "PDB file content of the molecule."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Molecule)"
         }
       },
       "required": [
         "id",
         "name",
-        "smiles"
+        "smiles",
+        "userId"
       ]
     },
-    "ProteinTarget": {
+    "TargetProtein": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ProteinTarget",
+      "title": "TargetProtein",
       "type": "object",
-      "description": "Represents a biological target (protein) for docking simulations.",
+      "description": "Represents a biological target protein.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the protein target."
+          "description": "Unique identifier for the target protein entity."
         },
         "name": {
           "type": "string",
-          "description": "Name of the protein target."
-        },
-        "pdbData": {
-          "type": "string",
-          "description": "PDB file data of the protein target."
+          "description": "Name of the target protein."
         },
         "sequence": {
           "type": "string",
-          "description": "Amino acid sequence of the protein target."
+          "description": "Amino acid sequence of the target protein."
+        },
+        "structure": {
+          "type": "string",
+          "description": "3D structure data of the protein (e.g., PDB format)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N TargetProtein)"
         }
       },
       "required": [
         "id",
         "name",
-        "pdbData",
-        "sequence"
+        "sequence",
+        "structure",
+        "userId"
       ]
     },
-    "DockingSimulation": {
+    "DockingResult": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DockingSimulation",
+      "title": "DockingResult",
       "type": "object",
-      "description": "Represents a docking simulation between a molecule and a protein target.",
+      "description": "Represents the result of a docking simulation.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the docking simulation."
+          "description": "Unique identifier for the docking result entity."
         },
         "moleculeId": {
           "type": "string",
-          "description": "Reference to Molecule. (Relationship: Molecule 1:N DockingSimulation)"
+          "description": "Reference to Molecule. (Relationship: Molecule 1:N DockingResult)"
         },
-        "proteinTargetId": {
+        "targetProteinId": {
           "type": "string",
-          "description": "Reference to ProteinTarget. (Relationship: ProteinTarget 1:N DockingSimulation)"
+          "description": "Reference to TargetProtein. (Relationship: TargetProtein 1:N DockingResult)"
         },
-        "classicalDockingScore": {
+        "dockingScore": {
           "type": "number",
-          "description": "Score from classical molecular docking."
+          "description": "The docking score of the simulation."
         },
-        "quantumRefinedScore": {
+        "refinedEnergy": {
           "type": "number",
-          "description": "Score after quantum refinement with VQE/QAOA."
+          "description": "Refined binding energy after quantum refinement (VQE/QAOA)."
+        },
+        "pose": {
+          "type": "string",
+          "description": "3D coordinates of the docked pose."
         },
         "bindingAffinity": {
           "type": "number",
-          "description": "Predicted binding affinity based on quantum-refined energies."
+          "description": "Predicted binding affinity."
         },
-        "dockedPoseData": {
+        "userId": {
           "type": "string",
-          "description": "Data representing the docked pose of the molecule and target."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp of when the docking simulation was performed.",
-          "format": "date-time"
+          "description": "Reference to User. (Relationship: User 1:N DockingResult)"
         }
       },
       "required": [
         "id",
         "moleculeId",
-        "proteinTargetId",
-        "classicalDockingScore",
-        "quantumRefinedScore",
+        "targetProteinId",
+        "dockingScore",
+        "refinedEnergy",
+        "pose",
         "bindingAffinity",
-        "dockedPoseData",
-        "timestamp"
+        "userId"
       ]
     },
-    "UserProfile": {
+    "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserProfile",
+      "title": "User",
       "type": "object",
-      "description": "Represents a user's profile information.",
+      "description": "Represents a user of the application.",
       "properties": {
-        "uid": {
+        "id": {
           "type": "string",
-          "description": "The unique user ID from Firebase Authentication."
+          "description": "Unique identifier for the user entity."
         },
         "email": {
           "type": "string",
-          "format": "email",
-          "description": "The user's email address."
+          "description": "Email address of the user.",
+          "format": "email"
         },
-        "displayName": {
+        "name": {
           "type": "string",
-          "description": "The user's display name."
-        },
-        "phoneNumber": {
-            "type": "string",
-            "description": "The user's phone number."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the user account was created."
+          "description": "Name of the user."
         }
       },
-      "required": ["uid", "email", "createdAt"]
-    },
-    "LoginHistory": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LoginHistory",
-      "type": "object",
-      "description": "Represents a single login session for a user.",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user for this session."
-        },
-        "loginTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the user logged in."
-        },
-        "logoutTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the user logged out."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["active", "inactive"],
-          "description": "The current status of the session."
-        },
-        "duration": {
-            "type": "number",
-            "description": "The duration of the session in minutes."
-        }
-      },
-      "required": ["userId", "loginTime", "status"]
+      "required": [
+        "id",
+        "email",
+        "name"
+      ]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "google.com"
+      "anonymous"
     ]
   },
   "firestore": {
@@ -186,21 +157,17 @@
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "UserProfile",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/UserProfile"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles. Access is restricted to the user themselves."
-        }
-      },
-      {
-        "path": "/users/{userId}/loginHistory/{historyId}",
-        "definition": {
-          "entityName": "LoginHistory",
-          "schema": {
-            "$ref": "#/backend/entities/LoginHistory"
-          },
-          "description": "Stores login history for a specific user. Access is restricted to the owner."
+          "description": "Stores user profiles.  All user-specific data is stored under this path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
         }
       },
       {
@@ -210,31 +177,60 @@
           "schema": {
             "$ref": "#/backend/entities/Molecule"
           },
-          "description": "Stores molecules created by a specific user. Access is restricted to the owner of the molecule."
+          "description": "Stores molecule data for a specific user.  Path-based ownership ensures only the user can access these documents.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "moleculeId",
+              "description": "The unique identifier of the molecule."
+            }
+          ]
         }
       },
       {
-        "path": "/users/{userId}/proteinTargets/{proteinTargetId}",
+        "path": "/users/{userId}/targetProteins/{targetProteinId}",
         "definition": {
-          "entityName": "ProteinTarget",
+          "entityName": "TargetProtein",
           "schema": {
-            "$ref": "#/backend/entities/ProteinTarget"
+            "$ref": "#/backend/entities/TargetProtein"
           },
-          "description": "Stores protein target data uploaded by a specific user. Access is restricted to the owner."
+          "description": "Stores target protein data for a specific user. Path-based ownership ensures only the user can access these documents.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "targetProteinId",
+              "description": "The unique identifier of the target protein."
+            }
+          ]
         }
       },
       {
-        "path": "/users/{userId}/dockingSimulations/{dockingSimulationId}",
+        "path": "/users/{userId}/dockingResults/{dockingResultId}",
         "definition": {
-          "entityName": "DockingSimulation",
+          "entityName": "DockingResult",
           "schema": {
-            "$ref": "#/backend/entities/DockingSimulation"
+            "$ref": "#/backend/entities/DockingResult"
           },
-          "description": "Stores docking simulation data performed by a specific user. Access is restricted to the owner."
+          "description": "Stores docking result data for a specific user. Path-based ownership ensures only the user can access these documents.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "dockingResultId",
+              "description": "The unique identifier of the docking result."
+            }
+          ]
         }
       }
-    ]
+    ],
+    "reasoning": "The Firestore structure is designed to reflect the relationships between users, molecules, target proteins, and docking results in the QuantumDock application. It leverages path-based ownership for private user data, ensuring clear authorization and efficient queries. The structure prioritizes Authorization Independence by ensuring that each document contains all the necessary information to validate access without needing to perform `get()` operations on parent documents.\n\nSpecifically:\n\n*   **Users Collection:** Stores user profiles.\n*   **User-Owned Data:** Molecules, TargetProteins, and DockingResults are stored as subcollections under each user's document (`/users/{userId}/molecules/{moleculeId}`, `/users/{userId}/targetProteins/{targetProteinId}`, and `/users/{userId}/dockingResults/{dockingResultId}`). This enforces clear ownership and simplifies security rules. Using hierarchical paths automatically ensures that only the owning user has access to their data, eliminating the need for complex authorization logic.\n\nThis design supports the required QAPs (Rules are not Filters) because listing operations will always be scoped to a specific user's data, based on the path. There is no need to filter based on user ID within the rules themselves, as the path inherently provides that context."
   }
 }
-
-    
