@@ -197,7 +197,7 @@ export default function SignInPage() {
         description: `If an account exists for ${data.email}, you will receive a password reset link.`,
       });
       setShowForgotPasswordDialog(false);
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error('Password reset error:', error);
        toast({
         variant: 'destructive',
@@ -401,4 +401,3 @@ export default function SignInPage() {
     </>
   );
 }
-

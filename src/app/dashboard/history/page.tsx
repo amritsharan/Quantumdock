@@ -3,16 +3,19 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import { useCollection, type WithId } from '@/firebase/firestore/use-collection';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, formatDistanceToNow, addMinutes } from 'date-fns';
+import { format, formatDistanceToNow, addMinutes, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { molecules } from '@/lib/molecules';
 
 type LoginHistory = {
   loginTime: { seconds: number; nanoseconds: number };
@@ -22,15 +25,95 @@ type LoginHistory = {
   userId: string;
 };
 
+type DockingSimulation = {
+    moleculeSmiles: string;
+    proteinTarget: string;
+    bindingAffinity: number;
+    timestamp: Timestamp;
+};
+
 const calculateActiveDuration = (loginDate: Date) => {
     return `${formatDistanceToNow(loginDate)} (so far)`;
 };
+
+function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Date | null, userId: string | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+    const firestore = useFirestore();
+    
+    const simulationsQuery = useMemoFirebase(() => {
+        if (!firestore || !userId || !date) return null;
+        
+        const start = startOfDay(date);
+        const end = endOfDay(date);
+
+        return query(
+            collection(firestore, 'users', userId, 'dockingSimulations'),
+            where('timestamp', '>=', start),
+            where('timestamp', '<=', end),
+            orderBy('timestamp', 'desc')
+        );
+    }, [firestore, userId, date]);
+
+    const { data: simulations, isLoading } = useCollection<DockingSimulation>(simulationsQuery);
+
+    const getMoleculeName = (smiles: string) => {
+        return molecules.find(m => m.smiles === smiles)?.name || 'Unknown';
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Activity for {date ? format(date, 'PPP') : ''}</DialogTitle>
+                    <DialogDescription>
+                        A log of docking simulations performed on this day.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[60vh] pr-4">
+                    {isLoading && (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+                    {!isLoading && (!simulations || simulations.length === 0) && (
+                         <div className="flex items-center justify-center h-full">
+                            <p className="text-muted-foreground">No simulations found for this day.</p>
+                        </div>
+                    )}
+                    {!isLoading && simulations && simulations.length > 0 && (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Time</TableHead>
+                                    <TableHead>Molecule</TableHead>
+                                    <TableHead>Protein</TableHead>
+                                    <TableHead className="text-right">Affinity (nM)</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {simulations.map(sim => (
+                                    <TableRow key={sim.id}>
+                                        <TableCell>{format(sim.timestamp.toDate(), 'p')}</TableCell>
+                                        <TableCell>{getMoleculeName(sim.moleculeSmiles)}</TableCell>
+                                        <TableCell>{sim.proteinTarget}</TableCell>
+                                        <TableCell className="text-right">{sim.bindingAffinity.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 
 export default function HistoryPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   
   const userId = user ? user.uid : null;
 
@@ -78,6 +161,7 @@ export default function HistoryPage() {
 
       return {
         ...item,
+        loginDate: loginDate,
         loginTimeFormatted: loginDate ? format(loginDate, 'PPpp') : 'N/A',
         logoutTimeFormatted: logoutTimeFormatted,
         calculatedDuration: durationDisplay,
@@ -85,6 +169,11 @@ export default function HistoryPage() {
     });
   }, [allHistory, currentTime]);
 
+  const handleLoginTimeClick = (date: Date | null) => {
+      if (!date) return;
+      setSelectedDate(date);
+      setIsActivityDialogOpen(true);
+  }
 
   const renderSkeleton = () => (
     <TableRow>
@@ -105,7 +194,7 @@ export default function HistoryPage() {
             <div className="space-y-1.5">
                 <CardTitle>Login History</CardTitle>
                 <CardDescription>
-                    Here is a record of your recent login activity.
+                    Here is a record of your recent login activity. Click a login time to see activity for that day.
                 </CardDescription>
             </div>
             <Button asChild variant="outline">
@@ -144,7 +233,12 @@ export default function HistoryPage() {
               {!isLoading && !error &&
                 formattedHistory?.map((item: any) => (
                   <TableRow key={item.id}>
-                    <TableCell>{item.loginTimeFormatted}</TableCell>
+                    <TableCell 
+                      className="cursor-pointer font-medium text-primary hover:underline"
+                      onClick={() => handleLoginTimeClick(item.loginDate)}
+                    >
+                        {item.loginTimeFormatted}
+                    </TableCell>
                     <TableCell>{item.logoutTimeFormatted}</TableCell>
                     <TableCell>{item.calculatedDuration}</TableCell>
                     <TableCell>
@@ -158,6 +252,12 @@ export default function HistoryPage() {
           </Table>
         </CardContent>
       </Card>
+      <DailyActivityDialog 
+        date={selectedDate}
+        userId={userId}
+        isOpen={isActivityDialogOpen}
+        onOpenChange={setIsActivityDialogOpen}
+      />
     </main>
   );
 }
