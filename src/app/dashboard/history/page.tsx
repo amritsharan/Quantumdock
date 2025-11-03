@@ -12,10 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format, formatDistanceToNow, addMinutes, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ArrowLeft, Loader2, Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { molecules } from '@/lib/molecules';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
 
 type LoginHistory = {
   loginTime: { seconds: number; nanoseconds: number };
@@ -59,14 +62,60 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
         return molecules.find(m => m.smiles === smiles)?.name || 'Unknown';
     }
 
+    const handleDownloadPdf = () => {
+        if (!simulations || !date) return;
+
+        const doc = new jsPDF();
+        const docTitle = `Docking Activity for ${format(date, 'PPP')}`;
+        
+        doc.setFontSize(18);
+        doc.text(docTitle, 14, 22);
+
+        const tableColumn = ["Time", "Molecule", "Protein Target", "Binding Affinity (nM)"];
+        const tableRows: any[][] = [];
+
+        simulations.forEach(sim => {
+            const simData = [
+                format(sim.timestamp.toDate(), 'p'),
+                getMoleculeName(sim.moleculeSmiles),
+                sim.proteinTarget,
+                sim.bindingAffinity.toFixed(2),
+            ];
+            tableRows.push(simData);
+        });
+
+        (doc as any).autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 30,
+            theme: 'striped',
+            headStyles: { fillColor: [46, 82, 102] }
+        });
+        
+        doc.save(`QuantumDock_Activity_${format(date, 'yyyy-MM-dd')}.pdf`);
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Activity for {date ? format(date, 'PPP') : ''}</DialogTitle>
-                    <DialogDescription>
-                        A log of docking simulations performed on this day.
-                    </DialogDescription>
+                    <div className="flex items-center justify-between">
+                         <div>
+                            <DialogTitle>Activity for {date ? format(date, 'PPP') : ''}</DialogTitle>
+                            <DialogDescription>
+                                A log of docking simulations performed on this day.
+                            </DialogDescription>
+                         </div>
+                         <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleDownloadPdf}
+                            disabled={isLoading || !simulations || simulations.length === 0}
+                        >
+                            <Download className="mr-2 h-4 w-4" />
+                            Download PDF
+                        </Button>
+                    </div>
                 </DialogHeader>
                 <ScrollArea className="h-[60vh] pr-4">
                     {isLoading && (
