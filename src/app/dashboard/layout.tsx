@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -56,15 +57,26 @@ export default function DashboardLayout({
             try {
                 const userDoc = await getDoc(userDocRef);
                 if (!userDoc.exists()) {
-                    await setDoc(userDocRef, {
+                   await setDoc(userDocRef, {
                         uid: user.uid,
                         email: user.email,
                         displayName: user.displayName,
                         createdAt: serverTimestamp(),
                     }, { merge: true });
                 }
-            } catch (error) {
-                console.error("Error ensuring user document exists:", error);
+            } catch (error: any) {
+                 errorEmitter.emit(
+                    'permission-error',
+                    new FirestorePermissionError({
+                      path: userDocRef.path,
+                      operation: userDocRef ? 'update' : 'create',
+                      requestResourceData: {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                      }
+                    })
+                  )
             }
 
             // 2. Deactivate any previously active sessions
@@ -106,6 +118,7 @@ export default function DashboardLayout({
                     new FirestorePermissionError({
                       path: `users/${user.uid}/loginHistory`,
                       operation: 'create',
+                      requestResourceData: { status: 'active' }
                     })
                   )
             }
@@ -133,8 +146,9 @@ export default function DashboardLayout({
 
       const querySnapshot = await getDocs(historyQuery);
       if (!querySnapshot.empty) {
-        const activeSessionDoc = querySnapshot.docs[0];
-        const loginTimeData = activeSessionDoc.data().loginTime as Timestamp | undefined;
+        const activeSessionDocRef = querySnapshot.docs[0].ref;
+        const activeSessionData = querySnapshot.docs[0].data();
+        const loginTimeData = activeSessionData.loginTime as Timestamp | undefined;
         
         let duration = 0;
         if (loginTimeData && typeof loginTimeData.toDate === 'function') {
@@ -150,7 +164,7 @@ export default function DashboardLayout({
           duration: duration,
         };
         
-        await updateDoc(activeSessionDoc.ref, updateData);
+        await updateDoc(activeSessionDocRef, updateData);
       }
     } catch (error: any) {
         // Emit a contextual error instead of showing an alert
