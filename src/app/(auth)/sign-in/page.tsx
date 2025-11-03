@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, serverTimestamp, getDocs, query, where, orderBy, doc, getDoc, setDoc, limit, addDoc, updateDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -67,14 +67,6 @@ export default function SignInPage() {
 
   const handleSuccessfulLogin = async (user: User) => {
     if (user && firestore) {
-      // Add the new active session.
-      const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
-        userId: user.uid,
-        loginTime: serverTimestamp(),
-        status: 'active',
-      });
-  
-      // Query for any *other* active sessions to deactivate.
       const historyQuery = query(
         collection(firestore, "users", user.uid, "loginHistory"),
         where("status", "==", "active"),
@@ -82,9 +74,13 @@ export default function SignInPage() {
       );
   
       const querySnapshot = await getDocs(historyQuery);
-      
+      const newSessionRef = await addDoc(collection(firestore, 'users', user.uid, 'loginHistory'), {
+        userId: user.uid,
+        loginTime: serverTimestamp(),
+        status: 'active',
+      });
+  
       for (const docSnapshot of querySnapshot.docs) {
-        // Make sure we don't deactivate the session we just created.
         if (docSnapshot.id !== newSessionRef.id) {
             await updateDoc(docSnapshot.ref, {
                 status: 'inactive',
@@ -125,24 +121,8 @@ export default function SignInPage() {
     }
 
     try {
-      if (data.email === 'amritsr2005@gmail.com' && data.password === 'Vasishta@2005') {
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-            await handleSuccessfulLogin(userCredential.user);
-        } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
-                const newUserCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-                await handleSuccessfulLogin(newUserCredential.user);
-            } else {
-                 setAlertTitle('Sign In Failed');
-                 setAlertDescription(error.message || 'An unexpected error occurred for the special user.');
-                 setShowErrorAlert(true);
-            }
-        }
-      } else {
-        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-        await handleSuccessfulLogin(userCredential.user);
-      }
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
         setAlertTitle("Account Not Found");
