@@ -364,8 +364,8 @@ export default function SignInPage() {
       </AlertDialog>
 
       <AlertDialog open={showForgotPasswordDialog} onOpenChange={setShowForgotPasswordDialog}>
-        <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)}>
-            <AlertDialogContent>
+        <AlertDialogContent>
+            <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)}>
               <AlertDialogHeader>
                 <AlertDialogTitle>Reset Your Password</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -389,17 +389,16 @@ export default function SignInPage() {
                 </div>
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+                <AlertDialogCancel type="button" onClick={() => setShowForgotPasswordDialog(false)}>Cancel</AlertDialogCancel>
                 <Button type="submit" disabled={isResettingPassword}>
                   {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Send Reset Link
                 </Button>
               </AlertDialogFooter>
-            </AlertDialogContent>
-        </form>
+            </form>
+        </AlertDialogContent>
       </AlertDialog>
     </>
   );
 }
 
-    
