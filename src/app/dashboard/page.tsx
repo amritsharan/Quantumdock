@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { molecules, type Molecule } from '@/lib/molecules';
-
+import { useState, useEffect, useMemo } from 'react';
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
 
@@ -50,7 +50,7 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
 };
 
-export default function DashboardPage() {
+function Dashboard() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [isDocked, setIsDocked] = useState(false);
@@ -260,5 +260,13 @@ export default function DashboardPage() {
       </main>
       <Toaster />
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Dashboard />
+    </Suspense>
   );
 }
