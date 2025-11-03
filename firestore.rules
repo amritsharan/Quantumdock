@@ -139,11 +139,18 @@ service cloud.firestore {
     /**
      * @description Security rules for user login history.
      * @path /users/{userId}/loginHistory/{historyId}
-     * @allow (read, list, write) - Allows users to access and manage their own login history.
+     * @allow (read, list) - Allows users to access their own login history.
+     * @allow (create) - Allows users to create new login history records.
+     * @allow (update, delete) - Allows users to modify their own existing login history records.
      * @principle Enforces document ownership for all operations on the login history subcollection.
      */
     match /users/{userId}/loginHistory/{historyId} {
-      allow read, list, write: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
     
      /**
