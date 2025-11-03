@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -50,7 +51,6 @@ export default function SignInPage() {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
   const [errorType, setErrorType] = useState<'user-not-found' | 'wrong-password' | 'generic'>('generic');
-  const [hydrated, setHydrated] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordDialog, setShowForgotPasswordDialog] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -74,16 +74,12 @@ export default function SignInPage() {
 
 
   useEffect(() => {
-    setHydrated(true);
-    // Check for redirect result from Google sign-in
     if (auth) {
-        setIsGoogleLoading(true); // Show loader while checking
+        setIsGoogleLoading(true);
         getRedirectResult(auth)
             .then((result) => {
                 if (result && result.user) {
                     handleSuccessfulLogin(result.user);
-                } else {
-                    setIsGoogleLoading(false); // No redirect result, stop loading
                 }
             })
             .catch((error) => {
@@ -92,6 +88,7 @@ export default function SignInPage() {
                 setAlertDescription(error.message || "An error occurred during Google Sign-In. Please try again.");
                 setErrorType('generic');
                 setShowErrorAlert(true);
+            }).finally(() => {
                 setIsGoogleLoading(false);
             });
     }
@@ -180,7 +177,7 @@ export default function SignInPage() {
   };
 
 
-  if (!hydrated) {
+  if (!auth) {
     return (
         <Card className="w-full max-w-sm">
             <CardHeader className="text-center">
@@ -275,7 +272,7 @@ export default function SignInPage() {
               )}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isLoading || isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Sign In
             </Button>
           </form>
@@ -371,3 +368,5 @@ export default function SignInPage() {
     </>
   );
 }
+
+    
