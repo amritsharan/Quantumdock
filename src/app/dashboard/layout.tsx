@@ -49,11 +49,11 @@ export default function DashboardLayout({
         
         const handleNewLogin = async () => {
             const userDocRef = doc(firestore, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-
+            
             // 1. Create user document if it doesn't exist
+            const userDoc = await getDoc(userDocRef);
             if (!userDoc.exists()) {
-                await setDoc(userDocRef, {
+                setDocumentNonBlocking(userDocRef, {
                     uid: user.uid,
                     email: user.email,
                     displayName: user.displayName,
@@ -61,28 +61,27 @@ export default function DashboardLayout({
                 }, { merge: true });
             }
 
-            // 2. Manage login history
+            // 2. Deactivate any previously active sessions
             const historyQuery = query(
               collection(firestore, "users", user.uid, "loginHistory"),
               where("status", "==", "active"),
               orderBy("loginTime", "desc")
             );
+        
+            const querySnapshot = await getDocs(historyQuery);
+            for (const docSnapshot of querySnapshot.docs) {
+              updateDocumentNonBlocking(docSnapshot.ref, {
+                  status: 'inactive',
+                  logoutTime: serverTimestamp() // Mark it as logged out now
+              });
+            }
 
-            const newSessionRef = await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
+            // 3. Create the new active session
+            addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'loginHistory'), {
               userId: user.uid,
               loginTime: serverTimestamp(),
               status: 'active',
             });
-        
-            const querySnapshot = await getDocs(historyQuery);
-            for (const docSnapshot of querySnapshot.docs) {
-              if (docSnapshot.id !== newSessionRef.id) {
-                  updateDocumentNonBlocking(docSnapshot.ref, {
-                      status: 'inactive',
-                      logoutTime: serverTimestamp()
-                  });
-              }
-            }
         };
 
         handleNewLogin().catch(console.error);
