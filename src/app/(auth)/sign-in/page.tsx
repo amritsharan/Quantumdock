@@ -11,8 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword, User, GoogleAuthProvider, signInWithRedirect, sendPasswordResetEmail, getRedirectResult } from 'firebase/auth';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
@@ -75,7 +75,27 @@ export default function SignInPage() {
 
   useEffect(() => {
     setHydrated(true);
-  }, []);
+    // Check for redirect result from Google sign-in
+    if (auth) {
+        setIsGoogleLoading(true); // Show loader while checking
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result && result.user) {
+                    handleSuccessfulLogin(result.user);
+                } else {
+                    setIsGoogleLoading(false); // No redirect result, stop loading
+                }
+            })
+            .catch((error) => {
+                console.error("Google sign in redirect error", error);
+                setAlertTitle("Google Sign-In Failed");
+                setAlertDescription(error.message || "An error occurred during Google Sign-In. Please try again.");
+                setErrorType('generic');
+                setShowErrorAlert(true);
+                setIsGoogleLoading(false);
+            });
+    }
+  }, [auth]);
 
   const handleSuccessfulLogin = (user: User) => {
     toast({
@@ -130,18 +150,7 @@ export default function SignInPage() {
         return;
     }
     const provider = new GoogleAuthProvider();
-    try {
-        const result = await signInWithPopup(auth, provider);
-        handleSuccessfulLogin(result.user);
-    } catch (error: any) {
-        console.error("Google sign in error", error);
-        setAlertTitle("Google Sign-In Failed");
-        setAlertDescription(error.message || "An error occurred during Google Sign-In. Please try again.");
-        setErrorType('generic');
-        setShowErrorAlert(true);
-    } finally {
-        setIsGoogleLoading(false);
-    }
+    await signInWithRedirect(auth, provider);
   };
   
   const onForgotPasswordSubmit = async (data: ForgotPasswordFormValues) => {

@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, User, getRedirectResult } from 'firebase/auth';
 import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -75,12 +75,42 @@ function SignUpForm() {
     }
   }, [searchParams, setValue]);
 
+  useEffect(() => {
+    // Check for redirect result from Google sign-in
+    if (auth) {
+        setIsGoogleLoading(true); // Show loader while checking
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result && result.user) {
+                    handleSuccessfulSignUp(result.user);
+                } else {
+                    setIsGoogleLoading(false); // No redirect result, stop loading
+                }
+            })
+            .catch((error) => {
+                console.error("Google sign up redirect error", error);
+                if (error.code === 'auth/account-exists-with-different-credential' || error.code === 'auth/email-already-in-use') {
+                    setAlertTitle('Email Already In Use');
+                    setAlertDescription('This email is already associated with an account. Please sign in using the original method.');
+                    setShowErrorAlert(true);
+                } else {
+                    toast({
+                        variant: "destructive",
+                        title: "Sign Up Failed",
+                        description: error.message || "An unexpected error occurred during Google Sign-Up.",
+                    });
+                }
+                setIsGoogleLoading(false);
+            });
+    }
+  }, [auth]);
+
   const handleSuccessfulSignUp = (user: User) => {
     toast({
         title: 'Account Created',
         description: 'Your account has been successfully created. Redirecting to sign in...',
     });
-    router.push('/sign-in');
+    router.push('/dashboard');
   }
 
   const onSubmit = async (data: SignUpFormValues) => {
@@ -119,7 +149,7 @@ function SignUpForm() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    if (!auth || !firestore) {
+    if (!auth) {
         setAlertTitle('Sign Up Failed');
         setAlertDescription('Authentication service is not available. Please try again later.');
         setShowErrorAlert(true);
@@ -127,25 +157,7 @@ function SignUpForm() {
         return;
     }
     const provider = new GoogleAuthProvider();
-    try {
-        const result = await signInWithPopup(auth, provider);
-        handleSuccessfulSignUp(result.user);
-    } catch (error: any) {
-        console.error("Google sign in error", error);
-         if (error.code === 'auth/account-exists-with-different-credential' || error.code === 'auth/email-already-in-use') {
-            setAlertTitle('Email Already In Use');
-            setAlertDescription('This email is already associated with an account. Please sign in using the original method.');
-            setShowErrorAlert(true);
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Sign Up Failed",
-                description: error.message || "An unexpected error occurred during Google Sign-In.",
-            });
-        }
-    } finally {
-        setIsGoogleLoading(false);
-    }
+    await signInWithRedirect(auth, provider);
   };
 
 
