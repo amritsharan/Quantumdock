@@ -5,7 +5,7 @@ import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities'
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
 
 
 // Helper function for retrying promises with exponential backoff
@@ -53,23 +53,42 @@ async function saveDockingSimulation(userId: string, result: DockingResults) {
     }
     try {
         const { firestore } = initializeFirebase();
+
+        // 1. Find the active login session for the user
+        const historyQuery = query(
+            collection(firestore, "users", userId, "loginHistory"),
+            where("status", "==", "active"),
+            limit(1)
+        );
+        const historySnapshot = await getDocs(historyQuery);
+
+        if (historySnapshot.empty) {
+            console.error(`Failed to save simulation: No active login session found for user ${userId}.`);
+            return;
+        }
+
+        const activeSessionDoc = historySnapshot.docs[0];
+        const activeSessionId = activeSessionDoc.id;
+
+        // 2. Create the simulation data, including the session ID
         const simulationData = {
             userId: userId,
+            loginHistoryId: activeSessionId,
             timestamp: serverTimestamp(),
             moleculeSmiles: result.moleculeSmiles,
             proteinTarget: result.proteinTarget,
             bindingAffinity: result.bindingAffinity,
-            // You can add more fields from the result if needed
+            confidenceScore: result.confidenceScore,
+            rationale: result.rationale,
         };
-        const simulationsCollectionRef = collection(firestore, 'users', userId, 'dockingSimulations');
+
+        // 3. Save the simulation as a subcollection of the active login session
+        const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', activeSessionId, 'dockingSimulations');
         await addDoc(simulationsCollectionRef, simulationData);
-        console.log(`Successfully saved simulation for user ${userId}`);
+        
+        console.log(`Successfully saved simulation for user ${userId} in session ${activeSessionId}`);
     } catch (error) {
-        // In a real app, you might want more robust error handling,
-        // but for now, we'll log it to the server console.
         console.error(`Failed to save simulation result for user ${userId}:`, error);
-        // We don't re-throw the error, as we don't want to fail the entire process
-        // if just the saving part fails. The user still gets their results.
     }
 }
 
@@ -151,3 +170,5 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     return [];
   }
 }
+
+    

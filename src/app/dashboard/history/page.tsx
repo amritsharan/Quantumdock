@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, formatDistanceToNow, addMinutes, startOfDay, endOfDay } from 'date-fns';
+import { format, formatDistanceToNow, addMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Download } from 'lucide-react';
@@ -21,6 +21,7 @@ import 'jspdf-autotable';
 
 
 type LoginHistory = {
+  id: string;
   loginTime: { seconds: number; nanoseconds: number };
   logoutTime?: { seconds: number; nanoseconds: number };
   status: 'active' | 'inactive';
@@ -39,22 +40,19 @@ const calculateActiveDuration = (loginDate: Date) => {
     return `${formatDistanceToNow(loginDate)} (so far)`;
 };
 
-function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Date | null, userId: string | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function DailyActivityDialog({ loginRecord, isOpen, onOpenChange }: { loginRecord: WithId<LoginHistory> | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
     const firestore = useFirestore();
+    const userId = loginRecord?.userId;
+    const historyId = loginRecord?.id;
     
     const simulationsQuery = useMemoFirebase(() => {
-        if (!firestore || !userId || !date) return null;
+        if (!firestore || !userId || !historyId) return null;
         
-        const start = startOfDay(date);
-        const end = endOfDay(date);
-
         return query(
-            collection(firestore, 'users', userId, 'dockingSimulations'),
-            where('timestamp', '>=', start),
-            where('timestamp', '<=', end),
+            collection(firestore, 'users', userId, 'loginHistory', historyId, 'dockingSimulations'),
             orderBy('timestamp', 'desc')
         );
-    }, [firestore, userId, date]);
+    }, [firestore, userId, historyId]);
 
     const { data: simulations, isLoading } = useCollection<DockingSimulation>(simulationsQuery);
 
@@ -63,8 +61,9 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
     }
 
     const handleDownloadPdf = () => {
-        if (!date) return;
+        if (!loginRecord?.loginTime) return;
 
+        const date = new Date(loginRecord.loginTime.seconds * 1000);
         const doc = new jsPDF();
         const docTitle = `Docking Activity for ${format(date, 'PPP')}`;
         
@@ -73,7 +72,7 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
 
         if (!simulations || simulations.length === 0) {
             doc.setFontSize(12);
-            doc.text("No docking simulations were performed on this day.", 14, 40);
+            doc.text("No docking simulations were performed during this session.", 14, 40);
         } else {
             const tableColumn = ["Time", "Molecule", "Protein Target", "Binding Affinity (nM)"];
             const tableRows: any[][] = [];
@@ -97,8 +96,10 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
             });
         }
         
-        doc.save(`QuantumDock_Activity_${format(date, 'yyyy-MM-dd')}.pdf`);
+        doc.save(`QuantumDock_Activity_${format(date, 'yyyy-MM-dd_HH-mm')}.pdf`);
     };
+
+    const date = loginRecord ? new Date(loginRecord.loginTime.seconds * 1000) : null;
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -106,9 +107,9 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
                 <DialogHeader>
                     <div className="flex items-center justify-between">
                          <div>
-                            <DialogTitle>Activity for {date ? format(date, 'PPP') : ''}</DialogTitle>
+                            <DialogTitle>Activity for Session Started at {date ? format(date, 'Pp') : ''}</DialogTitle>
                             <DialogDescription>
-                                A log of docking simulations performed on this day.
+                                A log of docking simulations performed during this login session.
                             </DialogDescription>
                          </div>
                          <Button 
@@ -130,7 +131,7 @@ function DailyActivityDialog({ date, userId, isOpen, onOpenChange }: { date: Dat
                     )}
                     {!isLoading && (!simulations || simulations.length === 0) && (
                          <div className="flex items-center justify-center h-full">
-                            <p className="text-muted-foreground">No simulations found for this day.</p>
+                            <p className="text-muted-foreground">No simulations found for this session.</p>
                         </div>
                     )}
                     {!isLoading && simulations && simulations.length > 0 && (
@@ -166,7 +167,7 @@ export default function HistoryPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedLoginRecord, setSelectedLoginRecord] = useState<WithId<LoginHistory> | null>(null);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   
   const userId = user ? user.uid : null;
@@ -179,7 +180,7 @@ export default function HistoryPage() {
     );
   }, [firestore, userId]);
 
-  const { data: allHistory, isLoading, error } = useCollection<LoginHistory>(historyQuery);
+  const { data: allHistory, isLoading, error } = useCollection<WithId<LoginHistory>>(historyQuery);
 
   useEffect(() => {
     // Set the current time only on the client, after hydration
@@ -223,9 +224,9 @@ export default function HistoryPage() {
     });
   }, [allHistory, currentTime]);
 
-  const handleLoginTimeClick = (date: Date | null) => {
-      if (!date) return;
-      setSelectedDate(date);
+  const handleLoginTimeClick = (record: WithId<LoginHistory> | null) => {
+      if (!record) return;
+      setSelectedLoginRecord(record);
       setIsActivityDialogOpen(true);
   }
 
@@ -248,7 +249,7 @@ export default function HistoryPage() {
             <div className="space-y-1.5">
                 <CardTitle>Login History</CardTitle>
                 <CardDescription>
-                    Here is a record of your recent login activity. Click a login time to see activity for that day.
+                    Here is a record of your recent login activity. Click a login time to see simulations for that session.
                 </CardDescription>
             </div>
             <Button asChild variant="outline">
@@ -289,7 +290,7 @@ export default function HistoryPage() {
                   <TableRow key={item.id}>
                     <TableCell 
                       className="cursor-pointer font-medium text-primary hover:underline"
-                      onClick={() => handleLoginTimeClick(item.loginDate)}
+                      onClick={() => handleLoginTimeClick(item)}
                     >
                         {item.loginTimeFormatted}
                     </TableCell>
@@ -307,11 +308,12 @@ export default function HistoryPage() {
         </CardContent>
       </Card>
       <DailyActivityDialog 
-        date={selectedDate}
-        userId={userId}
+        loginRecord={selectedLoginRecord}
         isOpen={isActivityDialogOpen}
         onOpenChange={setIsActivityDialogOpen}
       />
     </main>
   );
 }
+
+    

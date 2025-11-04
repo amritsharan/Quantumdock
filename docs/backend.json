@@ -186,7 +186,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DockingSimulation",
       "type": "object",
-      "description": "Represents a single docking simulation event performed by a user.",
+      "description": "Represents a single docking simulation event performed by a user during a specific login session.",
       "properties": {
         "id": {
           "type": "string",
@@ -195,6 +195,10 @@
         "userId": {
           "type": "string",
           "description": "The ID of the user who performed the simulation."
+        },
+        "loginHistoryId": {
+            "type": "string",
+            "description": "The ID of the login session during which the simulation was run."
         },
         "timestamp": {
           "type": "string",
@@ -217,6 +221,7 @@
       "required": [
         "id",
         "userId",
+        "loginHistoryId",
         "timestamp",
         "moleculeSmiles",
         "proteinTarget",
@@ -329,17 +334,21 @@
         }
       },
       {
-        "path": "/users/{userId}/dockingSimulations/{simulationId}",
+        "path": "/users/{userId}/loginHistory/{historyId}/dockingSimulations/{simulationId}",
         "definition": {
           "entityName": "DockingSimulation",
           "schema": {
             "$ref": "#/backend/entities/DockingSimulation"
           },
-          "description": "Stores docking simulation records for a specific user. Path-based ownership ensures only the user can access their own simulation data.",
+          "description": "Stores docking simulation records for a specific login session. Path-based ownership ensures only the user can access their own simulation data.",
           "params": [
             {
               "name": "userId",
               "description": "The unique identifier of the user."
+            },
+            {
+              "name": "historyId",
+              "description": "The unique identifier of the login session."
             },
             {
               "name": "simulationId",
@@ -349,6 +358,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between users and their data in the QuantumDock application. It leverages path-based ownership for private user data, ensuring clear authorization and efficient queries. The structure prioritizes Authorization Independence by ensuring that each document contains all the necessary information to validate access without needing to perform `get()` operations on parent documents.\n\nSpecifically:\n\n*   **Users Collection:** Stores user profiles.\n*   **User-Owned Data:** Molecules, TargetProteins, DockingResults, LoginHistory, and DockingSimulations are stored as subcollections under each user's document. This enforces clear ownership and simplifies security rules. Using hierarchical paths automatically ensures that only the owning user has access to their data, eliminating the need for complex authorization logic."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between users and their data in the QuantumDock application. It leverages path-based ownership for private user data, ensuring clear authorization and efficient queries. The structure prioritizes Authorization Independence by ensuring that each document contains all the necessary information to validate access without needing to perform `get()` operations on parent documents.\n\nSpecifically:\n\n*   **Users Collection:** Stores user profiles.\n*   **User-Owned Data:** Molecules, TargetProteins, and DockingResults are stored as subcollections under each user's document. This enforces clear ownership and simplifies security rules.\n*   **Login History and Simulations:** LoginHistory is a subcollection under each user. Crucially, DockingSimulations are now a subcollection of a specific LoginHistory document, creating a direct link between a session and the actions performed within it. This is more organized and provides better data relationship integrity."
   }
 }
+
+    
