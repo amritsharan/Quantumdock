@@ -5,7 +5,7 @@ import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities'
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 
 
 // Helper function for retrying promises with exponential backoff
@@ -61,6 +61,7 @@ export async function saveDockingResults(userId: string, results: DockingResults
         const historyQuery = query(
             collection(firestore, "users", userId, "loginHistory"),
             where("status", "==", "active"),
+            orderBy("loginTime", "desc"),
             limit(1)
         );
         const historySnapshot = await getDocs(historyQuery);
