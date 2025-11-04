@@ -70,7 +70,7 @@ async function saveDockingSimulation(userId: string, result: DockingResults) {
         const activeSessionDoc = historySnapshot.docs[0];
         const activeSessionId = activeSessionDoc.id;
 
-        // 2. Create the simulation data, including the session ID
+        // 2. Create the complete simulation data, including the session ID and all result fields
         const simulationData = {
             userId: userId,
             loginHistoryId: activeSessionId,
@@ -116,7 +116,7 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
           if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
             throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
           }
-          const finalResult = {
+          const finalResult: DockingResults = {
             ...predictionResult,
             moleculeSmiles: smile,
             proteinTarget: protein,
@@ -170,5 +170,3 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     return [];
   }
 }
-
-    
