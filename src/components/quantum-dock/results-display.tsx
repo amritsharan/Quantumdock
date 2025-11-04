@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Download, ChevronDown, ChevronsUpDown, Save, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { DockingResults } from '@/lib/schema';
 import {
@@ -19,14 +19,26 @@ import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow
 import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
 
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
 interface ResultsDisplayProps {
   results: DockingResults[];
+  onSave: () => void;
+  saveState: SaveState;
 }
 
 type SortKey = 'name' | 'proteinTarget' | 'bindingAffinity' | 'confidenceScore';
 type SortDirection = 'asc' | 'desc';
 
-export function ResultsDisplay({ results }: ResultsDisplayProps) {
+const SaveButtonContent: Record<SaveState, { icon: React.ReactNode, text: string }> = {
+    idle: { icon: <Save className="mr-2 h-4 w-4" />, text: 'Save Docking Results' },
+    saving: { icon: <Loader2 className="mr-2 h-4 w-4 animate-spin" />, text: 'Saving...' },
+    saved: { icon: <CheckCircle className="mr-2 h-4 w-4" />, text: 'Results Saved' },
+    error: { icon: <AlertCircle className="mr-2 h-4 w-4" />, text: 'Save Failed' },
+};
+
+
+export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayProps) {
   const [sortKey, setSortKey] = useState<SortKey>('bindingAffinity');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -159,26 +171,39 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
     }
   }
 
+  const { icon, text } = SaveButtonContent[saveState];
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-start justify-between">
         <div className='space-y-1.5'>
           <CardTitle>Detailed Prediction Results</CardTitle>
           <CardDescription>Tabular data for {results.length} combination(s).</CardDescription>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-              <ChevronDown className="ml-2 h-4 w-4" />
+        <div className='flex items-center gap-2'>
+            <Button 
+                onClick={onSave} 
+                disabled={saveState === 'saving' || saveState === 'saved'}
+                variant={saveState === 'error' ? 'destructive' : 'default'}
+                size="sm"
+            >
+                {icon}
+                {text}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+                <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent className="grid gap-8">
         <div>

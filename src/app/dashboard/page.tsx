@@ -10,17 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DockingForm } from '@/components/quantum-dock/docking-form';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
-import { runFullDockingProcess } from '@/app/actions';
+import { runFullDockingProcess, saveDockingResults } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Box, Dna, FlaskConical } from 'lucide-react';
+import { BrainCircuit, Box, Dna, FlaskConical, Save } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { molecules, type Molecule } from '@/lib/molecules';
 import { useUser } from '@/firebase';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: string; description: string }> = {
   idle: {
@@ -41,7 +44,7 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   done: {
     icon: <Box className="h-12 w-12 text-accent" />,
     title: 'Docking Complete',
-    description: 'Results are displayed below. You can now export the data or start a new simulation.',
+    description: 'Results are displayed below. You can now save the data or start a new simulation.',
   },
   error: {
     icon: <Box className="h-12 w-12 text-destructive" />,
@@ -54,6 +57,7 @@ function Dashboard() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [isDocked, setIsDocked] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -111,6 +115,7 @@ function Dashboard() {
     setStep('classical');
     setResults(null);
     setIsDocked(false);
+    setSaveState('idle'); // Reset save state for new simulation
 
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
     toast({
@@ -144,6 +149,39 @@ function Dashboard() {
         variant: 'destructive',
         title: 'Simulation Failed',
         description: (error as Error).message || 'An error occurred while running the docking process.',
+      });
+    }
+  };
+
+  const handleSaveResults = async () => {
+    if (!user || !results) {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'User is not authenticated or there are no results to save.',
+      });
+      return;
+    }
+
+    setSaveState('saving');
+    try {
+      const response = await saveDockingResults(user.uid, results);
+      if (response.success) {
+        setSaveState('saved');
+        toast({
+          title: 'Results Saved',
+          description: `Successfully saved ${response.count} simulation results to your history.`,
+        });
+      } else {
+        throw new Error('Server action reported failure.');
+      }
+    } catch (error) {
+      setSaveState('error');
+      console.error('Failed to save docking results:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: (error as Error).message || 'An unexpected error occurred while saving.',
       });
     }
   };
@@ -262,7 +300,11 @@ function Dashboard() {
             </Card>
 
             {results && step === 'done' && (
-              <ResultsDisplay results={results} />
+              <ResultsDisplay 
+                results={results} 
+                onSave={handleSaveResults}
+                saveState={saveState}
+              />
             )}
           </div>
         </div>

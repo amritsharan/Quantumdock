@@ -46,15 +46,18 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
   return mockScore;
 }
 
-async function saveDockingSimulation(userId: string, result: DockingResults) {
+export async function saveDockingResults(userId: string, results: DockingResults[]): Promise<{ success: boolean; count: number }> {
     if (!userId) {
-        console.error("Cannot save simulation result: user ID is missing.");
-        return;
+        console.error("Cannot save simulation results: user ID is missing.");
+        throw new Error("User ID is missing.");
     }
+    if (!results || results.length === 0) {
+        console.error("No simulation results to save.");
+        throw new Error("No simulation results provided to save.");
+    }
+
     try {
         const { firestore } = initializeFirebase();
-
-        // 1. Find the active login session for the user
         const historyQuery = query(
             collection(firestore, "users", userId, "loginHistory"),
             where("status", "==", "active"),
@@ -63,32 +66,34 @@ async function saveDockingSimulation(userId: string, result: DockingResults) {
         const historySnapshot = await getDocs(historyQuery);
 
         if (historySnapshot.empty) {
-            console.error(`Failed to save simulation: No active login session found for user ${userId}.`);
-            return;
+            console.error(`Failed to save simulations: No active login session found for user ${userId}.`);
+            throw new Error("No active login session found.");
         }
 
         const activeSessionDoc = historySnapshot.docs[0];
         const activeSessionId = activeSessionDoc.id;
-
-        // 2. Create the complete simulation data, including the session ID and all result fields
-        const simulationData = {
-            userId: userId,
-            loginHistoryId: activeSessionId,
-            timestamp: serverTimestamp(),
-            moleculeSmiles: result.moleculeSmiles,
-            proteinTarget: result.proteinTarget,
-            bindingAffinity: result.bindingAffinity,
-            confidenceScore: result.confidenceScore,
-            rationale: result.rationale,
-        };
-
-        // 3. Save the simulation as a subcollection of the active login session
         const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', activeSessionId, 'dockingSimulations');
-        await addDoc(simulationsCollectionRef, simulationData);
+
+        // Save each result as a new document in the subcollection
+        for (const result of results) {
+            const simulationData = {
+                userId: userId,
+                loginHistoryId: activeSessionId,
+                timestamp: serverTimestamp(),
+                moleculeSmiles: result.moleculeSmiles,
+                proteinTarget: result.proteinTarget,
+                bindingAffinity: result.bindingAffinity,
+                confidenceScore: result.confidenceScore,
+                rationale: result.rationale,
+            };
+            await addDoc(simulationsCollectionRef, simulationData);
+        }
         
-        console.log(`Successfully saved simulation for user ${userId} in session ${activeSessionId}`);
+        console.log(`Successfully saved ${results.length} simulations for user ${userId} in session ${activeSessionId}`);
+        return { success: true, count: results.length };
     } catch (error) {
-        console.error(`Failed to save simulation result for user ${userId}:`, error);
+        console.error(`Failed to save simulation results for user ${userId}:`, error);
+        throw new Error("Failed to save docking results to the database.");
     }
 }
 
@@ -121,9 +126,9 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
             moleculeSmiles: smile,
             proteinTarget: protein,
           };
-
-          // Save the result to Firestore without blocking the return to the client
-          await saveDockingSimulation(userId, finalResult);
+          
+          // REMOVED: Automatic saving is no longer done here.
+          // It will be triggered by the user from the dashboard.
 
           return finalResult;
         });
