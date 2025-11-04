@@ -58,28 +58,28 @@ export async function saveDockingResults(userId: string, results: DockingResults
 
     try {
         const { firestore } = initializeFirebase();
+        // Find the most recent login session for the user, regardless of status.
         const historyQuery = query(
             collection(firestore, "users", userId, "loginHistory"),
-            where("status", "==", "active"),
             orderBy("loginTime", "desc"),
             limit(1)
         );
         const historySnapshot = await getDocs(historyQuery);
 
         if (historySnapshot.empty) {
-            console.error(`Failed to save simulations: No active login session found for user ${userId}.`);
-            throw new Error("No active login session found.");
+            console.error(`Failed to save simulations: No login session found for user ${userId}.`);
+            throw new Error("No login session found. Please log in again.");
         }
 
-        const activeSessionDoc = historySnapshot.docs[0];
-        const activeSessionId = activeSessionDoc.id;
-        const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', activeSessionId, 'dockingSimulations');
+        const latestSessionDoc = historySnapshot.docs[0];
+        const latestSessionId = latestSessionDoc.id;
+        const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', latestSessionId, 'dockingSimulations');
 
         // Save each result as a new document in the subcollection
         for (const result of results) {
             const simulationData = {
                 userId: userId,
-                loginHistoryId: activeSessionId,
+                loginHistoryId: latestSessionId,
                 timestamp: serverTimestamp(),
                 moleculeSmiles: result.moleculeSmiles,
                 proteinTarget: result.proteinTarget,
@@ -90,7 +90,7 @@ export async function saveDockingResults(userId: string, results: DockingResults
             await addDoc(simulationsCollectionRef, simulationData);
         }
         
-        console.log(`Successfully saved ${results.length} simulations for user ${userId} in session ${activeSessionId}`);
+        console.log(`Successfully saved ${results.length} simulations for user ${userId} in session ${latestSessionId}`);
         return { success: true, count: results.length };
     } catch (error) {
         console.error(`Failed to save simulation results for user ${userId}:`, error);
