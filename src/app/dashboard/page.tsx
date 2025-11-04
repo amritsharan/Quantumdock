@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { molecules, type Molecule } from '@/lib/molecules';
-import { useState, useEffect, useMemo } from 'react';
+import { useUser } from '@/firebase';
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
 
@@ -56,6 +56,7 @@ function Dashboard() {
   const [isDocked, setIsDocked] = useState(false);
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const { user } = useUser();
 
   
   const form = useForm<z.infer<typeof dockingSchema>>({
@@ -99,6 +100,14 @@ function Dashboard() {
 
 
   const onSubmit = async (data: z.infer<typeof dockingSchema>) => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Authentication Error',
+            description: 'You must be signed in to run a simulation.',
+        });
+        return;
+    }
     setStep('classical');
     setResults(null);
     setIsDocked(false);
@@ -112,7 +121,7 @@ function Dashboard() {
     try {
       // The server action now internally handles the different steps.
       // We'll update the UI step after a delay to give a sense of progress.
-      const processPromise = runFullDockingProcess(data);
+      const processPromise = runFullDockingProcess(data, user.uid);
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       setStep('predicting');

@@ -4,6 +4,9 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
+import { initializeFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 
 // Helper function for retrying promises with exponential backoff
 async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
@@ -43,8 +46,35 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
   return mockScore;
 }
 
+async function saveDockingSimulation(userId: string, result: DockingResults) {
+    if (!userId) {
+        console.error("Cannot save simulation result: user ID is missing.");
+        return;
+    }
+    try {
+        const { firestore } = initializeFirebase();
+        const simulationData = {
+            userId: userId,
+            timestamp: serverTimestamp(),
+            moleculeSmiles: result.moleculeSmiles,
+            proteinTarget: result.proteinTarget,
+            bindingAffinity: result.bindingAffinity,
+            // You can add more fields from the result if needed
+        };
+        const simulationsCollectionRef = collection(firestore, 'users', userId, 'dockingSimulations');
+        await addDoc(simulationsCollectionRef, simulationData);
+        console.log(`Successfully saved simulation for user ${userId}`);
+    } catch (error) {
+        // In a real app, you might want more robust error handling,
+        // but for now, we'll log it to the server console.
+        console.error(`Failed to save simulation result for user ${userId}:`, error);
+        // We don't re-throw the error, as we don't want to fail the entire process
+        // if just the saving part fails. The user still gets their results.
+    }
+}
 
-export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
+
+export async function runFullDockingProcess(data: DockingInput, userId: string): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
   const predictionPromises: Promise<DockingResults>[] = [];
 
@@ -63,15 +93,20 @@ export async function runFullDockingProcess(data: DockingInput): Promise<Docking
 
             return retryPromise(() => predictBindingAffinities(predictionInput));
         })
-        .then(predictionResult => {
+        .then(async (predictionResult) => {
           if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
             throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
           }
-          return {
+          const finalResult = {
             ...predictionResult,
             moleculeSmiles: smile,
             proteinTarget: protein,
           };
+
+          // Save the result to Firestore without blocking the return to the client
+          await saveDockingSimulation(userId, finalResult);
+
+          return finalResult;
         });
       
       predictionPromises.push(promise);
