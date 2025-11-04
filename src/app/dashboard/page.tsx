@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DockingForm } from '@/components/quantum-dock/docking-form';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
-import { runFullDockingProcess, saveDockingResults } from '@/app/actions';
+import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, Box, Dna, FlaskConical, Save } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
@@ -18,9 +18,11 @@ import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { molecules, type Molecule } from '@/lib/molecules';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -61,6 +63,7 @@ function Dashboard() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const firestore = useFirestore();
 
   
   const form = useForm<z.infer<typeof dockingSchema>>({
@@ -161,27 +164,63 @@ function Dashboard() {
   };
 
   const handleSaveResults = async () => {
-    if (!user || !results) {
+    if (!user || !firestore || !results) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'User is not authenticated or there are no results to save.',
+        description: 'User is not authenticated, results are missing, or Firestore is unavailable.',
       });
       return;
     }
 
     setSaveState('saving');
     try {
-      const response = await saveDockingResults(user.uid, results);
-      if (response.success) {
-        setSaveState('saved');
-        toast({
-          title: 'Results Saved',
-          description: `Successfully saved ${response.count} simulation results to your history.`,
-        });
-      } else {
-        throw new Error('Server action reported failure.');
+      const historyQuery = query(
+        collection(firestore, "users", user.uid, "loginHistory"),
+        orderBy("loginTime", "desc"),
+        limit(1)
+      );
+
+      const historySnapshot = await getDocs(historyQuery);
+      if (historySnapshot.empty) {
+        throw new Error("No login session found for the current user.");
       }
+
+      const latestSessionDoc = historySnapshot.docs[0];
+      const simulationsCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory', latestSessionDoc.id, 'dockingSimulations');
+      
+      let savedCount = 0;
+      for (const result of results) {
+          const simulationData = {
+              userId: user.uid,
+              loginHistoryId: latestSessionDoc.id,
+              timestamp: serverTimestamp(),
+              moleculeSmiles: result.moleculeSmiles,
+              proteinTarget: result.proteinTarget,
+              bindingAffinity: result.bindingAffinity,
+              confidenceScore: result.confidenceScore,
+              rationale: result.rationale,
+          };
+          
+          addDoc(simulationsCollectionRef, simulationData).catch((serverError) => {
+              const permissionError = new FirestorePermissionError({
+                  path: simulationsCollectionRef.path,
+                  operation: 'create',
+                  requestResourceData: simulationData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+          });
+          savedCount++;
+      }
+
+      // We optimistically assume saves will work and update the UI.
+      // The error emitter will handle any permission errors.
+      setSaveState('saved');
+      toast({
+        title: 'Results Saved',
+        description: `Successfully saved ${savedCount} simulation results to your history.`,
+      });
+
     } catch (error) {
       setSaveState('error');
       console.error('Failed to save docking results:', error);
@@ -192,6 +231,7 @@ function Dashboard() {
       });
     }
   };
+
 
   const currentStepInfo = stepDescriptions[step];
 

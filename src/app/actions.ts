@@ -4,10 +4,6 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
-import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, getDocs, limit, orderBy } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 
 // Helper function for retrying promises with exponential backoff
@@ -46,82 +42,6 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
   const mockScore = -5 - (Math.random() * 5); 
   console.log(`Classical docking complete for ${smile} and ${protein}. Score: ${mockScore}`);
   return mockScore;
-}
-
-export async function saveDockingResults(userId: string, results: DockingResults[]): Promise<{ success: boolean; count: number }> {
-    if (!userId) {
-        const error = new Error("User ID is missing.");
-        console.error("Cannot save simulation results:", error);
-        throw error;
-    }
-    if (!results || results.length === 0) {
-        const error = new Error("No simulation results provided to save.");
-        console.error("No simulation results to save:", error);
-        throw error;
-    }
-
-    const { firestore } = initializeFirebase();
-    const historyQuery = query(
-        collection(firestore, "users", userId, "loginHistory"),
-        orderBy("loginTime", "desc"),
-        limit(1)
-    );
-
-    const historySnapshot = await getDocs(historyQuery);
-
-    if (historySnapshot.empty) {
-        const error = new Error(`No login session found for user ${userId}. Please log in again.`);
-        console.error(`Failed to save simulations:`, error);
-        throw error;
-    }
-
-    const latestSessionDoc = historySnapshot.docs[0];
-    const latestSessionId = latestSessionDoc.id;
-    const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', latestSessionId, 'dockingSimulations');
-    
-    let savedCount = 0;
-    for (const result of results) {
-        const simulationData = {
-            userId: userId,
-            loginHistoryId: latestSessionId,
-            timestamp: serverTimestamp(),
-            moleculeSmiles: result.moleculeSmiles,
-            proteinTarget: result.proteinTarget,
-            bindingAffinity: result.bindingAffinity,
-            confidenceScore: result.confidenceScore,
-            rationale: result.rationale,
-        };
-
-        // Use a non-blocking write with proper error handling
-        addDoc(simulationsCollectionRef, simulationData)
-            .then(() => {
-                savedCount++;
-            })
-            .catch((serverError) => {
-                 const permissionError = new FirestorePermissionError({
-                    path: simulationsCollectionRef.path,
-                    operation: 'create',
-                    requestResourceData: simulationData,
-                });
-                // This will throw the error to be caught by the server action boundary
-                // and displayed in the Next.js error overlay.
-                console.error("Firestore write failed:", permissionError.message);
-                // We re-throw the detailed error so the client knows the save failed.
-                // In a real app, you might handle this differently (e.g., retry queue).
-            });
-    }
-
-    // Give a moment for async operations to potentially fail. In a real scenario,
-    // you'd have a more robust system for tracking failed writes.
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (savedCount !== results.length) {
-        // This generic error is a fallback. The specific permission error should have already been thrown.
-        throw new Error("Failed to save one or more docking results to the database.");
-    }
-    
-    console.log(`Successfully queued ${results.length} simulations for user ${userId} in session ${latestSessionId}`);
-    return { success: true, count: results.length };
 }
 
 
