@@ -127,6 +127,7 @@ export default function DashboardLayout({
         const loginTimeData = activeSessionData.loginTime as Timestamp | undefined;
         
         let duration = 0;
+        // Safely check if loginTimeData is a valid Timestamp with a toDate method
         if (loginTimeData && typeof loginTimeData.toDate === 'function') {
             const loginTime = loginTimeData.toDate();
             const logoutTime = new Date();
