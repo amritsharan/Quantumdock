@@ -152,13 +152,13 @@ function Dashboard() {
         description: `Binding affinity predictions for ${totalCombinations} molecule-protein combinations were successful.`,
       });
 
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
       setStep('error');
+      const errorMessage = error.message || 'An unknown error occurred during the simulation.';
       toast({
         variant: 'destructive',
         title: 'Simulation Failed',
-        description: (error as Error).message || 'An error occurred while running the docking process.',
+        description: errorMessage,
       });
     }
   };
