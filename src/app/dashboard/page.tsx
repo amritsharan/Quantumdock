@@ -80,6 +80,13 @@ function Dashboard() {
     }
     return null;
   }, [selectedSmiles]);
+  
+  const bestSmiles = useMemo(() => {
+    if (!results || results.length === 0) return null;
+    return results.reduce((best, current) => {
+        return current.bindingAffinity < best.bindingAffinity ? current : best;
+    }).moleculeSmiles;
+  }, [results]);
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -242,6 +249,7 @@ function Dashboard() {
                     <MoleculeViewer 
                       isDocked={isDocked} 
                       selectedSmiles={selectedSmiles}
+                      bestSmiles={bestSmiles}
                     />
                     {(step === 'classical' || step === 'predicting') && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
