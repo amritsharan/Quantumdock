@@ -79,31 +79,7 @@ export default function DashboardLayout({
                   )
             }
 
-            // 2. Deactivate any previously active sessions
-            const historyQuery = query(
-              collection(firestore, "users", user.uid, "loginHistory"),
-              where("status", "==", "active")
-            );
-        
-            try {
-                const querySnapshot = await getDocs(historyQuery);
-                for (const docSnapshot of querySnapshot.docs) {
-                  await updateDoc(docSnapshot.ref, {
-                      status: 'inactive',
-                      logoutTime: serverTimestamp()
-                  });
-                }
-            } catch (error: any) {
-                 errorEmitter.emit(
-                    'permission-error',
-                    new FirestorePermissionError({
-                      path: (error as any)?.path || `users/${user.uid}/loginHistory`,
-                      operation: 'update',
-                    })
-                  )
-            }
-
-            // 3. Create the new active session
+            // 2. Create the new active session
             try {
                 const newSessionData = {
                   userId: user.uid,
