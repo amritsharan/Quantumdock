@@ -18,6 +18,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { molecules, type Molecule } from '@/lib/molecules';
+import { proteins, type Protein } from '@/lib/proteins';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -40,7 +41,7 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
   predicting: {
     icon: <FlaskConical className="h-12 w-12 text-accent" />,
-    title: 'Simulating Quantum Refinement & Predicting Affinity...',
+    title: 'Simulating a quantum refinement step and predicting binding affinity...',
     description: 'Simulating quantum analysis to predict binding strength.',
   },
   done: {
@@ -76,13 +77,22 @@ function Dashboard() {
   });
 
   const selectedSmiles = form.watch('smiles');
+  const selectedProteinNames = form.watch('proteinTargets');
   
-  const primaryMolecule = useMemo(() => {
-    if (selectedSmiles && selectedSmiles.length > 0) {
-      return molecules.find(m => m.smiles === selectedSmiles[0]);
-    }
-    return null;
-  }, [selectedSmiles]);
+  const totalMolecularWeight = useMemo(() => {
+    const selectedMolecules = molecules.filter(m => selectedSmiles.includes(m.smiles));
+    const selectedProteins = proteins.filter(p => selectedProteinNames.includes(p.name));
+
+    const maxMoleculeWeight = selectedMolecules.length > 0
+      ? Math.max(...selectedMolecules.map(m => m.molecularWeight))
+      : 0;
+
+    const maxProteinWeight = selectedProteins.length > 0
+      ? Math.max(...selectedProteins.map(p => p.molecularWeight))
+      : 0;
+      
+    return maxMoleculeWeight + maxProteinWeight;
+  }, [selectedSmiles, selectedProteinNames]);
   
   const bestSmiles = useMemo(() => {
     if (!results || results.length === 0) return null;
@@ -154,7 +164,9 @@ function Dashboard() {
 
     } catch (error: any) {
       setStep('error');
-      const errorMessage = error.message || 'An unknown error occurred during the simulation.';
+      const errorMessage = error.message.includes("overloaded")
+        ? "The AI model is currently overloaded. Please try the simulation again in a few moments."
+        : error.message || 'An unknown error occurred during the simulation.';
       toast({
         variant: 'destructive',
         title: 'Simulation Failed',
@@ -183,7 +195,7 @@ function Dashboard() {
 
       const historySnapshot = await getDocs(historyQuery);
       if (historySnapshot.empty) {
-        throw new Error("No login session found for the current user.");
+        throw new Error("No active login session found. Please sign out and back in.");
       }
 
       const latestSessionDoc = historySnapshot.docs[0];
@@ -257,6 +269,13 @@ function Dashboard() {
     },
   };
 
+  const primaryMoleculeDetails = useMemo(() => {
+    if (selectedSmiles && selectedSmiles.length > 0) {
+      return molecules.find(m => m.smiles === selectedSmiles[0]);
+    }
+    return null;
+  }, [selectedSmiles]);
+
 
   return (
     <>
@@ -302,19 +321,19 @@ function Dashboard() {
                     )}
                 </div>
                 
-                {isDocked && primaryMolecule && (
+                {isDocked && primaryMoleculeDetails && (
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="rounded-lg border p-3">
-                      <p className="text-sm text-muted-foreground">Molecular Weight</p>
-                      <p className="text-2xl font-bold">{primaryMolecule.molecularWeight.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">Combined MW (kDa)</p>
+                      <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-sm text-muted-foreground">H-Bond Donors</p>
-                      <p className="text-2xl font-bold">{primaryMolecule.donors}</p>
+                      <p className="text-2xl font-bold">{primaryMoleculeDetails.donors}</p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-sm text-muted-foreground">H-Bond Acceptors</p>
-                      <p className="text-2xl font-bold">{primaryMolecule.acceptors}</p>
+                      <p className="text-2xl font-bold">{primaryMoleculeDetails.acceptors}</p>
                     </div>
                   </div>
                 )}
