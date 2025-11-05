@@ -31,10 +31,9 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
 }
 
 /**
- * [SIMULATION] Simulates running a classical docking tool like AutoDock.
- * In a real application, this would be a call to a separate backend service
- * that executes the AutoDock Vina command-line tool.
- * @returns A promise that resolves with a mock classical docking score.
+ * [SIMULATION] Simulates running a classical docking tool like AutoDock Vina.
+ * To make this real, replace the simulated logic with the commented-out blueprint below.
+ * @returns A promise that resolves with a docking score.
  */
 async function runClassicalDocking(smile: string, protein: string): Promise<number> {
   console.log(`[SIMULATION] Running classical docking for ${smile} and ${protein}...`);
@@ -43,46 +42,102 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
   
   // Return a mock score, typically a negative value indicating binding energy (e.g., in kcal/mol).
   const mockScore = -5 - (Math.random() * 5); 
-  console.log(`[SIMULATION] Classical docking complete for ${smile} and ${protein}. Score: ${mockScore}`);
-  
-  // --- INTEGRATION POINT FOR AUTODOCK VINA ---
-  // To implement this for real, you would replace the simulation logic above with a call
-  // to a backend service that:
-  // 1. Accepts a SMILES string and a protein identifier.
-  // 2. Converts the SMILES to a 3D structure (e.g., PDBQT format).
-  // 3. Retrieves the protein's PDBQT structure.
-  // 4. Executes the AutoDock Vina command-line tool:
-  //    `vina --receptor protein.pdbqt --ligand molecule.pdbqt --out result.pdbqt --log result.log`
-  // 5. Parses the resulting log file to extract the best binding energy score.
-  // 6. Returns that score as a number.
-  // --- END INTEGRATION POINT ---
-
+  console.log(`[SIMULATION] Classical docking complete. Score: ${mockScore}`);
   return mockScore;
+  
+  // --- REAL INTEGRATION BLUEPRINT FOR AUTODOCK VINA ---
+  /*
+    // To implement this for real, you would replace the simulation logic above with a call
+    // to a backend service or a direct command-line execution. This requires Node.js's
+    // 'child_process' module to run external commands.
+
+    const { exec } = require('child_process');
+
+    // 1. Prepare Input Files:
+    // You would need helper functions to convert the SMILES string to a 3D structure
+    // (e.g., PDBQT format using a tool like Open Babel) and ensure the protein
+    // target file is also in PDBQT format.
+    // Example:
+    // await prepareLigandFile(smile, 'ligand.pdbqt');
+    // await prepareReceptorFile(protein, 'receptor.pdbqt');
+
+    // 2. Define the AutoDock Vina Command:
+    // This command executes Vina. You'd need to know the path to the 'vina' executable.
+    const command = `vina --receptor receptor.pdbqt --ligand ligand.pdbqt --out result_pose.pdbqt --log result.log --cpu 1`;
+
+    // 3. Execute the Command and Parse the Output:
+    // This runs the command and waits for it to finish.
+    return new Promise((resolve, reject) => {
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`AutoDock Vina execution error: ${stderr}`);
+          reject(new Error('AutoDock Vina failed.'));
+          return;
+        }
+
+        // After execution, you must parse the output log file to find the score.
+        // This is a simplified example of what that might look like.
+        const fs = require('fs');
+        const logContent = fs.readFileSync('result.log', 'utf-8');
+        const match = logContent.match(/Affinity:\s*(-?\d+\.\d+)/);
+        if (match && match[1]) {
+          const score = parseFloat(match[1]);
+          console.log(`Real docking complete. Score: ${score}`);
+          resolve(score);
+        } else {
+          reject(new Error('Could not parse docking score from Vina log file.'));
+        }
+      });
+    });
+  */
+  // --- END REAL INTEGRATION BLUEPRINT ---
 }
 
 
 /**
- * [SIMULATION] Simulates a quantum refinement step.
- * In a real application, this would involve setting up and running a quantum
- * algorithm (like VQE or QAOA) using a framework like Qiskit to calculate a more
- * precise binding energy.
+ * [SIMULATION] Simulates a quantum refinement step using a tool like Qiskit.
+ * To make this real, replace the simulated logic with the commented-out blueprint.
  * @param classicalScore The score from the classical docking.
  * @returns A promise that resolves with a mock quantum-refined energy.
  */
 async function runQuantumRefinementSimulation(classicalScore: number): Promise<number> {
     console.log(`[SIMULATION] Running quantum refinement simulation...`);
-    // Simulate a small improvement over the classical score.
+    // Simulate a small improvement over the classical score. This is a placeholder.
     const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2);
     
-    // --- INTEGRATION POINT FOR QISKIT ---
-    // To implement this for real, you would replace the simulation logic above with a call
-    // to a service that:
-    // 1. Takes the initial pose (from AutoDock) and defines a quantum chemistry problem.
-    // 2. Builds a quantum circuit using Qiskit.
-    // 3. Executes the circuit on a quantum simulator or real quantum hardware.
-    // 4. Post-processes the results to calculate the refined binding energy.
-    // 5. Returns the calculated energy as a number.
-    // --- END INTEGRATION POINT ---
+    // --- REAL INTEGRATION BLUEPRINT FOR QISKIT ---
+    /*
+      // To implement this for real, you would replace the simulation logic above with a call
+      // to a separate service (e.g., a Python Flask API or a serverless function) that can
+      // run a Python environment with Qiskit installed.
+
+      // 1. Define the input for the quantum service:
+      // This would include the molecule's structure from the classical docking result.
+      const qiskitServiceInput = {
+        dockedPose: 'data_from_result_pose.pdbqt',
+        // Other parameters for the quantum algorithm...
+      };
+
+      // 2. Call the external Qiskit service:
+      // This would be a network request (e.g., using fetch) to your quantum backend.
+      const response = await fetch('http://your-qiskit-service-url/calculate-energy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(qiskitServiceInput),
+      });
+
+      if (!response.ok) {
+        throw new Error('Quantum refinement service failed.');
+      }
+
+      // 3. Get the result:
+      // The service would return the calculated energy.
+      const { refinedEnergy } = await response.json();
+      
+      console.log(`Real quantum refinement complete. Energy: ${refinedEnergy}`);
+      return refinedEnergy;
+    */
+    // --- END REAL INTEGRATION BLUEPRINT ---
 
     return mockQuantumRefinedEnergy;
 }
