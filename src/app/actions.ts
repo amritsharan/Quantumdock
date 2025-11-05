@@ -31,19 +31,60 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
 }
 
 /**
- * Simulates running a classical docking tool like AutoDock.
- * In a real application, this would be a call to a separate backend service.
+ * [SIMULATION] Simulates running a classical docking tool like AutoDock.
+ * In a real application, this would be a call to a separate backend service
+ * that executes the AutoDock Vina command-line tool.
  * @returns A promise that resolves with a mock classical docking score.
  */
 async function runClassicalDocking(smile: string, protein: string): Promise<number> {
-  console.log(`Running classical docking for ${smile} and ${protein}...`);
+  console.log(`[SIMULATION] Running classical docking for ${smile} and ${protein}...`);
   // Simulate network latency and computation time for a real docking job.
   await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
   
   // Return a mock score, typically a negative value indicating binding energy (e.g., in kcal/mol).
   const mockScore = -5 - (Math.random() * 5); 
-  console.log(`Classical docking complete for ${smile} and ${protein}. Score: ${mockScore}`);
+  console.log(`[SIMULATION] Classical docking complete for ${smile} and ${protein}. Score: ${mockScore}`);
+  
+  // --- INTEGRATION POINT FOR AUTODOCK VINA ---
+  // To implement this for real, you would replace the simulation logic above with a call
+  // to a backend service that:
+  // 1. Accepts a SMILES string and a protein identifier.
+  // 2. Converts the SMILES to a 3D structure (e.g., PDBQT format).
+  // 3. Retrieves the protein's PDBQT structure.
+  // 4. Executes the AutoDock Vina command-line tool:
+  //    `vina --receptor protein.pdbqt --ligand molecule.pdbqt --out result.pdbqt --log result.log`
+  // 5. Parses the resulting log file to extract the best binding energy score.
+  // 6. Returns that score as a number.
+  // --- END INTEGRATION POINT ---
+
   return mockScore;
+}
+
+
+/**
+ * [SIMULATION] Simulates a quantum refinement step.
+ * In a real application, this would involve setting up and running a quantum
+ * algorithm (like VQE or QAOA) using a framework like Qiskit to calculate a more
+ * precise binding energy.
+ * @param classicalScore The score from the classical docking.
+ * @returns A promise that resolves with a mock quantum-refined energy.
+ */
+async function runQuantumRefinementSimulation(classicalScore: number): Promise<number> {
+    console.log(`[SIMULATION] Running quantum refinement simulation...`);
+    // Simulate a small improvement over the classical score.
+    const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2);
+    
+    // --- INTEGRATION POINT FOR QISKIT ---
+    // To implement this for real, you would replace the simulation logic above with a call
+    // to a service that:
+    // 1. Takes the initial pose (from AutoDock) and defines a quantum chemistry problem.
+    // 2. Builds a quantum circuit using Qiskit.
+    // 3. Executes the circuit on a quantum simulator or real quantum hardware.
+    // 4. Post-processes the results to calculate the refined binding energy.
+    // 5. Returns the calculated energy as a number.
+    // --- END INTEGRATION POINT ---
+
+    return mockQuantumRefinedEnergy;
 }
 
 
@@ -55,15 +96,16 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
     for (const protein of validatedData.proteinTargets) {
       const promise = runClassicalDocking(smile, protein)
         .then(classicalScore => {
-            // Simulate a quantum refinement step, which would be replaced by a real quantum algorithm (e.g., VQE/QAOA with Qiskit) in a production environment.
-            const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2);
-
+            // This function call is the integration point for a real quantum algorithm.
+            return runQuantumRefinementSimulation(classicalScore);
+        })
+        .then(quantumRefinedEnergy => {
             const predictionInput = {
-                quantumRefinedEnergy: mockQuantumRefinedEnergy,
+                quantumRefinedEnergy: quantumRefinedEnergy,
                 moleculeSmiles: smile,
                 proteinTargetName: protein,
             };
-
+            // The AI acts as an expert, interpreting the final energy value.
             return retryPromise(() => predictBindingAffinities(predictionInput));
         })
         .then(async (predictionResult) => {
