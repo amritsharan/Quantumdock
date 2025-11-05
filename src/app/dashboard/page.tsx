@@ -78,6 +78,11 @@ function Dashboard() {
 
   const selectedSmiles = form.watch('smiles');
   const selectedProteinNames = form.watch('proteinTargets');
+
+  const selectedMolecules = useMemo(() => {
+      if (!selectedSmiles) return [];
+      return molecules.filter(m => selectedSmiles.includes(m.smiles));
+  }, [selectedSmiles]);
   
   const totalMolecularWeight = useMemo(() => {
     const selectedMolecules = molecules.filter(m => selectedSmiles.includes(m.smiles));
@@ -269,13 +274,6 @@ function Dashboard() {
     },
   };
 
-  const primaryMoleculeDetails = useMemo(() => {
-    if (selectedSmiles && selectedSmiles.length > 0) {
-      return molecules.find(m => m.smiles === selectedSmiles[0]);
-    }
-    return null;
-  }, [selectedSmiles]);
-
 
   return (
     <>
@@ -321,19 +319,22 @@ function Dashboard() {
                     )}
                 </div>
                 
-                {isDocked && primaryMoleculeDetails && (
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="rounded-lg border p-3">
-                      <p className="text-sm text-muted-foreground">Combined MW (kDa)</p>
+                {selectedMolecules.length > 0 && (
+                  <div className="grid gap-4">
+                     <div className="rounded-lg border p-3 text-center">
+                      <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
                       <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
                     </div>
-                    <div className="rounded-lg border p-3">
-                      <p className="text-sm text-muted-foreground">H-Bond Donors</p>
-                      <p className="text-2xl font-bold">{primaryMoleculeDetails.donors}</p>
-                    </div>
-                    <div className="rounded-lg border p-3">
-                      <p className="text-sm text-muted-foreground">H-Bond Acceptors</p>
-                      <p className="text-2xl font-bold">{primaryMoleculeDetails.acceptors}</p>
+                    <div>
+                      <h4 className="font-medium mb-2">Selected Molecule Weights (Da)</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                        {selectedMolecules.map(m => (
+                          <div key={m.smiles} className="flex justify-between rounded-md bg-muted/50 p-2">
+                            <span className="truncate pr-2">{m.name}</span>
+                            <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
