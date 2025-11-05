@@ -12,11 +12,12 @@ import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Box, Dna, FlaskConical, Save } from 'lucide-react';
+import { BrainCircuit, Box, Dna, FlaskConical, Save, Target } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { molecules, type Molecule } from '@/lib/molecules';
 import { proteins, type Protein } from '@/lib/proteins';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -297,84 +298,108 @@ function Dashboard() {
 
           <div className="grid auto-rows-max items-start gap-6">
             <Card className="relative">
-              <CardHeader>
-                <CardTitle>Visualization</CardTitle>
-                <CardDescription>Interactive 3D view and binding affinity results.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-6">
-                <div className="min-h-[400px] lg:min-h-[500px] relative">
-                    <MoleculeViewer 
-                      isDocked={isDocked} 
-                      selectedSmiles={selectedSmiles}
-                      bestSmiles={bestSmiles}
-                    />
-                    {(step === 'classical' || step === 'predicting') && (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
-                        {currentStepInfo.icon}
-                        <div className="text-center">
-                        <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-                        <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                <Tabs defaultValue="visualization">
+                    <CardHeader>
+                        <CardTitle>Analysis</CardTitle>
+                        <div className="flex justify-between items-center">
+                            <CardDescription>Interactive views and model analysis.</CardDescription>
+                            <TabsList>
+                                <TabsTrigger value="visualization">Visualization</TabsTrigger>
+                                <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
+                            </TabsList>
                         </div>
-                    </div>
-                    )}
-                </div>
-                
-                <div className="grid gap-4">
-                  {results && step === 'done' && (
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
-                      <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
-                    </div>
-                  )}
-
-                  {selectedMolecules.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Selected Molecule Properties</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        {selectedMolecules.map(m => (
-                          <div key={m.smiles} className="flex flex-col rounded-md bg-muted/50 p-2">
-                            <span className="font-semibold truncate pr-2">{m.name}</span>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Formula:</span>
-                                <span className="font-mono">{m.formula}</span>
+                    </CardHeader>
+                    <CardContent className="grid gap-6">
+                        <TabsContent value="visualization">
+                             <div className="min-h-[400px] lg:min-h-[500px] relative">
+                                <MoleculeViewer 
+                                isDocked={isDocked} 
+                                selectedSmiles={selectedSmiles}
+                                bestSmiles={bestSmiles}
+                                />
+                                {(step === 'classical' || step === 'predicting') && (
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
+                                    {currentStepInfo.icon}
+                                    <div className="text-center">
+                                    <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+                                    <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                                    </div>
+                                </div>
+                                )}
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Weight (Da):</span>
-                                <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                            
+                            <div className="grid gap-4">
+                            {results && step === 'done' && (
+                                <div className="rounded-lg border p-3 text-center">
+                                <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
+                                <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
+                                </div>
+                            )}
 
-                {results && step === 'done' && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
-                    <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                        <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
-                        <CartesianGrid horizontal={false} />
-                        <YAxis
-                            dataKey="name"
-                            type="category"
-                            tickLine={false}
-                            tickMargin={10}
-                            axisLine={false}
-                            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
-                        />
-                        <XAxis dataKey="Binding Affinity (nM)" type="number" />
-                        <Tooltip
-                            cursor={{ fill: "hsl(var(--muted))" }}
-                            content={<ChartTooltipContent />}
-                        />
-                        <Bar dataKey="Binding Affinity (nM)" radius={4} />
-                        </BarChart>
-                    </ChartContainer>
-                  </div>
-                )}
-              </CardContent>
+                            {selectedMolecules.length > 0 && (
+                                <div>
+                                <h4 className="font-medium mb-2">Selected Molecule Properties</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                    {selectedMolecules.map(m => (
+                                    <div key={m.smiles} className="flex flex-col rounded-md bg-muted/50 p-2">
+                                        <span className="font-semibold truncate pr-2">{m.name}</span>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Formula:</span>
+                                            <span className="font-mono">{m.formula}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Weight (Da):</span>
+                                            <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    ))}
+                                </div>
+                                </div>
+                            )}
+                            </div>
+
+                            {results && step === 'done' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
+                                <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+                                    <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
+                                    <CartesianGrid horizontal={false} />
+                                    <YAxis
+                                        dataKey="name"
+                                        type="category"
+                                        tickLine={false}
+                                        tickMargin={10}
+                                        axisLine={false}
+                                        tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                                    />
+                                    <XAxis dataKey="Binding Affinity (nM)" type="number" />
+                                    <Tooltip
+                                        cursor={{ fill: "hsl(var(--muted))" }}
+                                        content={<ChartTooltipContent />}
+                                    />
+                                    <Bar dataKey="Binding Affinity (nM)" radius={4} />
+                                    </BarChart>
+                                </ChartContainer>
+                            </div>
+                            )}
+                        </TabsContent>
+                        <TabsContent value="accuracy">
+                             <Card className="min-h-[400px] lg:min-h-[500px]">
+                                <CardContent className="flex flex-col items-center justify-center h-full text-center gap-4 p-6">
+                                    <Target className="h-16 w-16 text-muted-foreground" />
+                                    <h3 className="text-xl font-semibold">Model Accuracy and Validation</h3>
+                                    <p className="text-muted-foreground max-w-md">
+                                        This is a placeholder for model performance metrics. Once the application is connected to real scientific backends (like AutoDock and Qiskit) and validated against known experimental data, this section will display accuracy measurements.
+                                    </p>
+                                    <p className="text-sm text-muted-foreground max-w-md">
+                                        Metrics would include Mean Absolute Error (MAE), R-squared (R²), and comparisons against standard computational chemistry models to demonstrate the added value of the quantum-assisted workflow.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </CardContent>
+                </Tabs>
             </Card>
 
             {results && step === 'done' && (
