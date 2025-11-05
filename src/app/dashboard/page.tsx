@@ -319,12 +319,15 @@ function Dashboard() {
                     )}
                 </div>
                 
-                {selectedMolecules.length > 0 && (
-                  <div className="grid gap-4">
-                     <div className="rounded-lg border p-3 text-center">
+                <div className="grid gap-4">
+                  {results && step === 'done' && (
+                    <div className="rounded-lg border p-3 text-center">
                       <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
                       <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
                     </div>
+                  )}
+
+                  {selectedMolecules.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-2">Selected Molecule Weights (Da)</h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
@@ -336,8 +339,8 @@ function Dashboard() {
                         ))}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {results && step === 'done' && (
                   <div>
