@@ -58,23 +58,53 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
     // 'child_process' module to run external commands.
 
     const { exec } = require('child_process');
+    const path = require('path');
+    const fs = require('fs');
 
-    // 1. Prepare Input Files:
-    // You would need helper functions to convert the SMILES string to a 3D structure
-    // (e.g., PDBQT format using a tool like Open Babel) and ensure the protein
-    // target file is also in PDBQT format.
-    // Example:
-    // await prepareLigandFile(smile, 'ligand.pdbqt');
-    // await prepareReceptorFile(protein, 'receptor.pdbqt');
+    // --- STEP 1: PREPARE INPUT FILES WITH MGLTOOLS ---
+    // This is where you would use the scripts from MGLTools (AutoDockTools) that you downloaded.
+    // You'd need to convert the SMILES string to a 3D format (like PDB) first, and then to PDBQT.
+    // The protein PDB file would also need to be converted to PDBQT.
 
-    // 2. Define the AutoDock Vina Command:
-    // This command executes Vina. You'd need to know the path to the 'vina' executable.
-    const command = `vina --receptor receptor.pdbqt --ligand ligand.pdbqt --out result_pose.pdbqt --log result.log --cpu 1`;
+    // A helper function would convert SMILES to PDB, e.g., using an online service or another tool.
+    const ligandPdbContent = await getPdbFromSmiles(smile);
+    fs.writeFileSync('ligand.pdb', ligandPdbContent);
 
-    // 3. Execute the Command and Parse the Output:
-    // This runs the command and waits for it to finish.
+    // Assume the target protein PDB file is available at a known path.
+    const receptorPdbPath = `path/to/proteins/${protein}.pdb`;
+    
+    // Define paths to your MGLTools scripts.
+    const mglToolsPath = '/path/to/mgltools_x86_64Linux2_1.5.7/MGLToolsPckgs';
+    const prepareLigandScript = path.join(mglToolsPath, 'AutoDockTools/Utilities24/prepare_ligand4.py');
+    const prepareReceptorScript = path.join(mglToolsPath, 'AutoDockTools/Utilities24/prepare_receptor4.py');
+    
+    // Command to prepare the ligand (molecule).
+    const ligandCmd = `pythonsh ${prepareLigandScript} -l ligand.pdb -o ligand.pdbqt`;
+    
+    // Command to prepare the receptor (protein).
+    const receptorCmd = `pythonsh ${prepareReceptorScript} -r ${receptorPdbPath} -o receptor.pdbqt`;
+
+    // Execute preparation scripts.
+    await new Promise((resolve, reject) => {
+        exec(`${ligandCmd} && ${receptorCmd}`, (err, stdout, stderr) => {
+            if (err) {
+                console.error("MGLTools preparation error:", stderr);
+                return reject(new Error("File preparation failed."));
+            }
+            console.log("PDBQT files prepared successfully.");
+            resolve(stdout);
+        });
+    });
+
+
+    // --- STEP 2: DEFINE THE AUTODOCK VINA COMMAND ---
+    // This command executes Vina. You'd need to know the path to the 'vina' executable
+    // and define the search space (center_x, center_y, etc.).
+    const vinaCmd = `vina --receptor receptor.pdbqt --ligand ligand.pdbqt --out result_pose.pdbqt --log result.log --cpu 1 --center_x 10 --center_y 10 --center_z 10 --size_x 20 --size_y 20 --size_z 20`;
+
+    // --- STEP 3: EXECUTE VINA AND PARSE THE OUTPUT ---
     return new Promise((resolve, reject) => {
-      exec(command, (error, stdout, stderr) => {
+      exec(vinaCmd, (error, stdout, stderr) => {
         if (error) {
           console.error(`AutoDock Vina execution error: ${stderr}`);
           reject(new Error('AutoDock Vina failed.'));
@@ -82,8 +112,6 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
         }
 
         // After execution, you must parse the output log file to find the score.
-        // This is a simplified example of what that might look like.
-        const fs = require('fs');
         const logContent = fs.readFileSync('result.log', 'utf-8');
         const match = logContent.match(/Affinity:\s*(-?\d+\.\d+)/);
         if (match && match[1]) {
