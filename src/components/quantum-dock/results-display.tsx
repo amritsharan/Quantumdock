@@ -211,6 +211,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       </CardHeader>
       <CardContent className="grid gap-4">
         <div>
+          <Accordion type="single" collapsible className="w-full">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -230,46 +231,45 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                     <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
                   </TableHead>
                   <TableHead>Affinity Level</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
+              <TableBody>
                 {sortedResults.map((result, index) => (
-                    <Accordion key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`} type="single" collapsible className="w-full" asChild>
-                        <TableBody>
-                            <AccordionItem value={`item-${index}`} asChild>
-                                <>
-                                    <TableRow>
-                                    <TableCell className="font-medium">{result.name}</TableCell>
-                                    <TableCell className="font-medium">{result.proteinTarget}</TableCell>
-                                    <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
-                                    <TableCell className="text-muted-foreground">{result.standardModelScore.toFixed(2)}</TableCell>
-                                    <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
-                                    <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-                                    <TableCell>
-                                        <AccordionTrigger>
-                                            <span className="sr-only">Show details</span>
-                                        </AccordionTrigger>
-                                    </TableCell>
-                                    </TableRow>
-                                    <AccordionContent asChild>
-                                    <tr className="bg-muted/50">
-                                        <TableCell colSpan={7} className="p-4">
-                                        <div className="grid gap-2">
-                                            <p className="font-semibold text-sm">AI Rationale & Commentary</p>
-                                            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
-                                            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
-                                        </div>
-                                        </TableCell>
-                                    </tr>
-                                    </AccordionContent>
-                                </>
-                            </AccordionItem>
-                        </TableBody>
-                    </Accordion>
+                  <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+                    <TableRow>
+                      <TableCell className="font-medium">{result.name}</TableCell>
+                      <TableCell className="font-medium">{result.proteinTarget}</TableCell>
+                      <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
+                      <TableCell className="text-muted-foreground">{result.standardModelScore.toFixed(2)}</TableCell>
+                      <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
+                      <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
+                      <TableCell>
+                          <AccordionTrigger>
+                              <span className="sr-only">Show details</span>
+                          </AccordionTrigger>
+                      </TableCell>
+                    </TableRow>
+                    <AccordionContent asChild>
+                      <tr>
+                          <TableCell colSpan={7} className="p-4 bg-muted/50">
+                          <div className="grid gap-2">
+                              <p className="font-semibold text-sm">AI Rationale & Commentary</p>
+                              <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
+                              <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
+                          </div>
+                          </TableCell>
+                      </tr>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
+              </TableBody>
             </Table>
+          </Accordion>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+    
