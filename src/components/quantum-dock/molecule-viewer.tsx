@@ -5,6 +5,13 @@ import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { BrainCircuit } from 'lucide-react';
 import Image from 'next/image';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 interface MoleculeViewerProps {
   isDocked: boolean;
@@ -25,34 +32,63 @@ export function MoleculeViewer({ isDocked, selectedSmiles, bestSmiles }: Molecul
   }, []);
   
   const hasSelection = selectedSmiles && selectedSmiles.length > 0;
-  const smilesToDisplay = isDocked ? bestSmiles : (hasSelection ? selectedSmiles[0] : null);
-  const displayMoleculeName = isDocked ? "best simulation result" : "primary selected molecule";
-  const displayMessage = isDocked ? `2D structure of the ${displayMoleculeName}.` : `2D structure of the ${displayMoleculeName}.\nRun the simulation to see the docked complex.`;
+  const smilesToDisplayAfterDocking = isDocked ? bestSmiles : null;
 
 
   return (
     <div ref={mountRef} className="h-full w-full">
-      {!smilesToDisplay && (
+      {!hasSelection && !smilesToDisplayAfterDocking && (
         <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
           <BrainCircuit className="h-24 w-24 text-muted-foreground" />
           <p className="text-center text-muted-foreground">
-            Select a molecule to see its structure. After simulation, the structure of the best result will appear here.
+            Select molecule(s) to see their structure. After simulation, the structure of the best result will appear here.
           </p>
         </div>
       )}
-      {smilesToDisplay && (
+
+      {smilesToDisplayAfterDocking && (
          <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
           <Image
-            src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(smilesToDisplay)}/image?width=250&height=250`}
-            alt={`Structure of ${smilesToDisplay}`}
+            src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(smilesToDisplayAfterDocking)}/image?width=250&height=250`}
+            alt={`Structure of ${smilesToDisplayAfterDocking}`}
             width={250}
             height={250}
             className="rounded-md bg-white p-2"
             unoptimized
           />
-          <p className="text-center text-sm text-muted-foreground whitespace-pre-line">
-            {displayMessage}
+          <p className="text-center text-sm text-muted-foreground">
+            2D structure of the best simulation result.
           </p>
+        </div>
+      )}
+
+      {!isDocked && hasSelection && (
+        <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
+            <Carousel className="w-full max-w-xs">
+              <CarouselContent>
+                {selectedSmiles!.map((smiles, index) => (
+                  <CarouselItem key={index}>
+                    <div className="p-1">
+                       <div className="flex aspect-square items-center justify-center p-6">
+                         <Image
+                            src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(smiles)}/image?width=200&height=200`}
+                            alt={`Structure of ${smiles}`}
+                            width={200}
+                            height={200}
+                            className="rounded-md bg-white p-2"
+                            unoptimized
+                          />
+                       </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
+            </Carousel>
+             <p className="text-center text-sm text-muted-foreground">
+                Displaying {selectedSmiles!.length} selected molecule(s). Run simulation to see best result.
+            </p>
         </div>
       )}
     </div>
