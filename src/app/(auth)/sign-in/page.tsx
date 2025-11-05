@@ -97,15 +97,15 @@ export default function SignInPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email' || error.code === 'auth/invalid-credential') {
         setErrorType('user-not-found');
         setAlertTitle("Account Not Found");
-        setAlertDescription("No account found with this email. Would you like to create one?");
+        setAlertDescription("No account found with this email, or the credentials were invalid. Would you like to create an account?");
         setShowErrorAlert(true);
-      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      } else if (error.code === 'auth/wrong-password') {
         setErrorType('wrong-password');
         setAlertTitle("Authentication Failed");
-        setAlertDescription("Invalid credentials. Please check your email and password and try again.");
+        setAlertDescription("Invalid password. Please check your password and try again.");
         setShowErrorAlert(true);
       } else {
         setErrorType('generic');
@@ -311,5 +311,3 @@ export default function SignInPage() {
     </>
   );
 }
-
-    
