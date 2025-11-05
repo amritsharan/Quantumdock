@@ -177,7 +177,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     <Card>
       <CardHeader className="flex flex-row items-start justify-between">
         <div className='space-y-1.5'>
-          <CardTitle>Detailed Prediction Results (Simulated)</CardTitle>
+          <CardTitle>Detailed Prediction Results</CardTitle>
           <CardDescription>Tabular data for {results.length} combination(s) with AI analysis.</CardDescription>
         </div>
         <div className='flex items-center gap-2'>
@@ -206,36 +206,30 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
         </div>
       </CardHeader>
       <CardContent>
-        {/* Header */}
         <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
           <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
           <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
-          <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
           <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('confidenceScore')}>Confidence {getSortIcon('confidenceScore')}</div>
-          <div className="w-1/12 text-left">Affinity Level</div>
+          <div className="w-2/12 text-left">Affinity Level</div>
         </div>
 
-        {/* Body */}
         <Accordion type="single" collapsible className="w-full">
           {sortedResults.map((result, index) => (
             <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
               <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline text-sm">
                 <div className="w-3/12 font-medium text-left">{result.name}</div>
                 <div className="w-3/12 font-medium text-left">{result.proteinTarget}</div>
-                <div className="w-3/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
+                <div className="w-2/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
                 <div className="w-2/12 text-left">{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
-                <div className="w-1/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
+                <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="p-4 bg-muted/50">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1">
                     <div>
                       <p className="font-semibold text-sm">AI Rationale</p>
                       <p className="text-xs text-muted-foreground">{result.rationale}</p>
-                    </div>
-                     <div>
-                      <p className="font-semibold text-sm">AI Commentary</p>
-                      <p className="text-xs text-muted-foreground">{result.aiCommentary}</p>
                     </div>
                   </div>
                 </div>
