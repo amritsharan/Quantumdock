@@ -40,7 +40,7 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
   predicting: {
     icon: <FlaskConical className="h-12 w-12 text-accent" />,
-    title: 'Quantum Refinement & Affinity Prediction...',
+    title: 'Simulating Quantum Refinement & Predicting Affinity...',
     description: 'Simulating quantum analysis to predict binding strength.',
   },
   done: {

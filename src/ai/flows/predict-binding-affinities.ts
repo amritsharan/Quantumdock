@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -15,7 +16,7 @@ const PredictBindingAffinitiesInputSchema = z.object({
   quantumRefinedEnergy: z
     .number()
     .describe(
-      'The quantum-refined binding energy calculated by VQE or QAOA (in kcal/mol).'
+      'A simulated quantum-refined binding energy (in kcal/mol). In a real scenario, this would come from a VQE or QAOA calculation.'
     ),
   moleculeSmiles: z
     .string()
@@ -59,19 +60,19 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
-  prompt: `You are an expert in drug discovery and molecular interactions. Given the quantum-refined binding energy, molecule SMILES, and protein target name, predict the binding affinity and provide a confidence score and rationale.
+  prompt: `You are an expert in drug discovery and molecular interactions. Given a simulated quantum-refined binding energy, a molecule SMILES, and a protein target name, predict the binding affinity and provide a confidence score and rationale.
 
-Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
+Simulated Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
 Molecule SMILES: {{{moleculeSmiles}}}
 Protein Target: {{{proteinTargetName}}}
 
-Consider known interactions, chemical properties, and any relevant data to estimate the binding affinity. The binding affinity should be a number (in nM or pM), the confidence score should be a number between 0 and 1, and the rationale should be a text explanation.
+Consider known interactions, chemical properties, and any relevant data to estimate the binding affinity based on the provided simulated energy. The binding affinity should be a number (in nM or pM), the confidence score should be a number between 0 and 1, and the rationale should be a text explanation.
 
 Here's an example of the required JSON output format:
 {
     "bindingAffinity": 15.2, 
     "confidenceScore": 0.85,
-    "rationale": "The molecule exhibits strong hydrogen bonding with key residues in the binding site, which correlates with the provided quantum energy to indicate a high binding affinity."
+    "rationale": "The molecule exhibits strong hydrogen bonding with key residues in the binding site, which correlates with the provided simulated quantum energy to indicate a high binding affinity."
 }
 `,
 });

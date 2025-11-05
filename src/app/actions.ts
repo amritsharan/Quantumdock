@@ -4,6 +4,8 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
 // Helper function for retrying promises with exponential backoff
@@ -53,8 +55,8 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
     for (const protein of validatedData.proteinTargets) {
       const promise = runClassicalDocking(smile, protein)
         .then(classicalScore => {
-            // The quantum refinement simulation improves upon the classical score.
-            const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2); // Makes it slightly better
+            // Simulate a quantum refinement step, which would be replaced by a real quantum algorithm (e.g., VQE/QAOA with Qiskit) in a production environment.
+            const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2);
 
             const predictionInput = {
                 quantumRefinedEnergy: mockQuantumRefinedEnergy,
