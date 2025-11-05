@@ -38,7 +38,7 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
 async function runClassicalDocking(smile: string, protein: string): Promise<number> {
   console.log(`[SIMULATION] Running classical docking for ${smile} and ${protein}...`);
   // Simulate network latency and computation time for a real docking job.
-  await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+  await new Promise(resolve => setTimeout(resolve, 1500 + 500));
   
   // Return a mock score, typically a negative value indicating binding energy (e.g., in kcal/mol).
   const mockScore = -5 - (Math.random() * 5); 
