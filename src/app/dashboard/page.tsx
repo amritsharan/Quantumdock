@@ -12,7 +12,7 @@ import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Box, Dna, FlaskConical, Save, Target } from 'lucide-react';
+import { BrainCircuit, Box, Dna, FlaskConical, Save, Target, Check, AlertTriangle, ListChecks } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
@@ -385,11 +385,51 @@ function Dashboard() {
                             )}
                         </TabsContent>
                         <TabsContent value="accuracy">
-                             <Card className="min-h-[400px] lg:min-h-[500px]">
-                                <CardContent className="flex flex-col items-center justify-center h-full text-center gap-4 p-6">
-                                    <Target className="h-16 w-16 text-muted-foreground" />
-                                    <h3 className="text-xl font-semibold">Model Accuracy and Validation</h3>
-                                </CardContent>
+                            <Card className="min-h-[400px] lg:min-h-[500px]">
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                  <ListChecks />
+                                  Validation Strategy
+                                </CardTitle>
+                                <CardDescription>
+                                  This section outlines the plan for rigorously validating the model's accuracy once integrated with live computational backends.
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-6 text-sm">
+                                <div className="flex items-start gap-4">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Check className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold">Benchmarking Against Experimental Data</h4>
+                                    <p className="text-muted-foreground">
+                                      The model's predictions will be compared against a curated dataset of experimentally verified binding affinities (e.g., from PDBbind or ChEMBL) to establish a baseline for real-world accuracy.
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-4">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                     <AlertTriangle className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold">Key Performance Metrics</h4>
+                                    <p className="text-muted-foreground">
+                                      Accuracy will be quantified using standard statistical measures, including Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and the coefficient of determination (R²), to assess predictive power and error margins.
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-4">
+                                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Target className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold">Future Work: Prospective Validation</h4>
+                                    <p className="text-muted-foreground">
+                                      High-scoring novel predictions from this platform will be flagged for prospective experimental validation, creating a feedback loop to continually refine and improve the underlying quantum and classical models.
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
                             </Card>
                         </TabsContent>
                     </CardContent>
