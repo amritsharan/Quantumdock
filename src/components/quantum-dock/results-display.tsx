@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { molecules } from '@/lib/molecules';
 
 import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
@@ -210,63 +209,43 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
         </div>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div>
+        <div className="w-full text-sm">
+           {/* Header */}
+          <div className="flex p-4 border-b font-medium text-muted-foreground">
+             <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
+             <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
+             <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+             <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('standardModelScore')}>Standard ML (nM) {getSortIcon('standardModelScore')}</div>
+             <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('confidenceScore')}>Confidence {getSortIcon('confidenceScore')}</div>
+             <div className="w-1/12">Affinity Level</div>
+             <div className="w-1/12">Details</div>
+          </div>
+          {/* Body */}
           <Accordion type="single" collapsible className="w-full">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                    <div className="flex items-center">Molecule {getSortIcon('name')}</div>
-                  </TableHead>
-                  <TableHead onClick={() => handleSort('proteinTarget')} className="cursor-pointer">
-                    <div className="flex items-center">Protein {getSortIcon('proteinTarget')}</div>
-                  </TableHead>
-                  <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
-                    <div className="flex items-center">Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
-                  </TableHead>
-                   <TableHead onClick={() => handleSort('standardModelScore')} className="cursor-pointer">
-                    <div className="flex items-center">Standard ML (nM) {getSortIcon('standardModelScore')}</div>
-                  </TableHead>
-                  <TableHead onClick={() => handleSort('confidenceScore')} className="cursor-pointer">
-                    <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
-                  </TableHead>
-                  <TableHead>Affinity Level</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedResults.map((result, index) => (
-                    <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`} asChild>
-                        <tbody>
-                            <TableRow>
-                                <TableCell className="font-medium">{result.name}</TableCell>
-                                <TableCell className="font-medium">{result.proteinTarget}</TableCell>
-                                <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
-                                <TableCell className="text-muted-foreground">{result.standardModelScore.toFixed(2)}</TableCell>
-                                <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
-                                <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-                                <TableCell>
-                                    <AccordionTrigger>
-                                        <span className="sr-only">Show details</span>
-                                    </AccordionTrigger>
-                                </TableCell>
-                            </TableRow>
-                            <AccordionContent asChild>
-                                <tr>
-                                    <TableCell colSpan={7} className="p-4 bg-muted/50">
-                                    <div className="grid gap-2">
-                                        <p className="font-semibold text-sm">AI Rationale & Commentary</p>
-                                        <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
-                                        <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
-                                    </div>
-                                    </TableCell>
-                                </tr>
-                            </AccordionContent>
-                        </tbody>
-                  </AccordionItem>
-                ))}
-              </TableBody>
-            </Table>
+             {sortedResults.map((result, index) => (
+                <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+                   <div className="flex items-center p-4 border-b hover:bg-muted/50">
+                      <div className="w-2/12 font-medium">{result.name}</div>
+                      <div className="w-2/12 font-medium">{result.proteinTarget}</div>
+                      <div className="w-2/12">{result.bindingAffinity.toFixed(2)}</div>
+                      <div className="w-2/12 text-muted-foreground">{result.standardModelScore.toFixed(2)}</div>
+                      <div className="w-2/12">{(result.confidenceScore * 100).toFixed(0)}%</div>
+                      <div className="w-1/12">{getAffinityBadge(result.bindingAffinity)}</div>
+                      <div className="w-1/12">
+                         <AccordionTrigger />
+                      </div>
+                   </div>
+                   <AccordionContent>
+                      <div className="p-4 bg-muted/50">
+                         <div className="grid gap-2">
+                            <p className="font-semibold text-sm">AI Rationale & Commentary</p>
+                            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
+                            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
+                         </div>
+                      </div>
+                   </AccordionContent>
+                </AccordionItem>
+             ))}
           </Accordion>
         </div>
       </CardContent>
