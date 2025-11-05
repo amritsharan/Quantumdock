@@ -51,78 +51,54 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
   console.log(`[SIMULATION] Classical docking complete. Score: ${mockScore}`);
   return mockScore;
   
-  // --- REAL INTEGRATION BLUEPRINT FOR AUTODOCK VINA ---
+  // --- REAL INTEGRATION BLUEPRINT ---
   /*
     // To implement this for real, you would replace the simulation logic above with a call
-    // to a backend service or a direct command-line execution. This requires Node.js's
-    // 'child_process' module to run external commands.
+    // to a dedicated backend service. This is the standard architecture for running heavy
+    // computations from a web application.
 
-    const { exec } = require('child_process');
-    const path = require('path');
-    const fs = require('fs');
+    // 1. DEFINE THE BACKEND API REQUEST
+    // The Next.js app sends the user's input to a backend API endpoint.
+    const apiEndpoint = 'https://your-backend-service.com/run-docking';
+    const requestBody = {
+      smiles: smile,
+      protein_name: protein
+    };
 
-    // --- STEP 1: PREPARE INPUT FILES WITH MGLTOOLS ---
-    // This is where you would use the scripts from MGLTools (AutoDockTools) that you downloaded.
-    // You'd need to convert the SMILES string to a 3D format (like PDB) first, and then to PDBQT.
-    // The protein PDB file would also need to be converted to PDBQT.
-
-    // A helper function would convert SMILES to PDB, e.g., using an online service or another tool.
-    const ligandPdbContent = await getPdbFromSmiles(smile);
-    fs.writeFileSync('ligand.pdb', ligandPdbContent);
-
-    // Assume the target protein PDB file is available at a known path.
-    const receptorPdbPath = `path/to/proteins/${protein}.pdb`;
-    
-    // Define paths to your MGLTools scripts.
-    const mglToolsPath = '/path/to/mgltools_x86_64Linux2_1.5.7/MGLToolsPckgs';
-    const prepareLigandScript = path.join(mglToolsPath, 'AutoDockTools/Utilities24/prepare_ligand4.py');
-    const prepareReceptorScript = path.join(mglToolsPath, 'AutoDockTools/Utilities24/prepare_receptor4.py');
-    
-    // Command to prepare the ligand (molecule).
-    const ligandCmd = `pythonsh ${prepareLigandScript} -l ligand.pdb -o ligand.pdbqt`;
-    
-    // Command to prepare the receptor (protein).
-    const receptorCmd = `pythonsh ${prepareReceptorScript} -r ${receptorPdbPath} -o receptor.pdbqt`;
-
-    // Execute preparation scripts.
-    await new Promise((resolve, reject) => {
-        exec(`${ligandCmd} && ${receptorCmd}`, (err, stdout, stderr) => {
-            if (err) {
-                console.error("MGLTools preparation error:", stderr);
-                return reject(new Error("File preparation failed."));
-            }
-            console.log("PDBQT files prepared successfully.");
-            resolve(stdout);
-        });
-    });
-
-
-    // --- STEP 2: DEFINE THE AUTODOCK VINA COMMAND ---
-    // This command executes Vina. You'd need to know the path to the 'vina' executable
-    // and define the search space (center_x, center_y, etc.).
-    const vinaCmd = `vina --receptor receptor.pdbqt --ligand ligand.pdbqt --out result_pose.pdbqt --log result.log --cpu 1 --center_x 10 --center_y 10 --center_z 10 --size_x 20 --size_y 20 --size_z 20`;
-
-    // --- STEP 3: EXECUTE VINA AND PARSE THE OUTPUT ---
-    return new Promise((resolve, reject) => {
-      exec(vinaCmd, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`AutoDock Vina execution error: ${stderr}`);
-          reject(new Error('AutoDock Vina failed.'));
-          return;
-        }
-
-        // After execution, you must parse the output log file to find the score.
-        const logContent = fs.readFileSync('result.log', 'utf-8');
-        const match = logContent.match(/Affinity:\s*(-?\d+\.\d+)/);
-        if (match && match[1]) {
-          const score = parseFloat(match[1]);
-          console.log(`Real docking complete. Score: ${score}`);
-          resolve(score);
-        } else {
-          reject(new Error('Could not parse docking score from Vina log file.'));
-        }
+    // 2. CALL THE BACKEND SERVICE
+    // This `fetch` call is the bridge between your web UI and the powerful tools on the server.
+    try {
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
       });
-    });
+
+      if (!response.ok) {
+        // The backend should return meaningful error messages.
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'The docking service failed.');
+      }
+
+      const result = await response.json();
+      const score = result.docking_score;
+      
+      console.log(`Real docking complete. Score: ${score}`);
+      return score;
+
+    } catch (error) {
+        console.error("Error calling docking service:", error);
+        throw error; // Propagate the error to the UI
+    }
+
+    // --- WHAT HAPPENS ON THE BACKEND SERVICE? ---
+    // The backend service (e.g., a Python Flask/FastAPI server) would perform these steps:
+    // a. Receive the request with the SMILES string and protein name.
+    // b. Convert the SMILES string to a PDBQT file using MGLTools' prepare_ligand4.py.
+    // c. Prepare the target protein's PDB file into a PDBQT file using prepare_receptor4.py.
+    // d. Execute the AutoDock Vina command with the prepared files.
+    // e. Parse the output log file from Vina to extract the best binding affinity score.
+    // f. Return the score in the JSON response to the Next.js app.
   */
   // --- END REAL INTEGRATION BLUEPRINT ---
 }
@@ -140,22 +116,20 @@ async function runQuantumRefinementSimulation(classicalScore: number): Promise<n
     // Simulate a small, predictable improvement over the classical score.
     const mockQuantumRefinedEnergy = classicalScore - 1.25; 
     
-    // --- REAL INTEGRATION BLUEPRINT FOR QISKIT ---
+    // --- REAL INTEGRATION BLUEPRINT FOR QISKIT/VQE/QAOA ---
     /*
-      // To implement this for real, you would replace the simulation logic above with a call
-      // to a separate service (e.g., a Python Flask API or a serverless function) that can
-      // run a Python environment with Qiskit installed.
+      // Similar to classical docking, this would be a call to a separate service
+      // that has access to quantum computing resources or simulators.
 
       // 1. Define the input for the quantum service:
-      // This would include the molecule's structure from the classical docking result.
+      // This would include the molecule's structure from the classical docking result pose.
       const qiskitServiceInput = {
-        dockedPose: 'data_from_result_pose.pdbqt',
+        docked_pose_pdbqt: 'data_from_classical_docking_result_pose.pdbqt',
         // Other parameters for the quantum algorithm...
       };
 
-      // 2. Call the external Qiskit service:
-      // This would be a network request (e.g., using fetch) to your quantum backend.
-      const response = await fetch('http://your-qiskit-service-url/calculate-energy', {
+      // 2. Call the external quantum service:
+      const response = await fetch('http://your-quantum-service/calculate-energy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(qiskitServiceInput),
@@ -167,10 +141,10 @@ async function runQuantumRefinementSimulation(classicalScore: number): Promise<n
 
       // 3. Get the result:
       // The service would return the calculated energy.
-      const { refinedEnergy } = await response.json();
+      const { refined_energy } = await response.json();
       
-      console.log(`Real quantum refinement complete. Energy: ${refinedEnergy}`);
-      return refinedEnergy;
+      console.log(`Real quantum refinement complete. Energy: ${refined_energy}`);
+      return refined_energy;
     */
     // --- END REAL INTEGRATION BLUEPRINT ---
 
