@@ -38,7 +38,7 @@ const PredictBindingAffinitiesOutputSchema = z.object({
   confidenceScore: z
     .number()
     .describe(
-      'A confidence score (0 to 1) indicating the reliability of the prediction, with higher values indicating higher confidence.'
+      'A confidence score (from 0.70 to 0.85) indicating the reliability of the prediction. It must be a value between 0.70 and 0.85.'
     ),
   rationale: z
     .string()
@@ -71,7 +71,7 @@ You will be given:
 
 Your tasks are:
 1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM.
-2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction.
+2.  **Provide a Confidence Score:** Give a confidence score from 0.70 to 0.85 for your prediction. This value MUST be between 0.70 and 0.85, inclusive.
 3.  **Generate Rationale:** Explain your reasoning for the prediction.
 4.  **Simulate a Standard Model Score:** Generate a *fictional* binding affinity score that a conventional ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
 5.  **Provide AI Commentary:** Write a brief commentary explaining why your quantum-informed prediction might differ from the standard model's score. For example, you could mention that your model is more sensitive to subtle quantum-level interactions that classical models might miss.
