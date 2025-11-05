@@ -27,7 +27,7 @@ interface ResultsDisplayProps {
   saveState: SaveState;
 }
 
-type SortKey = 'name' | 'proteinTarget' | 'bindingAffinity';
+type SortKey = 'name' | 'proteinTarget' | 'bindingAffinity' | 'aiCommentary';
 type SortDirection = 'asc' | 'desc';
 
 const SaveButtonContent: Record<SaveState, { icon: React.ReactNode, text: string }> = {
@@ -202,36 +202,37 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
         </div>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="w-full text-sm">
-           {/* Header */}
-          <div className="flex p-4 border-b font-medium text-muted-foreground">
-             <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
-             <div className="w-4/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
-             <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
-             <div className="w-2/12">Affinity Level</div>
-          </div>
-          {/* Body */}
-          <Accordion type="single" collapsible className="w-full">
-             {sortedResults.map((result, index) => (
-                <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-                   <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline">
-                      <div className="w-3/12 font-medium text-left">{result.name}</div>
-                      <div className="w-4/12 font-medium text-left">{result.proteinTarget}</div>
-                      <div className="w-3/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
-                      <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
-                   </AccordionTrigger>
-                   <AccordionContent>
-                      <div className="p-4 bg-muted/50">
-                         <div className="grid gap-2">
-                            <p className="font-semibold text-sm">AI Rationale</p>
-                            <p className="text-xs text-muted-foreground">{result.rationale}</p>
-                         </div>
-                      </div>
-                   </AccordionContent>
-                </AccordionItem>
-             ))}
-          </Accordion>
+        {/* Header */}
+        <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
+          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
+          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
+          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+          <div className="w-1/12 text-left">Affinity Level</div>
+          <div className="w-5/12 cursor-pointer flex items-center" onClick={() => handleSort('aiCommentary')}>Accuracy (AI Commentary) {getSortIcon('aiCommentary')}</div>
         </div>
+
+        {/* Body */}
+        <Accordion type="single" collapsible className="w-full">
+          {sortedResults.map((result, index) => (
+            <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+              <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline text-sm">
+                <div className="w-2/12 font-medium text-left">{result.name}</div>
+                <div className="w-2/12 font-medium text-left">{result.proteinTarget}</div>
+                <div className="w-2/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
+                <div className="w-1/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
+                <div className="w-5/12 text-left text-muted-foreground text-xs pr-4">{result.aiCommentary}</div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="p-4 bg-muted/50">
+                  <div className="grid gap-2">
+                    <p className="font-semibold text-sm">AI Rationale</p>
+                    <p className="text-xs text-muted-foreground">{result.rationale}</p>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </CardContent>
     </Card>
   );
