@@ -235,10 +235,10 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               </TableHeader>
               <TableBody>
                 {sortedResults.map((result, index) => (
-                  <Accordion type="single" collapsible className="w-full" asChild>
+                  <Accordion key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`} type="single" collapsible className="w-full" asChild>
                     <AccordionItem value={`item-${index}`} asChild>
                       <>
-                        <TableRow key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+                        <TableRow>
                           <TableCell className="font-medium">{result.name}</TableCell>
                           <TableCell className="font-medium">{result.proteinTarget}</TableCell>
                           <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
