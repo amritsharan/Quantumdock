@@ -329,12 +329,19 @@ function Dashboard() {
 
                   {selectedMolecules.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2">Selected Molecule Weights (Da)</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                      <h4 className="font-medium mb-2">Selected Molecule Properties</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                         {selectedMolecules.map(m => (
-                          <div key={m.smiles} className="flex justify-between rounded-md bg-muted/50 p-2">
-                            <span className="truncate pr-2">{m.name}</span>
-                            <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
+                          <div key={m.smiles} className="flex flex-col rounded-md bg-muted/50 p-2">
+                            <span className="font-semibold truncate pr-2">{m.name}</span>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Formula:</span>
+                                <span className="font-mono">{m.formula}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Weight (Da):</span>
+                                <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
+                            </div>
                           </div>
                         ))}
                       </div>
