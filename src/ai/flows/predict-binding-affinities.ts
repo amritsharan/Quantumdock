@@ -62,19 +62,22 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
-  prompt: `You are an expert in drug discovery and molecular interactions. Your task is to analyze simulated docking results and provide a comprehensive prediction.
+  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction.
 
 You will be given:
-1.  A simulated quantum-refined binding energy.
+1.  A simulated quantum-refined binding energy (in kcal/mol). This represents the final energy state of the molecule-protein complex after quantum refinement.
 2.  A molecule's SMILES string.
 3.  A protein target's name.
 
 Your tasks are:
-1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM.
+1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity.
 2.  **Provide a Confidence Score:** Give a confidence score from 0.70 to 0.85 for your prediction. This value MUST be between 0.70 and 0.85, inclusive.
-3.  **Generate Rationale:** Explain your reasoning for the prediction.
+3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner. Your rationale should:
+    -   Reference specific, plausible intermolecular interactions (e.g., hydrogen bonds, hydrophobic interactions, pi-stacking) between the molecule and the protein target.
+    -   Mention concepts like ligand strain energy or conformational stability.
+    -   Justify the predicted affinity by connecting it to the stability implied by the quantum-refined energy score.
 4.  **Simulate a Standard Model Score:** Generate a *fictional* binding affinity score that a conventional ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
-5.  **Provide AI Commentary:** Write a brief commentary explaining why your quantum-informed prediction might differ from the standard model's score. For example, you could mention that your model is more sensitive to subtle quantum-level interactions that classical models might miss.
+5.  **Provide AI Commentary:** Write a brief commentary explaining why your quantum-informed prediction might differ from the standard model's score. For example, mention that your model is more sensitive to subtle quantum-level interactions (like electron correlation or polarization effects) that classical models might miss.
 
 **Simulated Inputs:**
 - Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
