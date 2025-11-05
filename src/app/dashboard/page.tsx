@@ -17,7 +17,6 @@ import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { molecules, type Molecule } from '@/lib/molecules';
 import { proteins, type Protein } from '@/lib/proteins';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -216,7 +215,6 @@ function Dashboard() {
               moleculeSmiles: result.moleculeSmiles,
               proteinTarget: result.proteinTarget,
               bindingAffinity: result.bindingAffinity,
-              confidenceScore: result.confidenceScore,
               rationale: result.rationale,
           };
           
@@ -297,143 +295,87 @@ function Dashboard() {
           </div>
 
           <div className="grid auto-rows-max items-start gap-6">
-            <Card className="relative">
-                <Tabs defaultValue="visualization">
-                    <CardHeader>
-                        <CardTitle>Analysis</CardTitle>
-                        <div className="flex justify-between items-center">
-                            <CardDescription>Interactive views and model analysis.</CardDescription>
-                            <TabsList>
-                                <TabsTrigger value="visualization">Visualization</TabsTrigger>
-                                <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
-                            </TabsList>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="grid gap-6">
-                        <TabsContent value="visualization">
-                             <div className="min-h-[400px] lg:min-h-[500px] relative">
-                                <MoleculeViewer 
-                                isDocked={isDocked} 
-                                selectedSmiles={selectedSmiles}
-                                bestSmiles={bestSmiles}
-                                />
-                                {(step === 'classical' || step === 'predicting') && (
-                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
-                                    {currentStepInfo.icon}
-                                    <div className="text-center">
-                                    <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-                                    <p className="text-muted-foreground">{currentStepInfo.description}</p>
-                                    </div>
-                                </div>
-                                )}
-                            </div>
-                            
-                            <div className="grid gap-4">
-                            {results && step === 'done' && (
-                                <div className="rounded-lg border p-3 text-center">
-                                <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
-                                <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
-                                </div>
-                            )}
+             <Card>
+              <CardHeader>
+                <CardTitle>Analysis & Visualization</CardTitle>
+                <CardDescription>
+                  Interactive views of molecular structures and simulation results.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6">
+                <div className="min-h-[400px] lg:min-h-[500px] relative">
+                  <MoleculeViewer
+                    isDocked={isDocked}
+                    selectedSmiles={selectedSmiles}
+                    bestSmiles={bestSmiles}
+                  />
+                  {(step === 'classical' || step === 'predicting') && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
+                      {currentStepInfo.icon}
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+                        <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                            {selectedMolecules.length > 0 && (
-                                <div>
-                                <h4 className="font-medium mb-2">Selected Molecule Properties</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                    {selectedMolecules.map(m => (
-                                    <div key={m.smiles} className="flex flex-col rounded-md bg-muted/50 p-2">
-                                        <span className="font-semibold truncate pr-2">{m.name}</span>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Formula:</span>
-                                            <span className="font-mono">{m.formula}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Weight (Da):</span>
-                                            <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                    ))}
-                                </div>
-                                </div>
-                            )}
-                            </div>
+                <div className="grid gap-4">
+                  {results && step === 'done' && (
+                    <div className="rounded-lg border p-3 text-center">
+                      <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
+                      <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
+                    </div>
+                  )}
 
-                            {results && step === 'done' && (
-                            <div>
-                                <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
-                                <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                                    <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
-                                    <CartesianGrid horizontal={false} />
-                                    <YAxis
-                                        dataKey="name"
-                                        type="category"
-                                        tickLine={false}
-                                        tickMargin={10}
-                                        axisLine={false}
-                                        tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
-                                    />
-                                    <XAxis dataKey="Quantum Affinity (nM)" type="number" />
-                                    <Tooltip
-                                        cursor={{ fill: "hsl(var(--muted))" }}
-                                        content={<ChartTooltipContent />}
-                                    />
-                                    <Bar dataKey="Quantum Affinity (nM)" radius={4} />
-                                    </BarChart>
-                                </ChartContainer>
+                  {selectedMolecules.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Selected Molecule Properties</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        {selectedMolecules.map(m => (
+                          <div key={m.smiles} className="flex flex-col rounded-md bg-muted/50 p-2">
+                            <span className="font-semibold truncate pr-2">{m.name}</span>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Formula:</span>
+                              <span className="font-mono">{m.formula}</span>
                             </div>
-                            )}
-                        </TabsContent>
-                        <TabsContent value="accuracy">
-                            <Card className="min-h-[400px] lg:min-h-[500px]">
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                  <ListChecks />
-                                  Validation Strategy
-                                </CardTitle>
-                                <CardDescription>
-                                  This section outlines the plan for rigorously validating the model's accuracy once integrated with live computational backends.
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent className="space-y-6 text-sm">
-                                <div className="flex items-start gap-4">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <Check className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold">Benchmarking Against Experimental Data</h4>
-                                    <p className="text-muted-foreground">
-                                      The model's predictions will be compared against a curated dataset of experimentally verified binding affinities (e.g., from PDBbind or ChEMBL) to establish a baseline for real-world accuracy.
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-start gap-4">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                     <AlertTriangle className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold">Key Performance Metrics</h4>
-                                    <p className="text-muted-foreground">
-                                      Accuracy will be quantified using standard statistical measures, including Mean Absolute Error (MAE), Root Mean Square Error (RMSE), and the coefficient of determination (R²), to assess predictive power and error margins.
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-start gap-4">
-                                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <Target className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold">Future Work: Prospective Validation</h4>
-                                    <p className="text-muted-foreground">
-                                      High-scoring novel predictions from this platform will be flagged for prospective experimental validation, creating a feedback loop to continually refine and improve the underlying quantum and classical models.
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </CardContent>
-                </Tabs>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Weight (Da):</span>
+                              <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {results && step === 'done' && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
+                    <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+                      <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
+                        <CartesianGrid horizontal={false} />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          tickLine={false}
+                          tickMargin={10}
+                          axisLine={false}
+                          tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                        />
+                        <XAxis dataKey="Quantum Affinity (nM)" type="number" />
+                        <Tooltip
+                          cursor={{ fill: "hsl(var(--muted))" }}
+                          content={<ChartTooltipContent />}
+                        />
+                        <Bar dataKey="Quantum Affinity (nM)" radius={4} />
+                      </BarChart>
+                    </ChartContainer>
+                  </div>
+                )}
+              </CardContent>
             </Card>
 
             {results && step === 'done' && (
