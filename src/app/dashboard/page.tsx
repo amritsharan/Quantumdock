@@ -389,12 +389,6 @@ function Dashboard() {
                                 <CardContent className="flex flex-col items-center justify-center h-full text-center gap-4 p-6">
                                     <Target className="h-16 w-16 text-muted-foreground" />
                                     <h3 className="text-xl font-semibold">Model Accuracy and Validation</h3>
-                                    <p className="text-muted-foreground max-w-md">
-                                        This is a placeholder for model performance metrics. Once the application is connected to real scientific backends (like AutoDock and Qiskit) and validated against known experimental data, this section will display accuracy measurements.
-                                    </p>
-                                    <p className="text-sm text-muted-foreground max-w-md">
-                                        Metrics would include Mean Absolute Error (MAE), R-squared (R²), and comparisons against standard computational chemistry models to demonstrate the added value of the quantum-assisted workflow.
-                                    </p>
                                 </CardContent>
                             </Card>
                         </TabsContent>
