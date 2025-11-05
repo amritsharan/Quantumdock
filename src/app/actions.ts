@@ -38,10 +38,16 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
 async function runClassicalDocking(smile: string, protein: string): Promise<number> {
   console.log(`[SIMULATION] Running classical docking for ${smile} and ${protein}...`);
   // Simulate network latency and computation time for a real docking job.
-  await new Promise(resolve => setTimeout(resolve, 1500 + 500));
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  // --- DETERMINISTIC SIMULATION ---
+  // This is no longer random. It produces a consistent score based on the inputs.
+  // A longer SMILES string or protein name will result in a (theoretically) "better" score.
+  const baseScore = -5;
+  const smileContribution = (smile.length % 10) * 0.3; 
+  const proteinContribution = (protein.length % 10) * 0.2;
+  const mockScore = baseScore - smileContribution - proteinContribution;
   
-  // Return a mock score, typically a negative value indicating binding energy (e.g., in kcal/mol).
-  const mockScore = -5 - (Math.random() * 5); 
   console.log(`[SIMULATION] Classical docking complete. Score: ${mockScore}`);
   return mockScore;
   
@@ -102,8 +108,9 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
  */
 async function runQuantumRefinementSimulation(classicalScore: number): Promise<number> {
     console.log(`[SIMULATION] Running quantum refinement simulation...`);
-    // Simulate a small improvement over the classical score. This is a placeholder.
-    const mockQuantumRefinedEnergy = classicalScore - (Math.random() * 2);
+    // --- DETERMINISTIC SIMULATION ---
+    // Simulate a small, predictable improvement over the classical score.
+    const mockQuantumRefinedEnergy = classicalScore - 1.25; 
     
     // --- REAL INTEGRATION BLUEPRINT FOR QISKIT ---
     /*
@@ -217,4 +224,47 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     console.error("Error suggesting proteins:", error);
     return [];
   }
+}
+
+export async function saveDockingResults(userId: string, results: DockingResults[]) {
+    if (!userId || !results || results.length === 0) {
+      throw new Error("User ID and results are required to save.");
+    }
+    
+    // This is a placeholder. In a real app, you would get the firestore instance
+    // from your Firebase setup.
+    const { getFirestore } = await import('firebase/firestore');
+    const firestore = getFirestore();
+
+    try {
+        const historyQuery = query(
+            collection(firestore, "users", userId, "loginHistory"),
+            orderBy("loginTime", "desc"),
+            limit(1)
+        );
+        const historySnapshot = await getDocs(historyQuery);
+        if (historySnapshot.empty) {
+            throw new Error("No active login session found for the user.");
+        }
+        const latestSessionDoc = historySnapshot.docs[0];
+        const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', latestSessionDoc.id, 'dockingSimulations');
+        
+        const batch = [];
+        for (const result of results) {
+            const simulationData = {
+                userId: userId,
+                loginHistoryId: latestSessionDoc.id,
+                timestamp: serverTimestamp(),
+                moleculeSmiles: result.moleculeSmiles,
+                proteinTarget: result.proteinTarget,
+                bindingAffinity: result.bindingAffinity,
+            };
+            batch.push(addDoc(simulationsCollectionRef, simulationData));
+        }
+
+        await Promise.all(batch);
+    } catch (error) {
+        console.error("Failed to save docking results: ", error);
+        throw new Error("Could not save docking results due to a database error.");
+    }
 }
