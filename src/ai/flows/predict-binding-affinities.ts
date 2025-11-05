@@ -45,6 +45,8 @@ const PredictBindingAffinitiesOutputSchema = z.object({
     .describe(
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
+    standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated standard ML model (e.g., a GNN) for comparison.'),
+    aiCommentary: z.string().describe('A brief commentary comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
@@ -60,20 +62,26 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
-  prompt: `You are an expert in drug discovery and molecular interactions. Given a simulated quantum-refined binding energy, a molecule SMILES, and a protein target name, predict the binding affinity and provide a confidence score and rationale.
+  prompt: `You are an expert in drug discovery and molecular interactions. Your task is to analyze simulated docking results and provide a comprehensive prediction.
 
-Simulated Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
-Molecule SMILES: {{{moleculeSmiles}}}
-Protein Target: {{{proteinTargetName}}}
+You will be given:
+1.  A simulated quantum-refined binding energy.
+2.  A molecule's SMILES string.
+3.  A protein target's name.
 
-Consider known interactions, chemical properties, and any relevant data to estimate the binding affinity based on the provided simulated energy. The binding affinity should be a number (in nM or pM), the confidence score should be a number between 0 and 1, and the rationale should be a text explanation.
+Your tasks are:
+1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM.
+2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction.
+3.  **Generate Rationale:** Explain your reasoning for the prediction.
+4.  **Simulate a Standard Model Score:** Generate a *fictional* binding affinity score that a conventional ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
+5.  **Provide AI Commentary:** Write a brief commentary explaining why your quantum-informed prediction might differ from the standard model's score. For example, you could mention that your model is more sensitive to subtle quantum-level interactions that classical models might miss.
 
-Here's an example of the required JSON output format:
-{
-    "bindingAffinity": 15.2, 
-    "confidenceScore": 0.85,
-    "rationale": "The molecule exhibits strong hydrogen bonding with key residues in the binding site, which correlates with the provided simulated quantum energy to indicate a high binding affinity."
-}
+**Simulated Inputs:**
+- Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
+- Molecule SMILES: {{{moleculeSmiles}}}
+- Protein Target: {{{proteinTargetName}}}
+
+Please provide the output in the required JSON format.
 `,
 });
 

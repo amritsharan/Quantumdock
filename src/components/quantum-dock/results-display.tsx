@@ -18,6 +18,7 @@ import { molecules } from '@/lib/molecules';
 import { Document, Packer, Paragraph, HeadingLevel, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -27,7 +28,7 @@ interface ResultsDisplayProps {
   saveState: SaveState;
 }
 
-type SortKey = 'name' | 'proteinTarget' | 'bindingAffinity' | 'confidenceScore';
+type SortKey = 'name' | 'proteinTarget' | 'bindingAffinity' | 'confidenceScore' | 'standardModelScore';
 type SortDirection = 'asc' | 'desc';
 
 const SaveButtonContent: Record<SaveState, { icon: React.ReactNode, text: string }> = {
@@ -86,7 +87,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     if (sortKey !== key) {
       return <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground" />;
     }
-    return sortDirection === 'asc' ? <span>▲</span> : <span>▼</span>;
+    return sortDirection === 'asc' ? <span className="ml-2">▲</span> : <span className="ml-2">▼</span>;
   };
 
 
@@ -101,7 +102,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Protein Target", "Binding Affinity (nM)", "Confidence", "Rationale"];
+      const tableColumn = ["Molecule", "Protein Target", "AI Affinity (nM)", "Standard ML (nM)", "Confidence", "Commentary"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
@@ -109,8 +110,9 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               res.name,
               res.proteinTarget,
               res.bindingAffinity.toFixed(2),
+              res.standardModelScore.toFixed(2),
               `${(res.confidenceScore * 100).toFixed(0)}%`,
-              res.rationale
+              res.aiCommentary
           ];
           tableRows.push(row);
       });
@@ -128,11 +130,12 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     } else if (format === 'docx') {
         const tableHeader = new DocxTableRow({
             children: [
-                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Binding Affinity (nM)", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "AI Affinity (nM)", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 13, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Standard ML (nM)", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Rationale", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Commentary", style: "strong" })] }),
             ],
         });
 
@@ -141,8 +144,9 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ children: [new Paragraph(res.name)] }),
                 new DocxTableCell({ children: [new Paragraph(res.proteinTarget)] }),
                 new DocxTableCell({ children: [new Paragraph(res.bindingAffinity.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(res.standardModelScore.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${(res.confidenceScore * 100).toFixed(0)}%`)] }),
-                new DocxTableCell({ children: [new Paragraph(res.rationale)] }),
+                new DocxTableCell({ children: [new Paragraph(res.aiCommentary)] }),
             ],
         }));
 
@@ -178,7 +182,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       <CardHeader className="flex flex-row items-start justify-between">
         <div className='space-y-1.5'>
           <CardTitle>Detailed Prediction Results</CardTitle>
-          <CardDescription>Tabular data for {results.length} combination(s).</CardDescription>
+          <CardDescription>Tabular data for {results.length} combination(s) with AI commentary.</CardDescription>
         </div>
         <div className='flex items-center gap-2'>
             <Button 
@@ -205,7 +209,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
             </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-8">
+      <CardContent className="grid gap-4">
         <div>
             <Table>
               <TableHeader>
@@ -214,26 +218,53 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                     <div className="flex items-center">Molecule {getSortIcon('name')}</div>
                   </TableHead>
                   <TableHead onClick={() => handleSort('proteinTarget')} className="cursor-pointer">
-                    <div className="flex items-center">Protein Target {getSortIcon('proteinTarget')}</div>
+                    <div className="flex items-center">Protein {getSortIcon('proteinTarget')}</div>
                   </TableHead>
                   <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
-                    <div className="flex items-center">Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+                    <div className="flex items-center">AI Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+                  </TableHead>
+                   <TableHead onClick={() => handleSort('standardModelScore')} className="cursor-pointer">
+                    <div className="flex items-center">Standard ML (nM) {getSortIcon('standardModelScore')}</div>
                   </TableHead>
                   <TableHead onClick={() => handleSort('confidenceScore')} className="cursor-pointer">
                     <div className="flex items-center">Confidence {getSortIcon('confidenceScore')}</div>
                   </TableHead>
                   <TableHead>Affinity Level</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedResults.map((result, index) => (
-                  <TableRow key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-                    <TableCell className="font-medium">{result.name}</TableCell>
-                    <TableCell className="font-medium">{result.proteinTarget}</TableCell>
-                    <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
-                    <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
-                    <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-                  </TableRow>
+                  <Accordion type="single" collapsible className="w-full" asChild>
+                    <AccordionItem value={`item-${index}`} asChild>
+                      <>
+                        <TableRow key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+                          <TableCell className="font-medium">{result.name}</TableCell>
+                          <TableCell className="font-medium">{result.proteinTarget}</TableCell>
+                          <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
+                          <TableCell className="text-muted-foreground">{result.standardModelScore.toFixed(2)}</TableCell>
+                          <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
+                          <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
+                          <TableCell>
+                            <AccordionTrigger>
+                                <span className="sr-only">Show details</span>
+                            </AccordionTrigger>
+                          </TableCell>
+                        </TableRow>
+                        <AccordionContent asChild>
+                          <tr className="bg-muted/50">
+                            <TableCell colSpan={7} className="p-4">
+                               <div className="grid gap-2">
+                                 <p className="font-semibold text-sm">AI Rationale & Commentary</p>
+                                 <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
+                                 <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
+                               </div>
+                            </TableCell>
+                          </tr>
+                        </AccordionContent>
+                      </>
+                    </AccordionItem>
+                  </Accordion>
                 ))}
               </TableBody>
             </Table>
