@@ -101,7 +101,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)", "AI Commentary"];
+      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
@@ -109,7 +109,6 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               res.name,
               res.proteinTarget,
               res.bindingAffinity.toFixed(2),
-              res.aiCommentary
           ];
           tableRows.push(row);
       });
@@ -127,10 +126,10 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     } else if (format === 'docx') {
         const tableHeader = new DocxTableRow({
             children: [
-                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Quantum Affinity (nM)", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Commentary", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Quantum Affinity (nM)", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Rationale", style: "strong" })] }),
             ],
         });
 
@@ -139,7 +138,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ children: [new Paragraph(res.name)] }),
                 new DocxTableCell({ children: [new Paragraph(res.proteinTarget)] }),
                 new DocxTableCell({ children: [new Paragraph(res.bindingAffinity.toFixed(2))] }),
-                new DocxTableCell({ children: [new Paragraph(res.aiCommentary)] }),
+                new DocxTableCell({ children: [new Paragraph(res.rationale)] }),
             ],
         }));
 
@@ -174,7 +173,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     <Card>
       <CardHeader className="flex flex-row items-start justify-between">
         <div className='space-y-1.5'>
-          <CardTitle>Detailed Prediction Results</CardTitle>
+          <CardTitle>Detailed Prediction Results (Simulated)</CardTitle>
           <CardDescription>Tabular data for {results.length} combination(s) with AI commentary.</CardDescription>
         </div>
         <div className='flex items-center gap-2'>
@@ -207,30 +206,25 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
            {/* Header */}
           <div className="flex p-4 border-b font-medium text-muted-foreground">
              <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
-             <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
+             <div className="w-4/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
              <div className="w-3/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
              <div className="w-2/12">Affinity Level</div>
-             <div className="w-1/12">Details</div>
           </div>
           {/* Body */}
           <Accordion type="single" collapsible className="w-full">
              {sortedResults.map((result, index) => (
                 <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-                   <div className="flex items-center p-4 border-b hover:bg-muted/50">
-                      <div className="w-3/12 font-medium">{result.name}</div>
-                      <div className="w-3/12 font-medium">{result.proteinTarget}</div>
-                      <div className="w-3/12">{result.bindingAffinity.toFixed(2)}</div>
-                      <div className="w-2/12">{getAffinityBadge(result.bindingAffinity)}</div>
-                      <div className="w-1/12">
-                         <AccordionTrigger />
-                      </div>
-                   </div>
+                   <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline">
+                      <div className="w-3/12 font-medium text-left">{result.name}</div>
+                      <div className="w-4/12 font-medium text-left">{result.proteinTarget}</div>
+                      <div className="w-3/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
+                      <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
+                   </AccordionTrigger>
                    <AccordionContent>
                       <div className="p-4 bg-muted/50">
                          <div className="grid gap-2">
-                            <p className="font-semibold text-sm">AI Rationale & Commentary</p>
-                            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
-                            <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
+                            <p className="font-semibold text-sm">AI Rationale</p>
+                            <p className="text-xs text-muted-foreground">{result.rationale}</p>
                          </div>
                       </div>
                    </AccordionContent>
