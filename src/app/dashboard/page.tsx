@@ -264,13 +264,13 @@ function Dashboard() {
     });
     return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
       name: `${res.name} + ${res.proteinTarget}`,
-      'Binding Affinity (nM)': res.bindingAffinity,
+      'Quantum Affinity (nM)': res.bindingAffinity,
     }));
   }, [results]);
 
   const chartConfig = {
-    'Binding Affinity (nM)': {
-      label: 'Binding Affinity (nM)',
+    'Quantum Affinity (nM)': {
+      label: 'Quantum Affinity (nM)',
       color: 'hsl(var(--accent))',
     },
   };
@@ -373,12 +373,12 @@ function Dashboard() {
                                         axisLine={false}
                                         tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
                                     />
-                                    <XAxis dataKey="Binding Affinity (nM)" type="number" />
+                                    <XAxis dataKey="Quantum Affinity (nM)" type="number" />
                                     <Tooltip
                                         cursor={{ fill: "hsl(var(--muted))" }}
                                         content={<ChartTooltipContent />}
                                     />
-                                    <Bar dataKey="Binding Affinity (nM)" radius={4} />
+                                    <Bar dataKey="Quantum Affinity (nM)" radius={4} />
                                     </BarChart>
                                 </ChartContainer>
                             </div>

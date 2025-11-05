@@ -102,7 +102,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Protein Target", "AI Affinity (nM)", "Standard ML (nM)", "Confidence", "Commentary"];
+      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)", "Standard ML (nM)", "Confidence", "Commentary"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
@@ -132,7 +132,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
             children: [
                 new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "AI Affinity (nM)", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Quantum Affinity (nM)", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 13, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Standard ML (nM)", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Commentary", style: "strong" })] }),
@@ -222,7 +222,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                     <div className="flex items-center">Protein {getSortIcon('proteinTarget')}</div>
                   </TableHead>
                   <TableHead onClick={() => handleSort('bindingAffinity')} className="cursor-pointer">
-                    <div className="flex items-center">AI Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+                    <div className="flex items-center">Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
                   </TableHead>
                    <TableHead onClick={() => handleSort('standardModelScore')} className="cursor-pointer">
                     <div className="flex items-center">Standard ML (nM) {getSortIcon('standardModelScore')}</div>
@@ -236,31 +236,33 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               </TableHeader>
               <TableBody>
                 {sortedResults.map((result, index) => (
-                  <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-                    <TableRow>
-                      <TableCell className="font-medium">{result.name}</TableCell>
-                      <TableCell className="font-medium">{result.proteinTarget}</TableCell>
-                      <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
-                      <TableCell className="text-muted-foreground">{result.standardModelScore.toFixed(2)}</TableCell>
-                      <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
-                      <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
-                      <TableCell>
-                          <AccordionTrigger>
-                              <span className="sr-only">Show details</span>
-                          </AccordionTrigger>
-                      </TableCell>
-                    </TableRow>
-                    <AccordionContent asChild>
-                      <tr>
-                          <TableCell colSpan={7} className="p-4 bg-muted/50">
-                          <div className="grid gap-2">
-                              <p className="font-semibold text-sm">AI Rationale & Commentary</p>
-                              <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
-                              <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
-                          </div>
-                          </TableCell>
-                      </tr>
-                    </AccordionContent>
+                    <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`} asChild>
+                        <tbody>
+                            <TableRow>
+                                <TableCell className="font-medium">{result.name}</TableCell>
+                                <TableCell className="font-medium">{result.proteinTarget}</TableCell>
+                                <TableCell>{result.bindingAffinity.toFixed(2)}</TableCell>
+                                <TableCell className="text-muted-foreground">{result.standardModelScore.toFixed(2)}</TableCell>
+                                <TableCell>{(result.confidenceScore * 100).toFixed(0)}%</TableCell>
+                                <TableCell>{getAffinityBadge(result.bindingAffinity)}</TableCell>
+                                <TableCell>
+                                    <AccordionTrigger>
+                                        <span className="sr-only">Show details</span>
+                                    </AccordionTrigger>
+                                </TableCell>
+                            </TableRow>
+                            <AccordionContent asChild>
+                                <tr>
+                                    <TableCell colSpan={7} className="p-4 bg-muted/50">
+                                    <div className="grid gap-2">
+                                        <p className="font-semibold text-sm">AI Rationale & Commentary</p>
+                                        <p className="text-xs text-muted-foreground"><strong className="text-foreground">Rationale:</strong> {result.rationale}</p>
+                                        <p className="text-xs text-muted-foreground"><strong className="text-foreground">Commentary:</strong> {result.aiCommentary}</p>
+                                    </div>
+                                    </TableCell>
+                                </tr>
+                            </AccordionContent>
+                        </tbody>
                   </AccordionItem>
                 ))}
               </TableBody>
@@ -271,5 +273,3 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     </Card>
   );
 }
-
-    
