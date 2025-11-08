@@ -95,7 +95,7 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
     // The backend service (e.g., a Python Flask/FastAPI server) would perform these steps:
     // a. Receive the request with the SMILES string and protein name.
     // b. Convert the SMILES string to a PDBQT file using MGLTools' prepare_ligand4.py.
-    // c. Prepare the target protein's PDB file into a PDBQT file using prepare_receptor4.py.
+    // c. Prepare the target protein's PDB file into a PDBQT file using MGLTools' prepare_receptor4.py.
     // d. Execute the AutoDock Vina command with the prepared files.
     // e. Parse the output log file from Vina to extract the best binding affinity score.
     // f. Return the score in the JSON response to the Next.js app.
