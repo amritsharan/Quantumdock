@@ -23,9 +23,11 @@ import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
+import { ComparativeAnalysisDisplay } from '@/components/quantum-dock/comparative-analysis-display';
 
 
-type ProcessStep = 'idle' | 'classical' | 'predicting' | 'done' | 'error';
+type ProcessStep = 'idle' | 'classical' | 'predicting' | 'analyzing' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: string; description: string }> = {
@@ -41,12 +43,17 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
   },
   predicting: {
     icon: <FlaskConical className="h-12 w-12 text-accent" />,
-    title: 'Simulating a quantum refinement step and predicting binding affinity...',
-    description: 'Simulating quantum analysis to predict binding strength.',
+    title: 'Simulating quantum refinement & predicting affinity...',
+    description: 'Simulating quantum analysis and using AI to predict binding strength.',
+  },
+  analyzing: {
+    icon: <BrainCircuit className="h-12 w-12 animate-pulse text-accent" />,
+    title: 'Performing Comparative Literature Analysis...',
+    description: 'Comparing your simulation results against recent scientific literature.',
   },
   done: {
     icon: <Box className="h-12 w-12 text-accent" />,
-    title: 'Docking Complete',
+    title: 'Docking & Analysis Complete',
     description: 'Results are displayed below. You can now save the data or start a new simulation.',
   },
   error: {
@@ -61,6 +68,7 @@ function Dashboard() {
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [isDocked, setIsDocked] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [analysis, setAnalysis] = useState<ResearchComparisonOutput | null>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -139,8 +147,9 @@ function Dashboard() {
     }
     setStep('classical');
     setResults(null);
+    setAnalysis(null);
     setIsDocked(false);
-    setSaveState('idle'); // Reset save state for new simulation
+    setSaveState('idle');
 
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
     toast({
@@ -149,22 +158,31 @@ function Dashboard() {
     });
 
     try {
-      // The server action now internally handles the different steps.
-      // We'll update the UI step after a delay to give a sense of progress.
+      // Step 1: Run docking process
       const processPromise = runFullDockingProcess(data, user.uid);
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       setStep('predicting');
 
       const finalResults = await processPromise;
-      
       setResults(finalResults);
+
+      toast({
+        title: 'Simulations Complete',
+        description: `Binding affinity predictions were successful. Now analyzing against literature...`,
+      });
+
+      // Step 2: Run comparative analysis
+      setStep('analyzing');
+      const analysisResult = await analyzeResearchComparison(finalResults);
+      setAnalysis(analysisResult);
+      
       setStep('done');
       setIsDocked(true);
 
       toast({
-        title: 'Simulations Complete',
-        description: `Binding affinity predictions for ${totalCombinations} molecule-protein combinations were successful.`,
+        title: 'Analysis Complete',
+        description: 'Comparative literature analysis is finished.',
       });
 
     } catch (error: any) {
@@ -174,7 +192,7 @@ function Dashboard() {
         : error.message || 'An unknown error occurred during the simulation.';
       toast({
         variant: 'destructive',
-        title: 'Simulation Failed',
+        title: 'Process Failed',
         description: errorMessage,
       });
     }
@@ -229,8 +247,6 @@ function Dashboard() {
           savedCount++;
       }
 
-      // We optimistically assume saves will work and update the UI.
-      // The error emitter will handle any permission errors.
       setSaveState('saved');
       toast({
         title: 'Results Saved',
@@ -309,7 +325,7 @@ function Dashboard() {
                     selectedSmiles={selectedSmiles}
                     bestSmiles={bestSmiles}
                   />
-                  {(step === 'classical' || step === 'predicting') && (
+                  {(step !== 'idle' && step !== 'done' && step !== 'error') && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
                       {currentStepInfo.icon}
                       <div className="text-center">
@@ -384,6 +400,10 @@ function Dashboard() {
                 onSave={handleSaveResults}
                 saveState={saveState}
               />
+            )}
+
+            {analysis && step === 'done' && (
+                <ComparativeAnalysisDisplay analysis={analysis} />
             )}
           </div>
         </div>
