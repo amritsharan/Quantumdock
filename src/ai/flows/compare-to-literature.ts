@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { DockingResults } from '@/lib/schema';
 
 const ResearchComparisonInputSchema = z.array(z.object({
     moleculeSmiles: z.string(),
@@ -74,7 +73,7 @@ DRAWBACKS: Computational cost high; still limited to relatively small molecular 
 
 const prompt = ai.definePrompt({
   name: 'compareToLiteraturePrompt',
-  input: {schema: ResearchComparisonInputSchema},
+  input: {schema: z.object({ resultsJson: z.string() })},
   output: {schema: ResearchComparisonOutputSchema},
   prompt: `You are an expert research scientist in the field of computational drug discovery.
 
@@ -97,7 +96,7 @@ ${literatureSurvey}
 **QuantumDock Simulation Results:**
 Here are the results from the latest simulation run:
 \`\`\`json
-{{{jsonStringify input}}}
+{{{resultsJson}}}
 \`\`\`
 
 **Your Task:**
@@ -123,13 +122,8 @@ const compareToLiteratureFlow = ai.defineFlow(
     outputSchema: ResearchComparisonOutputSchema,
   },
   async input => {
-    // The prompt uses a custom Handlebars helper `jsonStringify`.
-    // It must be passed in the `custom` field of the prompt's options.
-    const {output} = await prompt(input, {
-        custom: {
-            jsonStringify: (obj: any) => JSON.stringify(obj, null, 2),
-        }
-    });
+    const resultsJson = JSON.stringify(input, null, 2);
+    const {output} = await prompt({ resultsJson });
     return output!;
   }
 );
