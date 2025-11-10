@@ -9,7 +9,7 @@ import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } f
 
 
 // Helper function for retrying promises with exponential backoff
-async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
+async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay = 2000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
   let lastError: Error | undefined;
   for (let i = 0; i < retries; i++) {
     try {
@@ -17,7 +17,7 @@ async function retryPromise<T>(fn: () => Promise<T>, retries = 3, delay = 1000, 
     } catch (error: any) {
       lastError = error;
       if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded'))) {
-        console.log(`Attempt ${i + 1} failed. Retrying in ${delay}ms...`);
+        console.log(`Attempt ${i + 1} failed. Retrying in ${delay * (i + 1)}ms...`);
         await new Promise(res => setTimeout(res, delay * (i + 1)));
       } else {
         break;
