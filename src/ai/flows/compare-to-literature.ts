@@ -123,9 +123,10 @@ const compareToLiteratureFlow = ai.defineFlow(
     outputSchema: ResearchComparisonOutputSchema,
   },
   async input => {
-    // The prompt uses a custom Handlebars helper `jsonStringify`
+    // The prompt uses a custom Handlebars helper `jsonStringify`.
+    // It must be passed in the `custom` field of the prompt's options.
     const {output} = await prompt(input, {
-        helpers: {
+        custom: {
             jsonStringify: (obj: any) => JSON.stringify(obj, null, 2),
         }
     });
