@@ -251,11 +251,18 @@ function Dashboard() {
                              )}
                            </CardContent>
                         </Card>
-                        <Button asChild variant="outline">
-                            <Link href={buildLink('/select-protein')}>
-                                Change Selection ({selectedProteins.length})
-                            </Link>
-                        </Button>
+                         <div className="grid grid-cols-2 gap-2">
+                          <Button asChild variant="outline">
+                              <Link href={buildLink('/select-protein')}>
+                                  Change Selection
+                              </Link>
+                          </Button>
+                           <Button asChild variant="outline">
+                              <Link href={buildLink('/select-disease')}>
+                                  Select by Disease
+                              </Link>
+                          </Button>
+                        </div>
                     </div>
 
                      <div className="grid gap-2">
