@@ -46,7 +46,7 @@ async function saveDockingResults(firestore: any, userId: string, results: Docki
         const simulationsCollectionRef = collection(firestore, `users/${userId}/loginHistory/${latestSessionDoc.id}/dockingSimulations`);
         
         const batch = writeBatch(firestore);
-        for (const result of results) {
+        results.forEach(result => {
             const simulationData = {
                 userId: userId,
                 loginHistoryId: latestSessionDoc.id,
@@ -57,7 +57,7 @@ async function saveDockingResults(firestore: any, userId: string, results: Docki
             };
             const newDocRef = doc(simulationsCollectionRef);
             batch.set(newDocRef, simulationData);
-        }
+        });
 
         await batch.commit();
     } catch (error) {
@@ -170,9 +170,7 @@ function Dashboard() {
 
     } catch (error: any) {
       setStep('error');
-      const errorMessage = error.message.includes("overloaded")
-        ? "The AI model is currently overloaded. Please try the simulation again in a few moments."
-        : error.message || 'An unknown error occurred during the simulation.';
+      const errorMessage = error.message || 'An unknown error occurred during the simulation.';
       toast({
         variant: 'destructive',
         title: 'Process Failed',
@@ -386,4 +384,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
