@@ -15,8 +15,8 @@ export async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay =
       return await fn();
     } catch (error: any) {
       lastError = error;
-      // Check for common transient error messages
-      if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded') || error.message.toLowerCase().includes('rate limit'))) {
+      // Check for common transient error messages (503, 429, overloaded)
+      if (error.message && (error.message.includes('503') || error.message.includes('429') || error.message.toLowerCase().includes('overloaded') || error.message.toLowerCase().includes('rate limit'))) {
         console.log(`Attempt ${i + 1} failed with transient error. Retrying in ${delay * (i + 1)}ms...`);
         await new Promise(res => setTimeout(res, delay * (i + 1)));
       } else {
@@ -25,8 +25,8 @@ export async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay =
       }
     }
   }
-   if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded'))) {
-      throw new Error("The AI model is currently overloaded. Please try again in a few moments.");
+   if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded')  || lastError.message.includes('429'))) {
+      throw new Error("The AI model is currently overloaded or rate-limited. Please try again in a few moments.");
   }
   // If the loop finished because of a non-retryable error, throw that error.
   // Otherwise, throw the final error message.
@@ -157,64 +157,44 @@ async function runQuantumRefinementSimulation(classicalScore: number): Promise<n
 
 export async function runFullDockingProcess(data: DockingInput, userId: string): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
-  const predictionPromises: Promise<DockingResults>[] = [];
+  const successfulResults: DockingResults[] = [];
 
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
-      const promise = runClassicalDocking(smile, protein)
-        .then(classicalScore => {
-            // This function call is the integration point for a real quantum algorithm.
-            return runQuantumRefinementSimulation(classicalScore);
-        })
-        .then(quantumRefinedEnergy => {
-            const predictionInput = {
-                quantumRefinedEnergy: quantumRefinedEnergy,
-                moleculeSmiles: smile,
-                proteinTargetName: protein,
-            };
-            // The AI acts as an expert, interpreting the final energy value.
-            return retryPromise(() => predictBindingAffinities(predictionInput));
-        })
-        .then(async (predictionResult) => {
-          if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number' || !predictionResult.comparison) {
-            throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
-          }
-          const finalResult: DockingResults = {
-            bindingAffinity: predictionResult.bindingAffinity,
-            confidenceScore: predictionResult.confidenceScore,
-            rationale: predictionResult.rationale,
-            comparison: predictionResult.comparison,
+      try {
+        const classicalScore = await runClassicalDocking(smile, protein);
+        const quantumRefinedEnergy = await runQuantumRefinementSimulation(classicalScore);
+        
+        const predictionInput = {
+            quantumRefinedEnergy: quantumRefinedEnergy,
             moleculeSmiles: smile,
-            proteinTarget: protein,
-          };
-          
-          return finalResult;
-        });
-      
-      predictionPromises.push(promise);
+            proteinTargetName: protein,
+        };
+
+        const predictionResult = await retryPromise(() => predictBindingAffinities(predictionInput));
+
+        if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number' || !predictionResult.comparison) {
+          throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
+        }
+
+        const finalResult: DockingResults = {
+          bindingAffinity: predictionResult.bindingAffinity,
+          confidenceScore: predictionResult.confidenceScore,
+          rationale: predictionResult.rationale,
+          comparison: predictionResult.comparison,
+          moleculeSmiles: smile,
+          proteinTarget: protein,
+        };
+        successfulResults.push(finalResult);
+      } catch (error) {
+         console.error(`Error processing combination: ${smile} + ${protein}. Error:`, error);
+         // Optionally re-throw or handle the error for the entire process to fail
+         throw error;
+      }
     }
   }
-  
-  const results = await Promise.allSettled(predictionPromises);
 
-  const successfulResults: DockingResults[] = [];
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      successfulResults.push(result.value);
-    } else {
-        const smile = validatedData.smiles[Math.floor(index / validatedData.proteinTargets.length)];
-        const protein = validatedData.proteinTargets[index % validatedData.proteinTargets.length];
-        console.error(`Error processing combination: ${smile} + ${protein}. Error:`, result.reason);
-    }
-  });
-
-  if (successfulResults.length === 0 && results.length > 0) {
-      const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
-      if (firstError) {
-        // Ensure we throw the actual error, not a generic one.
-        // The AI model overload error is a custom Error object that should be thrown.
-        throw firstError.reason;
-      }
+  if (successfulResults.length === 0 && validatedData.smiles.length > 0 && validatedData.proteinTargets.length > 0) {
       throw new Error("All docking simulations failed. Please check the server logs for more details.");
   }
 
