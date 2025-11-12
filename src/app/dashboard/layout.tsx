@@ -69,7 +69,7 @@ export default function DashboardLayout({
                     'permission-error',
                     new FirestorePermissionError({
                       path: userDocRef.path,
-                      operation: userDocRef ? 'update' : 'create',
+                      operation: 'create', // or 'update' depending on logic
                       requestResourceData: {
                         uid: user.uid,
                         email: user.email,

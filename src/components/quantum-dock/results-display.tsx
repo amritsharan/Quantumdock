@@ -218,7 +218,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
         </div>
 
         <div className="rounded-md border">
-            <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
+            <div className="hidden md:flex p-4 border-b font-medium text-muted-foreground text-sm">
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
@@ -230,13 +230,13 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
             <Accordion type="single" collapsible className="w-full">
             {sortedResults.map((result, index) => (
                 <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-                <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline text-sm">
-                    <div className="w-2/12 font-medium text-left">{result.name}</div>
-                    <div className="w-2/12 font-medium text-left">{result.proteinTarget}</div>
-                    <div className="w-2/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
-                    <div className="w-2/12 text-left">{result.standardModelScore.toFixed(2)}</div>
-                    <div className="w-2/12 text-left">{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
-                    <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
+                <AccordionTrigger className="flex flex-col md:flex-row items-start md:items-center p-4 hover:bg-muted/50 hover:no-underline text-sm space-y-2 md:space-y-0">
+                    <div className="w-full md:w-2/12 font-medium text-left"><span className='md:hidden font-bold'>Molecule: </span>{result.name}</div>
+                    <div className="w-full md:w-2/12 font-medium text-left"><span className='md:hidden font-bold'>Protein: </span>{result.proteinTarget}</div>
+                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Quantum Affinity (nM): </span>{result.bindingAffinity.toFixed(2)}</div>
+                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Standard ML (nM): </span>{result.standardModelScore.toFixed(2)}</div>
+                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Confidence: </span>{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
+                    <div className="w-full md:w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
                 </AccordionTrigger>
                 <AccordionContent>
                     <div className="p-4 bg-muted/50 space-y-4">

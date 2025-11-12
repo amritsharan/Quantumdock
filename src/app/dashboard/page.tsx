@@ -13,8 +13,9 @@ import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser } from '@/firebase';
 import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { ResultsDisplay } from '@/components/quantum-dock/results-display';
+import { ComparativeAnalysisDisplay } from '@/components/quantum-dock/comparative-analysis-display';
+import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,6 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'analyzing' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -139,28 +139,62 @@ function Dashboard() {
     }
   };
 
-  const chartData = useMemo(() => {
-    if (!results) return [];
-    const resultsWithNames = results.map(result => {
-        const molecule = molecules.find(m => m.smiles === result.moleculeSmiles);
-        return {
-            ...result,
-            name: molecule ? molecule.name : 'Unknown Molecule',
-        };
-    });
-    return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
-      name: `${res.name} + ${res.proteinTarget}`,
-      'Binding Affinity (nM)': res.bindingAffinity,
-    }));
-  }, [results]);
+  useEffect(() => {
+    if (step === 'done' && results) {
+      setStep('analyzing');
+      toast({
+        title: 'Analyzing Results',
+        description: 'Comparing your results to scientific literature...'
+      });
 
-  const chartConfig = {
-    'Binding Affinity (nM)': {
-      label: 'Binding Affinity (nM)',
-      color: 'hsl(var(--accent))',
-    },
+      const analysisInput = results.map(r => ({
+          moleculeSmiles: r.moleculeSmiles,
+          proteinTarget: r.proteinTarget,
+          bindingAffinity: r.bindingAffinity,
+          confidenceScore: r.confidenceScore,
+          rationale: r.rationale,
+          standardModelScore: r.standardModelScore,
+          aiCommentary: r.explanation,
+      }));
+
+      analyzeResearchComparison(analysisInput)
+        .then(analysisResult => {
+            setAnalysis(analysisResult);
+            toast({
+                title: 'Analysis Complete',
+                description: 'AI-powered literature comparison is ready.'
+            });
+        })
+        .catch(error => {
+            console.error('Analysis failed:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Analysis Failed',
+                description: 'Could not compare results to literature.'
+            });
+        })
+        .finally(() => {
+            setStep('done');
+        });
+    }
+  }, [step, results, toast]);
+
+  const handleSaveResults = async () => {
+    if (!user || !results) {
+        toast({ variant: 'destructive', title: 'Save Error', description: 'No user or results to save.' });
+        return;
+    }
+    setSaveState('saving');
+    try {
+        await saveDockingResults(user.uid, results);
+        setSaveState('saved');
+        toast({ title: 'Success', description: 'Docking results saved to your history.' });
+    } catch (error: any) {
+        setSaveState('error');
+        toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'Could not save results.' });
+    }
   };
-
+  
   const buildLink = (pathname: string) => {
     const params = new URLSearchParams();
     const smiles = form.getValues('smiles');
@@ -174,19 +208,25 @@ function Dashboard() {
     return `${pathname}?${params.toString()}`;
   }
 
-  const isLoading = step === 'predicting';
+  const isLoading = step === 'predicting' || step === 'analyzing' || step === 'classical';
+  
+  const bestSmiles = useMemo(() => {
+    if (!results || results.length === 0) return null;
+    return results.reduce((best, current) => {
+        return current.bindingAffinity < best.bindingAffinity ? current : best;
+    }).moleculeSmiles;
+  }, [results]);
 
   return (
     <>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[320px_1fr] lg:grid-cols-[320px_1fr]">
+        <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[300px_1fr] lg:grid-cols-[350px_1fr]">
           
-          {/* Left Column for Controls */}
           <div className="grid auto-rows-max items-start gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Controls</CardTitle>
-                <CardDescription>Select molecules and proteins to begin.</CardDescription>
+                <CardTitle>Simulation Controls</CardTitle>
+                <CardDescription>Select molecules and protein targets to begin your docking simulation.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
@@ -234,83 +274,77 @@ function Dashboard() {
                 </form>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Selected Molecule Properties</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  {selectedMolecules.length > 0 ? (
+                      <ScrollArea className="h-[200px]">
+                          <div className="grid grid-cols-1 gap-4">
+                              {selectedMolecules.map(m => (
+                                  <div key={m.smiles} className="text-sm p-3 bg-muted/50 rounded-md">
+                                      <p className="font-bold">{m.name}</p>
+                                      <p><span className="text-muted-foreground">Formula:</span> {m.formula}</p>
+                                      <p><span className="text-muted-foreground">Weight (Da):</span> {m.molecularWeight.toFixed(2)}</p>
+                                  </div>
+                              ))}
+                          </div>
+                      </ScrollArea>
+                  ) : (
+                      <div className="flex items-center justify-center h-24">
+                          <p className="text-sm text-muted-foreground">Select molecules to see their properties.</p>
+                      </div>
+                  )}
+              </CardContent>
+            </Card>
+
           </div>
 
-          {/* Right Column for Visualization and Data */}
           <div className="grid auto-rows-max items-start gap-6">
             <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                     <CardHeader>
                         <CardTitle>Max Combined MW (kDa)</CardTitle>
+                        <CardDescription>The theoretical maximum molecular weight of your selected pairs.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-4xl font-bold">{maxCombinedMW > 0 ? maxCombinedMW.toFixed(2) : 'N/A'}</p>
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Molecule Viewer</CardTitle>
+                        <CardDescription>Visualize the selected molecules. Best result shown after simulation.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="min-h-[150px] relative rounded-md border flex items-center justify-center">
+                            <MoleculeViewer
+                                isDocked={!!results}
+                                selectedSmiles={selectedSmiles}
+                                bestSmiles={bestSmiles}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
             
-            <Card>
+            {results && (
+              <Card>
                 <CardHeader>
-                    <CardTitle>Selected Molecule Properties</CardTitle>
+                    <CardTitle>Analysis & Results</CardTitle>
+                    <CardDescription>Explore the detailed results and AI-powered analysis of your simulation.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {selectedMolecules.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {selectedMolecules.map(m => (
-                                <div key={m.smiles} className="text-sm p-3 bg-muted/50 rounded-md">
-                                    <p className="font-bold">{m.name}</p>
-                                    <p><span className="text-muted-foreground">Formula:</span> {m.formula}</p>
-                                    <p><span className="text-muted-foreground">Weight (Da):</span> {m.molecularWeight.toFixed(2)}</p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-24">
-                            <p className="text-sm text-muted-foreground">Select molecules to see their properties.</p>
-                        </div>
-                    )}
+                    <ResultsDisplay results={results} onSave={handleSaveResults} saveState={saveState} />
                 </CardContent>
-            </Card>
+              </Card>
+            )}
 
-            <Card>
-                 <CardHeader>
-                    <CardTitle>Binding Affinity Chart</CardTitle>
-                    <CardDescription>Lower values indicate stronger binding affinity. Results will appear here after running a simulation.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoading && (
-                        <div className="flex items-center justify-center h-[250px]">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                    )}
-                    {!isLoading && (!results || results.length === 0) && (
-                        <div className="flex items-center justify-center h-[250px]">
-                            <p className="text-muted-foreground">Run a simulation to see results.</p>
-                        </div>
-                    )}
-                    {!isLoading && results && results.length > 0 && (
-                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                            <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 150, right: 20 }}>
-                            <CartesianGrid horizontal={false} />
-                            <YAxis
-                                dataKey="name"
-                                type="category"
-                                tickLine={false}
-                                tickMargin={10}
-                                axisLine={false}
-                                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
-                            />
-                            <XAxis dataKey="Binding Affinity (nM)" type="number" />
-                            <Tooltip
-                                cursor={{ fill: "hsl(var(--muted))" }}
-                                content={<ChartTooltipContent />}
-                            />
-                            <Bar dataKey="Binding Affinity (nM)" radius={4} />
-                            </BarChart>
-                        </ChartContainer>
-                    )}
-                </CardContent>
-            </Card>
+            {analysis && (
+                <ComparativeAnalysisDisplay analysis={analysis} />
+            )}
 
           </div>
         </div>
