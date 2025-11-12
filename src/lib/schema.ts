@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import type { PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
 
@@ -10,7 +11,7 @@ export const dockingSchema = z.object({
 export type DockingInput = z.infer<typeof dockingSchema>;
 
 // This now correctly includes all fields from the AI's output.
-export type DockingResults = PredictBindingAffinitiesOutput & { 
-  proteinTarget: string; 
+export type DockingResults = PredictBindingAffinitiesOutput & {
+  proteinTarget: string;
   moleculeSmiles: string;
 };

@@ -244,7 +244,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               <AccordionContent>
                  <div className="p-4 bg-muted/50 space-y-4">
                   <div className='pt-4 border-t'>
-                    <p className="font-semibold text-sm">Explanation</p>
+                    <p className="font-semibold text-sm">Model Score Comparison</p>
                     <p className="text-xs text-muted-foreground">{result.explanation}</p>
                   </div>
                   <div className='pt-4 border-t'>
