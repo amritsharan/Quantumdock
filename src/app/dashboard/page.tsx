@@ -259,7 +259,7 @@ function Dashboard() {
           <div className="grid auto-rows-max items-start gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>QuantumDock</CardTitle>
+                <CardTitle>Molecule Viewer</CardTitle>
                 <CardDescription>Select molecules, diseases, and protein targets to begin your simulation.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -423,5 +423,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
