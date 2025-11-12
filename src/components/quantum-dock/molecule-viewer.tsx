@@ -25,7 +25,7 @@ interface MoleculeViewerProps {
 const MoleculeProperties = ({ molecule }: { molecule: Molecule }) => (
     <div className='text-xs space-y-2 p-2'>
         <div className='flex justify-between'>
-            <span className='font-semibold'>Formula:</span>
+            <span className='font-semibold'>Chemical Formula:</span>
             <span className='font-mono'>{molecule.formula}</span>
         </div>
         <div className='flex justify-between'>
@@ -129,7 +129,7 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
                                     />
                                     <p className='font-semibold text-sm'>{mol.name}</p>
                                     <div className="text-xs text-muted-foreground space-y-1 text-center">
-                                        <p className='font-mono'>{mol.formula}</p>
+                                        <p className='font-mono'>Chemical Formula: {mol.formula}</p>
                                         <p className='font-mono'>Molecular Weight: {mol.molecularWeight.toFixed(2)} Da</p>
                                     </div>
                                 </div>
