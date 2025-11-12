@@ -1,17 +1,18 @@
 
 'use client';
 
-import { Suspense, useState, useEffect, useMemo } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { runFullDockingProcess, saveDockingResults } from '@/app/actions';
+import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
@@ -26,6 +27,48 @@ import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/f
 type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
+async function saveDockingResults(firestore: any, userId: string, results: DockingResults[]) {
+    if (!firestore || !userId || !results || results.length === 0) {
+      throw new Error("User ID, Firestore instance, and results are required to save.");
+    }
+
+    try {
+        const historyQuery = query(
+            collection(firestore, `users/${userId}/loginHistory`),
+            orderBy("loginTime", "desc"),
+            limit(1)
+        );
+
+        const historySnapshot = await getDocs(historyQuery);
+        if (historySnapshot.empty) {
+            throw new Error("No active login session found for the user.");
+        }
+        const latestSessionDoc = historySnapshot.docs[0];
+        const simulationsCollectionRef = collection(firestore, `users/${userId}/loginHistory/${latestSessionDoc.id}/dockingSimulations`);
+        
+        const batch = writeBatch(firestore);
+        for (const result of results) {
+            const simulationData = {
+                userId: userId,
+                loginHistoryId: latestSessionDoc.id,
+                timestamp: serverTimestamp(),
+                moleculeSmiles: result.moleculeSmiles,
+                proteinTarget: result.proteinTarget,
+                bindingAffinity: result.bindingAffinity,
+            };
+            const newDocRef = doc(simulationsCollectionRef);
+            batch.set(newDocRef, simulationData);
+        }
+
+        await batch.commit();
+    } catch (error) {
+        console.error("Failed to save docking results: ", error);
+        // We can make this more user-friendly by checking the error type
+        // and re-throwing a FirestorePermissionError if applicable.
+        throw new Error("Could not save docking results due to a database error.");
+    }
+}
+
 
 function Dashboard() {
   const [step, setStep] = useState<ProcessStep>('idle');
@@ -34,6 +77,7 @@ function Dashboard() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
@@ -140,13 +184,13 @@ function Dashboard() {
   };
 
   const handleSaveResults = async () => {
-    if (!user || !results) {
-        toast({ variant: 'destructive', title: 'Save Error', description: 'No user or results to save.' });
+    if (!user || !results || !firestore) {
+        toast({ variant: 'destructive', title: 'Save Error', description: 'No user, results, or firestore instance available to save.' });
         return;
     }
     setSaveState('saving');
     try {
-        await saveDockingResults(user.uid, results);
+        await saveDockingResults(firestore, user.uid, results);
         setSaveState('saved');
         toast({ title: 'Success', description: 'Docking results saved to your history.' });
     } catch (error: any) {

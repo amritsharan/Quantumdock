@@ -4,8 +4,6 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initServerApp } from '@/firebase/server';
 import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
@@ -236,46 +234,4 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     console.error("Error suggesting proteins:", error);
     return [];
   }
-}
-
-export async function saveDockingResults(userId: string, results: DockingResults[]) {
-    if (!userId || !results || results.length === 0) {
-      throw new Error("User ID and results are required to save.");
-    }
-    
-    const app = await initServerApp();
-    const firestore = getFirestore(app);
-
-    try {
-        const historyQuery = firestore.collection(`users/${userId}/loginHistory`)
-            .orderBy("loginTime", "desc")
-            .limit(1);
-
-        const historySnapshot = await historyQuery.get();
-
-        if (historySnapshot.empty) {
-            throw new Error("No active login session found for the user.");
-        }
-        const latestSessionDoc = historySnapshot.docs[0];
-        const simulationsCollectionRef = firestore.collection(`users/${userId}/loginHistory/${latestSessionDoc.id}/dockingSimulations`);
-        
-        const batch = firestore.batch();
-        for (const result of results) {
-            const simulationData = {
-                userId: userId,
-                loginHistoryId: latestSessionDoc.id,
-                timestamp: serverTimestamp(),
-                moleculeSmiles: result.moleculeSmiles,
-                proteinTarget: result.proteinTarget,
-                bindingAffinity: result.bindingAffinity,
-            };
-            const newDocRef = simulationsCollectionRef.doc();
-            batch.set(newDocRef, simulationData);
-        }
-
-        await batch.commit();
-    } catch (error) {
-        console.error("Failed to save docking results: ", error);
-        throw new Error("Could not save docking results due to a database error.");
-    }
 }
