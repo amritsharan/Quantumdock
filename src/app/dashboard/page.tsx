@@ -330,26 +330,16 @@ function Dashboard() {
 
           <div className="grid auto-rows-max items-start gap-6">
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Visualization</CardTitle>
-                    <CardDescription>Visualize the selected molecules. Best result shown after simulation.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <div className="min-h-[250px] relative rounded-md border flex items-center justify-center">
-                        <MoleculeViewer
-                           isDocked={!!results}
-                           molecules={selectedMolecules}
-                           bestResultMolecule={bestResult}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <MoleculeViewer
+              isDocked={!!results}
+              molecules={selectedMolecules}
+              bestResultMolecule={bestResult}
+            />
             
             {isLoading && (
               <Card>
                 <CardHeader>
-                    <CardTitle>Simulation In Progress</CardTitle>
+                    <CardTitle>Detailed Prediction Results</CardTitle>
                     <CardDescription>Please wait while the simulation completes.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center min-h-[200px]">
