@@ -17,7 +17,7 @@ import type { PredictBindingAffinitiesInput } from '@/ai/flows/predict-binding-a
  * @returns A promise that resolves with the prediction result.
  * @throws An error if the request fails after all retry attempts.
  */
-async function predictWithRetry(input: PredictBindingAffinitiesInput, retries = 5, delay = 2000) {
+async function predictWithRetry(input: PredictBindingAffinitiesInput, retries = 10, delay = 3000) {
   let lastError: any;
 
   for (let i = 0; i < retries; i++) {
@@ -81,7 +81,7 @@ async function runQuantumRefinementSimulation(classicalScore: number): Promise<n
 }
 
 
-export async function runFullDockingProcess(data: DockingInput, userId: string): Promise<DockingResults[]> {
+export async function runFullDockingProcess(data: DockingInput): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
   const successfulResults: DockingResults[] = [];
 
