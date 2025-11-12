@@ -4,7 +4,8 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
-import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { getFirestore } from 'firebase-admin/firestore';
+import { initServerApp } from '@/firebase/server';
 import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
@@ -242,25 +243,23 @@ export async function saveDockingResults(userId: string, results: DockingResults
       throw new Error("User ID and results are required to save.");
     }
     
-    // This is a placeholder. In a real app, you would get the firestore instance
-    // from your Firebase setup.
-    const { getFirestore } = await import('firebase/firestore');
-    const firestore = getFirestore();
+    const app = await initServerApp();
+    const firestore = getFirestore(app);
 
     try {
-        const historyQuery = query(
-            collection(firestore, "users", userId, "loginHistory"),
-            orderBy("loginTime", "desc"),
-            limit(1)
-        );
-        const historySnapshot = await getDocs(historyQuery);
+        const historyQuery = firestore.collection(`users/${userId}/loginHistory`)
+            .orderBy("loginTime", "desc")
+            .limit(1);
+
+        const historySnapshot = await historyQuery.get();
+
         if (historySnapshot.empty) {
             throw new Error("No active login session found for the user.");
         }
         const latestSessionDoc = historySnapshot.docs[0];
-        const simulationsCollectionRef = collection(firestore, 'users', userId, 'loginHistory', latestSessionDoc.id, 'dockingSimulations');
+        const simulationsCollectionRef = firestore.collection(`users/${userId}/loginHistory/${latestSessionDoc.id}/dockingSimulations`);
         
-        const batch = [];
+        const batch = firestore.batch();
         for (const result of results) {
             const simulationData = {
                 userId: userId,
@@ -270,10 +269,11 @@ export async function saveDockingResults(userId: string, results: DockingResults
                 proteinTarget: result.proteinTarget,
                 bindingAffinity: result.bindingAffinity,
             };
-            batch.push(addDoc(simulationsCollectionRef, simulationData));
+            const newDocRef = simulationsCollectionRef.doc();
+            batch.set(newDocRef, simulationData);
         }
 
-        await Promise.all(batch);
+        await batch.commit();
     } catch (error) {
         console.error("Failed to save docking results: ", error);
         throw new Error("Could not save docking results due to a database error.");
