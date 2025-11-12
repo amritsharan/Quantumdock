@@ -13,18 +13,17 @@ import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser } from '@/firebase';
 import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
-import { ResultsDisplay } from '@/components/quantum-dock/results-display';
-import { ComparativeAnalysisDisplay } from '@/components/quantum-dock/comparative-analysis-display';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
 
-type ProcessStep = 'idle' | 'classical' | 'predicting' | 'analyzing' | 'done' | 'error';
+type ProcessStep = 'idle' | 'predicting' | 'analyzing' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 
@@ -71,21 +70,13 @@ function Dashboard() {
   }, [searchParams, form]);
 
 
-  const { selectedMolecules, selectedProteins, maxCombinedMW } = useMemo(() => {
+  const { selectedMolecules, selectedProteins } = useMemo(() => {
     const sm = molecules.filter(m => selectedSmiles.includes(m.smiles));
     const sp = proteins.filter(p => selectedProteinNames.includes(p.name));
-    
-    let maxMw = 0;
-    if (sm.length > 0 && sp.length > 0) {
-        const maxMoleculeWeight = Math.max(...sm.map(m => m.molecularWeight));
-        const maxProteinWeight = Math.max(...sp.map(p => p.molecularWeight));
-        maxMw = (maxMoleculeWeight + maxProteinWeight) / 1000; // Convert to kDa
-    }
     
     return {
       selectedMolecules: sm,
       selectedProteins: sp,
-      maxCombinedMW: maxMw,
     };
   }, [selectedSmiles, selectedProteinNames]);
 
@@ -208,7 +199,7 @@ function Dashboard() {
     return `${pathname}?${params.toString()}`;
   }
 
-  const isLoading = step === 'predicting' || step === 'analyzing' || step === 'classical';
+  const isLoading = step === 'predicting' || step === 'analyzing';
   
   const bestSmiles = useMemo(() => {
     if (!results || results.length === 0) return null;
@@ -282,77 +273,55 @@ function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                  <CardTitle>Selected Molecule Properties</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  {selectedMolecules.length > 0 ? (
-                      <ScrollArea className="h-[200px]">
-                          <div className="grid grid-cols-1 gap-4">
-                              {selectedMolecules.map(m => (
-                                  <div key={m.smiles} className="text-sm p-3 bg-muted/50 rounded-md">
-                                      <p className="font-bold">{m.name}</p>
-                                      <p><span className="text-muted-foreground">Formula:</span> {m.formula}</p>
-                                      <p><span className="text-muted-foreground">Weight (Da):</span> {m.molecularWeight.toFixed(2)}</p>
-                                  </div>
-                              ))}
-                          </div>
-                      </ScrollArea>
-                  ) : (
-                      <div className="flex items-center justify-center h-24">
-                          <p className="text-sm text-muted-foreground">Select molecules to see their properties.</p>
-                      </div>
-                  )}
-              </CardContent>
-            </Card>
-
           </div>
 
           <div className="grid auto-rows-max items-start gap-6">
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Max Combined MW (kDa)</CardTitle>
-                        <CardDescription>The theoretical maximum molecular weight of your selected pairs.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold">{maxCombinedMW > 0 ? maxCombinedMW.toFixed(2) : 'N/A'}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Molecule Viewer</CardTitle>
-                        <CardDescription>Visualize the selected molecules. Best result shown after simulation.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="min-h-[150px] relative rounded-md border flex items-center justify-center">
-                            <MoleculeViewer
-                                isDocked={!!results}
-                                selectedSmiles={selectedSmiles}
-                                bestSmiles={bestSmiles}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
             
-            {results && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Molecule Viewer</CardTitle>
+                    <CardDescription>Visualize the selected molecules. Best result shown after simulation.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <div className="min-h-[250px] relative rounded-md border flex items-center justify-center">
+                        <MoleculeViewer
+                            isDocked={!!results}
+                            selectedSmiles={selectedSmiles}
+                            bestSmiles={bestSmiles}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+            
+            {isLoading && (
+              <Card>
+                <CardHeader>
+                    <CardTitle>Simulation In Progress</CardTitle>
+                    <CardDescription>Please wait while the simulation completes.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center min-h-[200px]">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground">
+                      {step === 'predicting' ? 'Running docking simulations...' : 'Analyzing literature...'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isLoading && results && analysis && (
               <Card>
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
                     <CardDescription>Explore the detailed results and AI-powered analysis of your simulation.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ResultsDisplay results={results} onSave={handleSaveResults} saveState={saveState} />
+                    <ResultsTabs results={results} analysis={analysis} onSave={handleSaveResults} saveState={saveState} />
                 </CardContent>
               </Card>
             )}
-
-            {analysis && (
-                <ComparativeAnalysisDisplay analysis={analysis} />
-            )}
-
+            
           </div>
         </div>
       </main>
@@ -368,3 +337,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    
