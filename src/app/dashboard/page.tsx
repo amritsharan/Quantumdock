@@ -232,17 +232,56 @@ function Dashboard() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
+                    
                     <div className="grid gap-2">
-                        <Label>1. Select Molecules ({selectedSmiles.length})</Label>
+                        <Label>1. Select Molecules ({selectedMolecules.length})</Label>
+                        <Card className="min-h-[60px]">
+                           <CardContent className="p-2">
+                             {selectedMolecules.length > 0 ? (
+                                <ScrollArea className="h-16">
+                                    <ul className="space-y-1">
+                                        {selectedMolecules.map(m => (
+                                            <li key={m.smiles} className="text-sm p-1 bg-muted/50 rounded-md truncate">
+                                                {m.name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </ScrollArea>
+                             ) : (
+                                <div className="flex items-center justify-center h-16">
+                                    <p className="text-sm text-muted-foreground">No molecules selected.</p>
+                                </div>
+                             )}
+                           </CardContent>
+                        </Card>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-molecule')}>
-                                {selectedSmiles.length > 0 ? `Change Molecule Selection` : 'Select Molecules'}
+                                {selectedMolecules.length > 0 ? `Change Molecule Selection` : 'Select Molecules'}
                             </Link>
                         </Button>
                     </div>
 
                     <div className="grid gap-2">
                         <Label>2. Select Diseases ({selectedDiseaseKeywords.length})</Label>
+                         <Card className="min-h-[60px]">
+                           <CardContent className="p-2">
+                             {selectedDiseaseKeywords.length > 0 ? (
+                                <ScrollArea className="h-16">
+                                    <ul className="space-y-1">
+                                        {selectedDiseaseKeywords.map(d => (
+                                            <li key={d} className="text-sm p-1 bg-muted/50 rounded-md truncate">
+                                                {d}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </ScrollArea>
+                             ) : (
+                                <div className="flex items-center justify-center h-16">
+                                    <p className="text-sm text-muted-foreground">No diseases selected.</p>
+                                </div>
+                             )}
+                           </CardContent>
+                        </Card>
                         <Button asChild variant="outline">
                             <Link href={buildLink('/select-disease')}>
                                 {selectedDiseaseKeywords.length > 0 ? `Change Disease Selection` : 'Select Diseases'}
@@ -252,20 +291,20 @@ function Dashboard() {
 
                     <div className="grid gap-2">
                         <Label>3. Protein Targets ({selectedProteins.length})</Label>
-                         <Card className="min-h-[80px]">
+                         <Card className="min-h-[60px]">
                            <CardContent className="p-2">
                              {selectedProteins.length > 0 ? (
-                                <ScrollArea className="h-20">
+                                <ScrollArea className="h-16">
                                     <ul className="space-y-1">
                                         {selectedProteins.map(p => (
-                                            <li key={p.name} className="text-sm p-2 bg-muted/50 rounded-md">
+                                            <li key={p.name} className="text-sm p-1 bg-muted/50 rounded-md truncate">
                                                 {p.name}
                                             </li>
                                         ))}
                                     </ul>
                                 </ScrollArea>
                              ) : (
-                                <div className="flex items-center justify-center h-20">
+                                <div className="flex items-center justify-center h-16">
                                     <p className="text-sm text-muted-foreground">No targets selected.</p>
                                 </div>
                              )}
@@ -350,3 +389,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    
