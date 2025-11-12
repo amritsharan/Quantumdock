@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser } from '@/firebase';
-import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
+import { type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
 
-type ProcessStep = 'idle' | 'predicting' | 'analyzing' | 'done' | 'error';
+type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 // Helper function for retrying promises with exponential backoff
@@ -56,7 +56,6 @@ function Dashboard() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [analysis, setAnalysis] = useState<ResearchComparisonOutput | null>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -125,7 +124,6 @@ function Dashboard() {
     }
     setStep('predicting');
     setResults(null);
-    setAnalysis(null);
     setSaveState('idle');
 
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
@@ -166,46 +164,6 @@ function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    if (step === 'done' && results && results.length > 0) {
-      setStep('analyzing');
-      toast({
-        title: 'Analyzing Results',
-        description: 'Comparing your results to scientific literature...'
-      });
-
-      const analysisInput = results.map(r => ({
-          moleculeSmiles: r.moleculeSmiles,
-          proteinTarget: r.proteinTarget,
-          bindingAffinity: r.bindingAffinity,
-          confidenceScore: r.confidenceScore,
-          rationale: r.rationale,
-          standardModelScore: r.comparison.standardModelScore,
-          aiCommentary: r.comparison.explanation,
-      }));
-
-      retryPromise(() => analyzeResearchComparison(analysisInput), 3, 3000, "Literature analysis failed after multiple retries.")
-        .then(analysisResult => {
-            setAnalysis(analysisResult);
-            toast({
-                title: 'Analysis Complete',
-                description: 'AI-powered literature comparison is ready.'
-            });
-        })
-        .catch(error => {
-            console.error('Analysis failed:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Analysis Failed',
-                description: error.message || 'Could not compare results to literature.'
-            });
-        })
-        .finally(() => {
-            setStep('done'); // Set to done regardless of analysis outcome
-        });
-    }
-  }, [step, results, toast]);
-
   const handleSaveResults = async () => {
     if (!user || !results) {
         toast({ variant: 'destructive', title: 'Save Error', description: 'No user or results to save.' });
@@ -235,7 +193,7 @@ function Dashboard() {
     return `${pathname}?${params.toString()}`;
   }
 
-  const isLoading = step === 'predicting' || step === 'analyzing';
+  const isLoading = step === 'predicting';
   
   const bestResult = useMemo(() => {
     if (!results || results.length === 0) return null;
@@ -384,28 +342,16 @@ function Dashboard() {
               </Card>
             )}
 
-            {step === 'done' && results && analysis && (
+            {step === 'done' && results && (
               <Card>
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
                     <CardDescription>Explore the detailed results and AI-powered analysis of your simulation.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ResultsTabs results={results} analysis={analysis} onSave={handleSaveResults} saveState={saveState} />
+                    <ResultsTabs results={results} onSave={handleSaveResults} saveState={saveState} />
                 </CardContent>
               </Card>
-            )}
-
-            {step === 'done' && results && !analysis && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Results</CardTitle>
-                        <CardDescription>The main simulation is complete, but the literature analysis could not be performed.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <ResultsTabs results={results} analysis={analysis} onSave={handleSaveResults} saveState={saveState} />
-                    </CardContent>
-                </Card>
             )}
             
           </div>

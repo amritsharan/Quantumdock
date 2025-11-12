@@ -4,9 +4,7 @@
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
-import { ComparativeAnalysisDisplay } from '@/components/quantum-dock/comparative-analysis-display';
 import type { DockingResults } from '@/lib/schema';
-import type { ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { molecules } from '@/lib/molecules';
@@ -15,12 +13,11 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface ResultsTabsProps {
   results: DockingResults[];
-  analysis: ResearchComparisonOutput;
   saveState: SaveState;
   onSave: () => void;
 }
 
-export function ResultsTabs({ results, analysis, saveState, onSave }: ResultsTabsProps) {
+export function ResultsTabs({ results, saveState, onSave }: ResultsTabsProps) {
   
   const chartData = useMemo(() => {
     if (!results) return [];
@@ -51,10 +48,9 @@ export function ResultsTabs({ results, analysis, saveState, onSave }: ResultsTab
 
   return (
     <Tabs defaultValue="chart">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="chart">Binding Affinity Chart</TabsTrigger>
         <TabsTrigger value="results">Detailed Results</TabsTrigger>
-        <TabsTrigger value="analysis">Literature Analysis</TabsTrigger>
       </TabsList>
       <TabsContent value="chart" className="mt-4">
         <div className="grid gap-6">
@@ -88,9 +84,6 @@ export function ResultsTabs({ results, analysis, saveState, onSave }: ResultsTab
       </TabsContent>
       <TabsContent value="results" className="mt-4">
         <ResultsDisplay results={results} onSave={onSave} saveState={saveState} />
-      </TabsContent>
-      <TabsContent value="analysis" className="mt-4">
-        <ComparativeAnalysisDisplay analysis={analysis} />
       </TabsContent>
     </Tabs>
   );
