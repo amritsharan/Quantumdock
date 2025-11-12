@@ -230,6 +230,14 @@ function Dashboard() {
 
   const currentStepInfo = stepDescriptions[step];
 
+  const renderStatus = () => (
+    <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center">
+        {currentStepInfo.icon}
+        <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+        <p className="text-muted-foreground">{currentStepInfo.description}</p>
+    </div>
+  );
+
   return (
     <>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -251,45 +259,22 @@ function Dashboard() {
           </div>
 
           <div className="grid auto-rows-max items-start gap-6">
-            <Card className="min-h-[500px] relative">
+            <Card className="min-h-[500px]">
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
                     <CardDescription>View simulation outputs and comparative analysis.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {(step === 'idle' || step === 'error' || (step === 'done' && results && analysis) ) ? (
-                        <>
-                        {step === 'idle' && (
-                            <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center">
-                                {stepDescriptions.idle.icon}
-                                <h3 className="text-xl font-semibold">{stepDescriptions.idle.title}</h3>
-                                <p className="text-muted-foreground">{stepDescriptions.idle.description}</p>
-                            </div>
-                        )}
-                        {step === 'error' && (
-                            <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center">
-                                {currentStepInfo.icon}
-                                <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-                                <p className="text-muted-foreground">{currentStepInfo.description}</p>
-                            </div>
-                        )}
-                        {step === 'done' && results && analysis && (
-                            <ResultsTabs 
-                                results={results}
-                                analysis={analysis}
-                                saveState={saveState}
-                                onSave={handleSaveResults}
-                            />
-                        )}
-                        </>
+                    {step === 'done' && results && analysis ? (
+                        <ResultsTabs 
+                            results={results}
+                            analysis={analysis}
+                            saveState={saveState}
+                            onSave={handleSaveResults}
+                        />
                     ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center bg-background/80 backdrop-blur-sm z-10">
-                            {currentStepInfo.icon}
-                            <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-                            <p className="text-muted-foreground">{currentStepInfo.description}</p>
-                        </div>
+                        renderStatus()
                     )}
-
                 </CardContent>
             </Card>
           </div>
