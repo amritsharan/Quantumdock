@@ -192,9 +192,10 @@ export default function HistoryPage() {
   }, []);
 
   const formattedHistory = useMemo(() => {
-    if (!currentTime || !allHistory) return null; // Don't compute until client has mounted
+    // Return null if allHistory is not yet loaded to prevent server/client mismatch
+    if (!allHistory) return null;
     
-    return allHistory?.map((item) => {
+    return allHistory.map((item) => {
       const loginDate = item.loginTime ? new Date(item.loginTime.seconds * 1000) : null;
       
       let logoutTimeFormatted = '—';
@@ -206,7 +207,8 @@ export default function HistoryPage() {
       }
 
       let durationDisplay;
-      if (item.status === 'active' && loginDate) {
+      if (item.status === 'active' && loginDate && currentTime) {
+        // This part now only runs if currentTime is available (client-side after hydration)
         durationDisplay = calculateActiveDuration(loginDate);
       } else if (item.duration !== undefined) {
         durationDisplay = `${item.duration} minute(s)`;

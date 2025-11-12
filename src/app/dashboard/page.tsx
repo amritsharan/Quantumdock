@@ -26,29 +26,7 @@ import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
 type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-function Dashboard() {
-  const [step, setStep] = useState<ProcessStep>('idle');
-  const [results, setResults] = useState<DockingResults[] | null>(null);
-  const [saveState, setSaveState] = useState<SaveState>('idle');
-  const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const { user } = useUser();
-  const firestore = useFirestore();
-
-  const form = useForm<z.infer<typeof dockingSchema>>({
-    resolver: zodResolver(dockingSchema),
-    defaultValues: {
-      smiles: [],
-      proteinTargets: [],
-      diseaseKeywords: [],
-    },
-  });
-
-  const selectedSmiles = form.watch('smiles');
-  const selectedProteinNames = form.watch('proteinTargets');
-  const selectedDiseaseKeywords = form.watch('diseaseKeywords');
-
-  const saveDockingResults = async (firestore: any, userId: string, results: DockingResults[]) => {
+async function saveDockingResults(firestore: any, userId: string, results: DockingResults[]) {
     if (!firestore || !userId || !results || results.length === 0) {
       throw new Error("User ID, Firestore instance, and results are required to save.");
     }
@@ -87,6 +65,29 @@ function Dashboard() {
         throw new Error("Could not save docking results due to a database error or permissions issue.");
     }
 }
+
+
+function Dashboard() {
+  const [step, setStep] = useState<ProcessStep>('idle');
+  const [results, setResults] = useState<DockingResults[] | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const form = useForm<z.infer<typeof dockingSchema>>({
+    resolver: zodResolver(dockingSchema),
+    defaultValues: {
+      smiles: [],
+      proteinTargets: [],
+      diseaseKeywords: [],
+    },
+  });
+
+  const selectedSmiles = form.watch('smiles');
+  const selectedProteinNames = form.watch('proteinTargets');
+  const selectedDiseaseKeywords = form.watch('diseaseKeywords');
 
 
   useEffect(() => {
@@ -386,4 +387,3 @@ export default function DashboardPage() {
   );
 }
 
-    
