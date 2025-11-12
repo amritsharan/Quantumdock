@@ -98,7 +98,10 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
                           unoptimized
                         />
                         <p className='font-semibold text-sm'>{mol.name}</p>
-                        <p className='text-xs text-muted-foreground font-mono'>{mol.formula}</p>
+                        <div className="text-xs text-muted-foreground space-y-1 text-center">
+                            <p className='font-mono'>{mol.formula}</p>
+                            <p className='font-mono'>MW: {mol.molecularWeight.toFixed(2)}</p>
+                        </div>
                       </div>
                   </div>
                 </CarouselItem>
@@ -113,4 +116,3 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
 
   return null;
 }
-
