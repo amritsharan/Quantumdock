@@ -4,153 +4,78 @@
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
-import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { PredictBindingAffinitiesInput } from '@/ai/flows/predict-binding-affinities';
 
 
-// Helper function for retrying promises with exponential backoff
-export async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay = 2000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
-  let lastError: Error | undefined;
+/**
+ * A robust wrapper for the `predictBindingAffinities` AI call that includes
+ * retry logic with exponential backoff. This is essential for handling
+ * transient server errors like 503 (Service Unavailable) or 429 (Rate Limiting).
+ * @param input The input for the AI prediction.
+ * @param retries The number of times to retry the request.
+ * @param delay The initial delay between retries, which will be doubled on each subsequent attempt.
+ * @returns A promise that resolves with the prediction result.
+ * @throws An error if the request fails after all retry attempts.
+ */
+async function predictWithRetry(input: PredictBindingAffinitiesInput, retries = 5, delay = 2000) {
+  let lastError: any;
+
   for (let i = 0; i < retries; i++) {
     try {
-      return await fn();
+      // Attempt to get the prediction
+      const result = await predictBindingAffinities(input);
+      if (!result || typeof result.bindingAffinity !== 'number') {
+        throw new Error('Invalid response from prediction model.');
+      }
+      return result; // Success, return the result
     } catch (error: any) {
       lastError = error;
-      // Check for common transient error messages (503, 429, overloaded)
-      if (error.message && (error.message.includes('503') || error.message.includes('429') || error.message.toLowerCase().includes('overloaded') || error.message.toLowerCase().includes('rate limit'))) {
-        console.log(`Attempt ${i + 1} failed with transient error. Retrying in ${delay * (i + 1)}ms...`);
-        await new Promise(res => setTimeout(res, delay * (i + 1)));
+      const errorMessage = error.message.toLowerCase();
+      // Check for specific, retry-able error messages from the AI service
+      if (errorMessage.includes('503') || errorMessage.includes('429') || errorMessage.includes('overloaded') || errorMessage.includes('rate limit')) {
+        // If it's a retry-able error, wait and then continue to the next loop iteration
+        console.log(`Attempt ${i + 1} failed with transient error. Retrying in ${delay}ms...`);
+        await new Promise(res => setTimeout(res, delay));
+        delay *= 2; // Exponential backoff
       } else {
-        // If the error is not a known retryable one, break the loop immediately.
-        break;
+        // If the error is not a transient one, break the loop and re-throw immediately
+        console.error("Non-retryable error during prediction:", error);
+        throw error;
       }
     }
   }
-   if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded')  || lastError.message.includes('429'))) {
-      throw new Error("The AI model is currently overloaded or rate-limited. Please try again in a few moments.");
-  }
-  // If the loop finished because of a non-retryable error, throw that error.
-  // Otherwise, throw the final error message.
-  throw lastError || new Error(finalErr);
+
+  // If the loop completes without a successful return, it means all retries failed.
+  // We throw a user-friendly error.
+  console.error("All retry attempts failed. Last error:", lastError);
+  throw new Error("The AI model is currently overloaded. Please try again in a few moments.");
 }
+
 
 /**
  * [SIMULATION] Simulates running a classical docking tool like AutoDock Vina.
- * To make this real, replace the simulated logic with the commented-out blueprint below.
  * @returns A promise that resolves with a docking score.
  */
 async function runClassicalDocking(smile: string, protein: string): Promise<number> {
   console.log(`[SIMULATION] Running classical docking for ${smile} and ${protein}...`);
-  // Simulate network latency and computation time for a real docking job.
   await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // --- DETERMINISTIC SIMULATION ---
-  // This is no longer random. It produces a consistent score based on the inputs.
-  // A longer SMILES string or protein name will result in a (theoretically) "better" score.
   const baseScore = -5;
   const smileContribution = (smile.length % 10) * 0.3; 
   const proteinContribution = (protein.length % 10) * 0.2;
   const mockScore = baseScore - smileContribution - proteinContribution;
-  
   console.log(`[SIMULATION] Classical docking complete. Score: ${mockScore}`);
   return mockScore;
-  
-  // --- REAL INTEGRATION BLUEPRINT ---
-  /*
-    // To implement this for real, you would replace the simulation logic above with a call
-    // to a dedicated backend service. This is the standard architecture for running heavy
-    // computations from a web application.
-
-    // 1. DEFINE THE BACKEND API REQUEST
-    // The Next.js app sends the user's input to a backend API endpoint.
-    const apiEndpoint = 'https://your-backend-service.com/run-docking';
-    const requestBody = {
-      smiles: smile,
-      protein_name: protein
-    };
-
-    // 2. CALL THE BACKEND SERVICE
-    // This `fetch` call is the bridge between your web UI and the powerful tools on the server.
-    try {
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        // The backend should return meaningful error messages.
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'The docking service failed.');
-      }
-
-      const result = await response.json();
-      const score = result.docking_score;
-      
-      console.log(`Real docking complete. Score: ${score}`);
-      return score;
-
-    } catch (error) {
-        console.error("Error calling docking service:", error);
-        throw error; // Propagate the error to the UI
-    }
-
-    // --- WHAT HAPPENS ON THE BACKEND SERVICE? ---
-    // The backend service (e.g., a Python Flask/FastAPI server) would perform these steps:
-    // a. Receive the request with the SMILES string and protein name.
-    // b. Convert the SMILES string to a PDBQT file using MGLTools' prepare_ligand4.py.
-    // c. Prepare the target protein's PDB file into a PDBQT file using MGLTools' prepare_receptor4.py.
-    // d. Execute the AutoDock Vina command with the prepared files.
-    // e. Parse the output log file from Vina to extract the best binding affinity score.
-    // f. Return the score in the JSON response to the Next.js app.
-  */
-  // --- END REAL INTEGRATION BLUEPRINT ---
 }
 
 
 /**
- * [SIMULATION] Simulates a quantum refinement step using a tool like Qiskit.
- * To make this real, replace the simulated logic with the commented-out blueprint.
+ * [SIMULATION] Simulates a quantum refinement step.
  * @param classicalScore The score from the classical docking.
  * @returns A promise that resolves with a mock quantum-refined energy.
  */
 async function runQuantumRefinementSimulation(classicalScore: number): Promise<number> {
     console.log(`[SIMULATION] Running quantum refinement simulation...`);
-    // --- DETERMINISTIC SIMULATION ---
-    // Simulate a small, predictable improvement over the classical score.
     const mockQuantumRefinedEnergy = classicalScore - 1.25; 
-    
-    // --- REAL INTEGRATION BLUEPRINT FOR QISKIT/VQE/QAOA ---
-    /*
-      // Similar to classical docking, this would be a call to a separate service
-      // that has access to quantum computing resources or simulators.
-
-      // 1. Define the input for the quantum service:
-      // This would include the molecule's structure from the classical docking result pose.
-      const qiskitServiceInput = {
-        docked_pose_pdbqt: 'data_from_classical_docking_result_pose.pdbqt',
-        // Other parameters for the quantum algorithm...
-      };
-
-      // 2. Call the external quantum service:
-      const response = await fetch('http://your-quantum-service/calculate-energy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(qiskitServiceInput),
-      });
-
-      if (!response.ok) {
-        throw new Error('Quantum refinement service failed.');
-      }
-
-      // 3. Get the result:
-      // The service would return the calculated energy.
-      const { refined_energy } = await response.json();
-      
-      console.log(`Real quantum refinement complete. Energy: ${refined_energy}`);
-      return refined_energy;
-    */
-    // --- END REAL INTEGRATION BLUEPRINT ---
-
     return mockQuantumRefinedEnergy;
 }
 
@@ -159,9 +84,11 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
   const validatedData = dockingSchema.parse(data);
   const successfulResults: DockingResults[] = [];
 
+  // Process each combination sequentially to avoid overwhelming the AI service
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
       try {
+        console.log(`Processing combination: ${smile} + ${protein}`);
         const classicalScore = await runClassicalDocking(smile, protein);
         const quantumRefinedEnergy = await runQuantumRefinementSimulation(classicalScore);
         
@@ -171,11 +98,8 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
             proteinTargetName: protein,
         };
 
-        const predictionResult = await retryPromise(() => predictBindingAffinities(predictionInput));
-
-        if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number' || !predictionResult.comparison) {
-          throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
-        }
+        // Use the new robust retry mechanism for the AI call
+        const predictionResult = await predictWithRetry(predictionInput);
 
         const finalResult: DockingResults = {
           bindingAffinity: predictionResult.bindingAffinity,
@@ -186,14 +110,16 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
           proteinTarget: protein,
         };
         successfulResults.push(finalResult);
+
       } catch (error) {
          console.error(`Error processing combination: ${smile} + ${protein}. Error:`, error);
-         // Optionally re-throw or handle the error for the entire process to fail
+         // Propagate the error to the client to be displayed in a toast
          throw error;
       }
     }
   }
 
+  // This check is important. If the loops were entered but no results were successful, it's an issue.
   if (successfulResults.length === 0 && validatedData.smiles.length > 0 && validatedData.proteinTargets.length > 0) {
       throw new Error("All docking simulations failed. Please check the server logs for more details.");
   }
@@ -206,12 +132,14 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     return [];
   }
   try {
-    const suggestionsPromises = keywords.map(keyword => suggestTargetProteins({ keyword }));
+    // This can still run in parallel as it's less intensive and less likely to fail
+    const suggestionsPromises = keywords.map(keyword => predictWithRetry({ keyword } as any));
     const results = await Promise.all(suggestionsPromises);
-    const allProteins = results.flatMap(result => result.proteins || []);
+    const allProteins = results.flatMap((result: any) => result.proteins || []);
     return [...new Set(allProteins)];
   } catch (error) {
     console.error("Error suggesting proteins:", error);
+    // Return empty array on failure to prevent crashing the selection page
     return [];
   }
 }
