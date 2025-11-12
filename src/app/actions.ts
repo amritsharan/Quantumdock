@@ -132,10 +132,9 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     return [];
   }
   try {
-    // This can still run in parallel as it's less intensive and less likely to fail
-    const suggestionsPromises = keywords.map(keyword => predictWithRetry({ keyword } as any));
+    const suggestionsPromises = keywords.map(keyword => suggestTargetProteins({ keyword }));
     const results = await Promise.all(suggestionsPromises);
-    const allProteins = results.flatMap((result: any) => result.proteins || []);
+    const allProteins = results.flatMap(result => result.proteins || []);
     return [...new Set(allProteins)];
   } catch (error) {
     console.error("Error suggesting proteins:", error);
