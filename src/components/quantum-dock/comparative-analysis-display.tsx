@@ -27,17 +27,11 @@ export function ComparativeAnalysisDisplay({ analysis }: ComparativeAnalysisDisp
           <p className="text-sm text-muted-foreground">{analysis.overallAssessment}</p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-1 gap-4">
             <div className="space-y-2">
                 <h4 className="font-semibold flex items-center"><CheckCircle className="h-5 w-5 mr-2 text-green-500" />Project Strengths</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm">
                     {analysis.projectStrengths.map((strength, i) => <li key={i}>{strength}</li>)}
-                </ul>
-            </div>
-            <div className="space-y-2">
-                <h4 className="font-semibold flex items-center"><AlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />Project Weaknesses</h4>
-                <ul className="list-disc pl-5 space-y-1 text-sm">
-                    {analysis.projectWeaknesses.map((weakness, i) => <li key={i}>{weakness}</li>)}
                 </ul>
             </div>
         </div>
