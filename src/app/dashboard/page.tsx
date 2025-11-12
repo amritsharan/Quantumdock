@@ -83,10 +83,10 @@ function Dashboard() {
 
 
   const totalCombinations = useMemo(() => {
-    const numSmiles = selectedMolecules?.length || 0;
-    const numProteins = selectedProteins?.length || 0;
+    const numSmiles = selectedSmiles?.length || 0;
+    const numProteins = selectedProteinNames?.length || 0;
     return numSmiles * numProteins;
-  }, [selectedMolecules, selectedProteins]);
+  }, [selectedSmiles, selectedProteinNames]);
   
 
   const onSubmit = async (data: z.infer<typeof dockingSchema>) => {
@@ -104,6 +104,16 @@ function Dashboard() {
     setSaveState('idle');
 
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
+    if(totalCombinations === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Selection Error',
+            description: 'Please select at least one molecule and one protein target.',
+        });
+        setStep('idle');
+        return;
+    }
+
     toast({
       title: 'Starting Simulation...',
       description: `Running classical and quantum simulations for ${totalCombinations} combinations.`,
@@ -223,16 +233,16 @@ function Dashboard() {
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                     <div className="grid gap-2">
-                        <Label>1. Select Molecules ({selectedMolecules.length})</Label>
+                        <Label>1. Select Molecules ({selectedSmiles.length})</Label>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-molecule')}>
-                                {selectedMolecules.length > 0 ? `Change Molecule Selection` : 'Select Molecules'}
+                                {selectedSmiles.length > 0 ? `Change Molecule Selection` : 'Select Molecules'}
                             </Link>
                         </Button>
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>2. Select Diseases ({selectedDiseaseKeywords.length}) (Optional)</Label>
+                        <Label>2. Select Diseases ({selectedDiseaseKeywords.length})</Label>
                         <Button asChild variant="outline">
                             <Link href={buildLink('/select-disease')}>
                                 {selectedDiseaseKeywords.length > 0 ? `Change Disease Selection` : 'Select Diseases'}
@@ -340,5 +350,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
