@@ -3,7 +3,6 @@
 
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { ComparativeAnalysisDisplay } from '@/components/quantum-dock/comparative-analysis-display';
 import type { DockingResults } from '@/lib/schema';
@@ -22,16 +21,7 @@ interface ResultsTabsProps {
 }
 
 export function ResultsTabs({ results, analysis, saveState, onSave }: ResultsTabsProps) {
-  const isDocked = results && results.length > 0;
-  const selectedSmiles = useMemo(() => results ? [...new Set(results.map(r => r.moleculeSmiles))] : [], [results]);
-
-  const bestSmiles = useMemo(() => {
-    if (!results || results.length === 0) return null;
-    return results.reduce((best, current) => {
-        return current.bindingAffinity < best.bindingAffinity ? current : best;
-    }).moleculeSmiles;
-  }, [results]);
-
+  
   const chartData = useMemo(() => {
     if (!results) return [];
     const resultsWithNames = results.map(result => {
@@ -55,21 +45,14 @@ export function ResultsTabs({ results, analysis, saveState, onSave }: ResultsTab
   };
 
   return (
-    <Tabs defaultValue="visualization">
+    <Tabs defaultValue="chart">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="visualization">Visualization & Chart</TabsTrigger>
+        <TabsTrigger value="chart">Binding Affinity Chart</TabsTrigger>
         <TabsTrigger value="results">Detailed Results</TabsTrigger>
         <TabsTrigger value="analysis">Literature Analysis</TabsTrigger>
       </TabsList>
-      <TabsContent value="visualization" className="mt-4">
+      <TabsContent value="chart" className="mt-4">
         <div className="grid gap-6">
-            <div className="min-h-[400px] lg:min-h-[400px] relative rounded-md border">
-                <MoleculeViewer
-                    isDocked={isDocked}
-                    selectedSmiles={selectedSmiles}
-                    bestSmiles={bestSmiles}
-                />
-            </div>
             <div>
                 <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
                 <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>

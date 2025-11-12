@@ -212,11 +212,12 @@ function Dashboard() {
 
   const isLoading = step === 'predicting' || step === 'analyzing';
   
-  const bestSmiles = useMemo(() => {
+  const bestResult = useMemo(() => {
     if (!results || results.length === 0) return null;
-    return results.reduce((best, current) => {
+    const best = results.reduce((best, current) => {
         return current.bindingAffinity < best.bindingAffinity ? current : best;
-    }).moleculeSmiles;
+    });
+    return molecules.find(m => m.smiles === best.moleculeSmiles) || null;
   }, [results]);
 
   return (
@@ -235,7 +236,7 @@ function Dashboard() {
                     
                     <div className="grid gap-2">
                         <Label>1. Select Molecules ({selectedMolecules.length})</Label>
-                        <Card className="min-h-[60px]">
+                         <Card className="min-h-[60px]">
                            <CardContent className="p-2">
                              {selectedMolecules.length > 0 ? (
                                 <ScrollArea className="h-16">
@@ -331,15 +332,15 @@ function Dashboard() {
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Molecule Viewer</CardTitle>
+                    <CardTitle>Visualization</CardTitle>
                     <CardDescription>Visualize the selected molecules. Best result shown after simulation.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <div className="min-h-[250px] relative rounded-md border flex items-center justify-center">
                         <MoleculeViewer
-                            isDocked={!!results}
-                            selectedSmiles={selectedSmiles}
-                            bestSmiles={bestSmiles}
+                           isDocked={!!results}
+                           molecules={selectedMolecules}
+                           bestResultMolecule={bestResult}
                         />
                     </div>
                 </CardContent>
@@ -389,5 +390,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
