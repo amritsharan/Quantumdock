@@ -7,13 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DockingForm } from '@/components/quantum-dock/docking-form';
-import { runFullDockingProcess } from '@/app/actions';
+import { runFullDockingProcess, saveDockingResults } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
-import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
@@ -22,6 +20,9 @@ import { proteins } from '@/lib/proteins';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
+
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'analyzing' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -35,7 +36,6 @@ function Dashboard() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
