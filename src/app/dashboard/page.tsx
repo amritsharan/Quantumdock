@@ -47,6 +47,7 @@ function Dashboard() {
 
   const selectedSmiles = form.watch('smiles');
   const selectedProteinNames = form.watch('proteinTargets');
+  const selectedDiseaseKeywords = form.watch('diseaseKeywords');
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -222,7 +223,25 @@ function Dashboard() {
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                     <div className="grid gap-2">
-                        <Label>Protein Targets ({selectedProteins.length})</Label>
+                        <Label>1. Select Molecules ({selectedMolecules.length})</Label>
+                         <Button asChild variant="outline">
+                            <Link href={buildLink('/select-molecule')}>
+                                Change Selection
+                            </Link>
+                        </Button>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>2. Select Diseases ({selectedDiseaseKeywords.length}) (Optional)</Label>
+                        <Button asChild variant="outline">
+                            <Link href={buildLink('/select-disease')}>
+                                Select Diseases
+                            </Link>
+                        </Button>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>3. Protein Targets ({selectedProteins.length})</Label>
                          <Card className="min-h-[80px]">
                            <CardContent className="p-2">
                              {selectedProteins.length > 0 ? (
@@ -242,25 +261,9 @@ function Dashboard() {
                              )}
                            </CardContent>
                         </Card>
-                         <div className="grid grid-cols-2 gap-2">
-                          <Button asChild variant="outline">
-                              <Link href={buildLink('/select-protein')}>
-                                  Change Selection
-                              </Link>
-                          </Button>
-                           <Button asChild variant="outline">
-                              <Link href={buildLink('/select-disease')}>
-                                  Select by Disease
-                              </Link>
-                          </Button>
-                        </div>
-                    </div>
-
-                     <div className="grid gap-2">
-                        <Label>Molecules ({selectedMolecules.length})</Label>
                          <Button asChild variant="outline">
-                            <Link href={buildLink('/select-molecule')}>
-                                Change Selection ({selectedMolecules.length})
+                            <Link href={buildLink('/select-protein')}>
+                                Change Protein Selection
                             </Link>
                         </Button>
                     </div>
@@ -337,5 +340,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
