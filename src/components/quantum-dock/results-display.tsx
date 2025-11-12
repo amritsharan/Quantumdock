@@ -225,12 +225,29 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="p-4 bg-muted/50">
-                  <div className="grid grid-cols-1">
-                    <div>
-                      <p className="font-semibold text-sm">AI Rationale</p>
-                      <p className="text-xs text-muted-foreground">{result.rationale}</p>
+                 <div className="p-4 bg-muted/50 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <p className="font-semibold text-sm">Model Score Comparison</p>
+                       <div className='flex items-end gap-4'>
+                          <div>
+                            <p className='text-xs text-muted-foreground'>QuantumDock (nM)</p>
+                            <p className='text-2xl font-bold text-accent'>{result.bindingAffinity.toFixed(2)}</p>
+                          </div>
+                           <div>
+                            <p className='text-xs text-muted-foreground'>Standard ML (nM)</p>
+                            <p className='text-xl font-semibold'>{result.standardModelScore.toFixed(2)}</p>
+                          </div>
+                       </div>
                     </div>
+                     <div className="space-y-2">
+                      <p className="font-semibold text-sm">AI Commentary</p>
+                      <p className="text-xs text-muted-foreground">{result.aiCommentary}</p>
+                    </div>
+                  </div>
+                  <div className='pt-4 border-t'>
+                    <p className="font-semibold text-sm">Interaction Rationale</p>
+                    <p className="text-xs text-muted-foreground">{result.rationale}</p>
                   </div>
                 </div>
               </AccordionContent>
