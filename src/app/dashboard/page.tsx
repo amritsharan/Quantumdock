@@ -10,52 +10,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DockingForm } from '@/components/quantum-dock/docking-form';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Box, Dna, FlaskConical, Save, Target, Check, AlertTriangle, ListChecks } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
-import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
-
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { molecules } from '@/lib/molecules';
+import { proteins } from '@/lib/proteins';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'analyzing' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: string; description: string }> = {
-  idle: {
-    icon: <Box className="h-12 w-12 text-muted-foreground" />,
-    title: 'Ready for Docking',
-    description: 'Enter molecular data and select a target to begin the simulation.',
-  },
-  classical: {
-    icon: <Dna className="h-12 w-12 animate-spin text-accent" />,
-    title: 'Performing Classical Docking...',
-    description: 'Simulating AutoDock to generate initial poses. This may take a moment.',
-  },
-  predicting: {
-    icon: <FlaskConical className="h-12 w-12 text-accent" />,
-    title: 'Simulating quantum refinement & predicting affinity...',
-    description: 'Simulating quantum analysis and using AI to predict binding strength.',
-  },
-  analyzing: {
-    icon: <BrainCircuit className="h-12 w-12 animate-pulse text-accent" />,
-    title: 'Performing Comparative Literature Analysis...',
-    description: 'Comparing your simulation results against recent scientific literature.',
-  },
-  done: {
-    icon: <Check className="h-12 w-12 text-green-500" />,
-    title: 'Docking & Analysis Complete',
-    description: 'Results are available in the tabs below. You can now save or start a new simulation.',
-  },
-  error: {
-    icon: <AlertTriangle className="h-12 w-12 text-destructive" />,
-    title: 'An Error Occurred',
-    description: 'Something went wrong during the process. Please check your inputs or try again later.',
-  },
-};
 
 function Dashboard() {
   const [step, setStep] = useState<ProcessStep>('idle');
@@ -67,7 +37,6 @@ function Dashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  
   const form = useForm<z.infer<typeof dockingSchema>>({
     resolver: zodResolver(dockingSchema),
     defaultValues: {
@@ -76,6 +45,9 @@ function Dashboard() {
       diseaseKeywords: [],
     },
   });
+
+  const selectedSmiles = form.watch('smiles');
+  const selectedProteinNames = form.watch('proteinTargets');
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -99,6 +71,32 @@ function Dashboard() {
   }, [searchParams, form]);
 
 
+  const { selectedMolecules, selectedProteins, maxCombinedMW } = useMemo(() => {
+    const sm = molecules.filter(m => selectedSmiles.includes(m.smiles));
+    const sp = proteins.filter(p => selectedProteinNames.includes(p.name));
+    
+    let maxMw = 0;
+    if (sm.length > 0 && sp.length > 0) {
+        const maxMoleculeWeight = Math.max(...sm.map(m => m.molecularWeight));
+        const maxProteinWeight = Math.max(...sp.map(p => p.molecularWeight));
+        maxMw = (maxMoleculeWeight + maxProteinWeight) / 1000; // Convert to kDa
+    }
+    
+    return {
+      selectedMolecules: sm,
+      selectedProteins: sp,
+      maxCombinedMW: maxMw,
+    };
+  }, [selectedSmiles, selectedProteinNames]);
+
+
+  const totalCombinations = useMemo(() => {
+    const numSmiles = selectedMolecules?.length || 0;
+    const numProteins = selectedProteins?.length || 0;
+    return numSmiles * numProteins;
+  }, [selectedMolecules, selectedProteins]);
+  
+
   const onSubmit = async (data: z.infer<typeof dockingSchema>) => {
     if (!user) {
         toast({
@@ -108,7 +106,7 @@ function Dashboard() {
         });
         return;
     }
-    setStep('classical');
+    setStep('predicting');
     setResults(null);
     setAnalysis(null);
     setSaveState('idle');
@@ -120,30 +118,12 @@ function Dashboard() {
     });
 
     try {
-      // Step 1: Run docking process
-      const processPromise = runFullDockingProcess(data, user.uid);
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setStep('predicting');
-
-      const finalResults = await processPromise;
+      const finalResults = await runFullDockingProcess(data, user.uid);
       setResults(finalResults);
-
+      setStep('done');
       toast({
         title: 'Simulations Complete',
-        description: `Binding affinity predictions were successful. Now analyzing against literature...`,
-      });
-
-      // Step 2: Run comparative analysis
-      setStep('analyzing');
-      const analysisResult = await analyzeResearchComparison(finalResults);
-      setAnalysis(analysisResult);
-      
-      setStep('done');
-
-      toast({
-        title: 'Analysis Complete',
-        description: 'Comparative literature analysis is finished.',
+        description: `Binding affinity predictions were successful.`,
       });
 
     } catch (error: any) {
@@ -159,124 +139,179 @@ function Dashboard() {
     }
   };
 
-  const handleSaveResults = async () => {
-    if (!user || !firestore || !results) {
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: 'User is not authenticated, results are missing, or Firestore is unavailable.',
-      });
-      return;
-    }
+  const chartData = useMemo(() => {
+    if (!results) return [];
+    const resultsWithNames = results.map(result => {
+        const molecule = molecules.find(m => m.smiles === result.moleculeSmiles);
+        return {
+            ...result,
+            name: molecule ? molecule.name : 'Unknown Molecule',
+        };
+    });
+    return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
+      name: `${res.name} + ${res.proteinTarget}`,
+      'Binding Affinity (nM)': res.bindingAffinity,
+    }));
+  }, [results]);
 
-    setSaveState('saving');
-    try {
-      const historyQuery = query(
-        collection(firestore, "users", user.uid, "loginHistory"),
-        orderBy("loginTime", "desc"),
-        limit(1)
-      );
-
-      const historySnapshot = await getDocs(historyQuery);
-      if (historySnapshot.empty) {
-        throw new Error("No active login session found. Please sign out and back in.");
-      }
-
-      const latestSessionDoc = historySnapshot.docs[0];
-      const simulationsCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory', latestSessionDoc.id, 'dockingSimulations');
-      
-      let savedCount = 0;
-      for (const result of results) {
-          const simulationData = {
-              userId: user.uid,
-              loginHistoryId: latestSessionDoc.id,
-              timestamp: serverTimestamp(),
-              moleculeSmiles: result.moleculeSmiles,
-              proteinTarget: result.proteinTarget,
-              bindingAffinity: result.bindingAffinity,
-              rationale: result.rationale,
-              standardModelScore: result.standardModelScore,
-              explanation: result.explanation,
-          };
-          
-          addDoc(simulationsCollectionRef, simulationData).catch((serverError) => {
-              const permissionError = new FirestorePermissionError({
-                  path: simulationsCollectionRef.path,
-                  operation: 'create',
-                  requestResourceData: simulationData,
-              });
-              errorEmitter.emit('permission-error', permissionError);
-          });
-          savedCount++;
-      }
-
-      setSaveState('saved');
-      toast({
-        title: 'Results Saved',
-        description: `Successfully saved ${savedCount} simulation results to your history.`,
-      });
-
-    } catch (error) {
-      setSaveState('error');
-      console.error('Failed to save docking results:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: (error as Error).message || 'An unexpected error occurred while saving.',
-      });
-    }
+  const chartConfig = {
+    'Binding Affinity (nM)': {
+      label: 'Binding Affinity (nM)',
+      color: 'hsl(var(--accent))',
+    },
   };
 
+  const buildLink = (pathname: string) => {
+    const params = new URLSearchParams();
+    const smiles = form.getValues('smiles');
+    const diseases = form.getValues('diseaseKeywords');
+    const proteins = form.getValues('proteinTargets');
 
-  const currentStepInfo = stepDescriptions[step];
+    if (smiles?.length) params.set('smiles', JSON.stringify(smiles));
+    if (diseases?.length) params.set('diseases', JSON.stringify(diseases));
+    if (proteins?.length) params.set('proteins', JSON.stringify(proteins));
 
-  const renderStatus = () => (
-    <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center">
-        {currentStepInfo.icon}
-        <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-        <p className="text-muted-foreground">{currentStepInfo.description}</p>
-    </div>
-  );
+    return `${pathname}?${params.toString()}`;
+  }
+
+  const isLoading = step === 'predicting';
 
   return (
     <>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">
+        <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 md:grid-cols-[320px_1fr] lg:grid-cols-[320px_1fr]">
+          
+          {/* Left Column for Controls */}
           <div className="grid auto-rows-max items-start gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Docking Simulation</CardTitle>
-                <CardDescription>Input your molecule(s) and target(s) to begin.</CardDescription>
+                <CardTitle>Controls</CardTitle>
+                <CardDescription>Select molecules and proteins to begin.</CardDescription>
               </CardHeader>
               <CardContent>
-                <DockingForm 
-                  form={form} 
-                  onSubmit={onSubmit} 
-                  isLoading={step !== 'idle' && step !== 'done' && step !== 'error'}
-                />
+                <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
+                    <div className="grid gap-2">
+                        <Label>Protein Targets ({selectedProteins.length})</Label>
+                         <Card className="min-h-[80px]">
+                           <CardContent className="p-2">
+                             {selectedProteins.length > 0 ? (
+                                <ScrollArea className="h-20">
+                                    <ul className="space-y-1">
+                                        {selectedProteins.map(p => (
+                                            <li key={p.name} className="text-sm p-2 bg-muted/50 rounded-md">
+                                                {p.name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </ScrollArea>
+                             ) : (
+                                <div className="flex items-center justify-center h-20">
+                                    <p className="text-sm text-muted-foreground">No targets selected.</p>
+                                </div>
+                             )}
+                           </CardContent>
+                        </Card>
+                        <Button asChild variant="outline">
+                            <Link href={buildLink('/select-protein')}>
+                                Change Selection ({selectedProteins.length})
+                            </Link>
+                        </Button>
+                    </div>
+
+                     <div className="grid gap-2">
+                        <Label>Molecules ({selectedMolecules.length})</Label>
+                         <Button asChild variant="outline">
+                            <Link href={buildLink('/select-molecule')}>
+                                Change Selection ({selectedMolecules.length})
+                            </Link>
+                        </Button>
+                    </div>
+
+                    <Button type="submit" disabled={isLoading || totalCombinations === 0} className="w-full">
+                      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {isLoading ? 'Running Simulation...' : `Run Docking for ${totalCombinations} Combination(s)`}
+                    </Button>
+                </form>
               </CardContent>
             </Card>
           </div>
 
+          {/* Right Column for Visualization and Data */}
           <div className="grid auto-rows-max items-start gap-6">
-            <Card className="min-h-[500px]">
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Max Combined MW (kDa)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{maxCombinedMW > 0 ? maxCombinedMW.toFixed(2) : 'N/A'}</p>
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <Card>
                 <CardHeader>
-                    <CardTitle>Analysis & Results</CardTitle>
-                    <CardDescription>View simulation outputs and comparative analysis.</CardDescription>
+                    <CardTitle>Selected Molecule Properties</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {step === 'done' && results && analysis ? (
-                        <ResultsTabs 
-                            results={results}
-                            analysis={analysis}
-                            saveState={saveState}
-                            onSave={handleSaveResults}
-                        />
+                    {selectedMolecules.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {selectedMolecules.map(m => (
+                                <div key={m.smiles} className="text-sm p-3 bg-muted/50 rounded-md">
+                                    <p className="font-bold">{m.name}</p>
+                                    <p><span className="text-muted-foreground">Formula:</span> {m.formula}</p>
+                                    <p><span className="text-muted-foreground">Weight (Da):</span> {m.molecularWeight.toFixed(2)}</p>
+                                </div>
+                            ))}
+                        </div>
                     ) : (
-                        renderStatus()
+                        <div className="flex items-center justify-center h-24">
+                            <p className="text-sm text-muted-foreground">Select molecules to see their properties.</p>
+                        </div>
                     )}
                 </CardContent>
             </Card>
+
+            <Card>
+                 <CardHeader>
+                    <CardTitle>Binding Affinity Chart</CardTitle>
+                    <CardDescription>Lower values indicate stronger binding affinity. Results will appear here after running a simulation.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoading && (
+                        <div className="flex items-center justify-center h-[250px]">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+                    {!isLoading && (!results || results.length === 0) && (
+                        <div className="flex items-center justify-center h-[250px]">
+                            <p className="text-muted-foreground">Run a simulation to see results.</p>
+                        </div>
+                    )}
+                    {!isLoading && results && results.length > 0 && (
+                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+                            <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 150, right: 20 }}>
+                            <CartesianGrid horizontal={false} />
+                            <YAxis
+                                dataKey="name"
+                                type="category"
+                                tickLine={false}
+                                tickMargin={10}
+                                axisLine={false}
+                                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                            />
+                            <XAxis dataKey="Binding Affinity (nM)" type="number" />
+                            <Tooltip
+                                cursor={{ fill: "hsl(var(--muted))" }}
+                                content={<ChartTooltipContent />}
+                            />
+                            <Bar dataKey="Binding Affinity (nM)" radius={4} />
+                            </BarChart>
+                        </ChartContainer>
+                    )}
+                </CardContent>
+            </Card>
+
           </div>
         </div>
       </main>

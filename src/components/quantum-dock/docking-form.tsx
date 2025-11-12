@@ -6,7 +6,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { getProteinSuggestions } from '@/app/actions';
@@ -15,6 +15,8 @@ import { dockingSchema } from '@/lib/schema';
 import { Card, CardContent } from '../ui/card';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 interface DockingFormProps {
   form: UseFormReturn<z.infer<typeof dockingSchema>>;
@@ -25,7 +27,6 @@ interface DockingFormProps {
 export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   const [isPending, startTransition] = useTransition();
   const [suggestedTargets, setSuggestedTargets] = useState<string[]>([]);
-  const searchParams = useSearchParams();
   
   const diseaseKeywords = form.watch('diseaseKeywords');
   const selectedSmiles = form.watch('smiles');
@@ -76,114 +77,43 @@ export function DockingForm({ form, onSubmit, isLoading }: DockingFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-        <FormField
-          control={form.control}
-          name="smiles"
-          render={() => (
-            <FormItem>
-              <FormLabel>Selected Molecules ({selectedMolecules.length})</FormLabel>
-                <Card className="min-h-[100px]">
-                   <CardContent className="p-2">
-                     {selectedMolecules.length > 0 ? (
-                        <ScrollArea className="h-24">
-                            <ul className="space-y-1">
-                                {selectedMolecules.map(m => (
-                                    <li key={m.smiles} className="text-sm p-2 bg-muted/50 rounded-md">
-                                        {m.name}
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
-                     ) : (
-                        <div className="flex items-center justify-center h-24">
-                            <p className="text-sm text-muted-foreground">No molecules selected.</p>
-                        </div>
-                     )}
-                   </CardContent>
-                </Card>
-                 <Button asChild variant="outline" className="w-full">
-                    <Link href={buildLink('/select-molecule')}>
-                        {selectedMolecules.length > 0 ? `Change Selection (${selectedMolecules.length})` : 'Select Molecules'}
-                    </Link>
-                </Button>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         
-        <FormField
-          control={form.control}
-          name="diseaseKeywords"
-          render={() => (
-            <FormItem>
-              <FormLabel className="flex items-center justify-between">
-                Selected Diseases ({diseaseKeywords.length})
-                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              </FormLabel>
-               <Card className="min-h-[100px]">
-                   <CardContent className="p-2">
-                     {diseaseKeywords.length > 0 ? (
-                        <ScrollArea className="h-24">
-                            <ul className="space-y-1">
-                                {diseaseKeywords.map(d => (
-                                    <li key={d} className="text-sm p-2 bg-muted/50 rounded-md">
-                                        {d}
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
-                     ) : (
-                        <div className="flex items-center justify-center h-24">
-                            <p className="text-sm text-muted-foreground">No diseases selected.</p>
-                        </div>
-                     )}
-                   </CardContent>
-                </Card>
-                 <Button asChild variant="outline" className="w-full">
-                    <Link href={buildLink('/select-disease')}>
-                         {diseaseKeywords.length > 0 ? `Change Selection (${diseaseKeywords.length})` : 'Select Diseases'}
-                    </Link>
-                </Button>
-              <FormDescription>Get AI-powered protein target suggestions.</FormDescription>
-               <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="proteinTargets"
-          render={() => (
-            <FormItem>
-              <FormLabel>Protein Targets ({selectedProteins.length})</FormLabel>
-                <Card className="min-h-[100px]">
-                   <CardContent className="p-2">
-                     {selectedProteins.length > 0 ? (
-                        <ScrollArea className="h-24">
-                            <ul className="space-y-1">
-                                {selectedProteins.map(p => (
-                                    <li key={p.name} className="text-sm p-2 bg-muted/50 rounded-md">
-                                        {p.name}
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
-                     ) : (
-                        <div className="flex items-center justify-center h-24">
-                            <p className="text-sm text-muted-foreground">No protein targets selected.</p>
-                        </div>
-                     )}
-                   </CardContent>
-                </Card>
-              <Button asChild variant="outline" className="w-full">
-                  <Link href={buildLink('/select-protein')}>
-                      {selectedProteins.length > 0 ? `Change Selection (${selectedProteins.length})` : 'Select Protein Targets'}
-                  </Link>
-              </Button>
-               <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid gap-2">
+            <Label>Protein Targets ({selectedProteins.length})</Label>
+              <Card className="min-h-[80px]">
+                <CardContent className="p-2">
+                  {selectedProteins.length > 0 ? (
+                    <ScrollArea className="h-20">
+                        <ul className="space-y-1">
+                            {selectedProteins.map(p => (
+                                <li key={p.name} className="text-sm p-2 bg-muted/50 rounded-md">
+                                    {p.name}
+                                </li>
+                            ))}
+                        </ul>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex items-center justify-center h-20">
+                        <p className="text-sm text-muted-foreground">No protein targets selected.</p>
+                    </div>
+                  )}
+                </CardContent>
+            </Card>
+            <Button asChild variant="outline">
+                <Link href={buildLink('/select-protein')}>
+                    Change Selection ({selectedProteins.length})
+                </Link>
+            </Button>
+        </div>
+        
+        <div className="grid gap-2">
+          <Label>Selected Molecules ({selectedMolecules.length})</Label>
+           <Button asChild variant="outline">
+              <Link href={buildLink('/select-molecule')}>
+                  {selectedMolecules.length > 0 ? `Change Selection (${selectedMolecules.length})` : 'Select Molecules'}
+              </Link>
+          </Button>
+        </div>
 
         <Button type="submit" disabled={isLoading || totalCombinations === 0} className="w-full">
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
