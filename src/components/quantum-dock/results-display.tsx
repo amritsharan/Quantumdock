@@ -271,5 +271,3 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     </Card>
   );
 }
-
-    

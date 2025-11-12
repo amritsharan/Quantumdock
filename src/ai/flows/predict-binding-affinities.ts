@@ -46,7 +46,9 @@ const PredictBindingAffinitiesOutputSchema = z.object({
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
     standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated standard ML model (e.g., a GNN) for comparison.'),
-    aiCommentary: z.string().describe('A brief commentary comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+    explanation: z.string().describe('A brief explanation comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+    quantumModelTime: z.number().describe('A fictional time in seconds (e.g., between 2.5 and 4.0) representing how long the entire QuantumDock pipeline (classical + quantum + AI) took.'),
+    standardModelTime: z.number().describe('A fictional time in seconds (e.g., between 15 and 30) representing how long a standard, non-quantum ML model would take to run the same analysis.'),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
@@ -72,12 +74,12 @@ You will be given:
 Your tasks are:
 1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity.
 2.  **Provide a Confidence Score:** Give a confidence score from 0.70 to 0.85 for your prediction. This value MUST be between 0.70 and 0.85, inclusive.
-3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner. Your rationale should:
-    -   Reference specific, plausible intermolecular interactions (e.g., hydrogen bonds, hydrophobic interactions, pi-stacking) between the molecule and the protein target.
-    -   Mention concepts like ligand strain energy or conformational stability.
-    -   Justify the predicted affinity by connecting it to the stability implied by the quantum-refined energy score.
+3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Simulate a Standard Model Score:** Generate a *fictional* binding affinity score that a conventional ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
-5.  **Provide AI Commentary:** Write a brief commentary explaining why your quantum-informed prediction might differ from the standard model's score. For example, mention that your model is more sensitive to subtle quantum-level interactions (like electron correlation or polarization effects) that classical models might miss.
+5.  **Provide an Explanation:** Write a brief explanation for why your quantum-informed prediction might differ from the standard model's score. Mention sensitivity to quantum effects.
+6.  **Simulate Performance Times:**
+    -   Generate a fictional \`quantumModelTime\` in seconds (between 2.5 and 4.0) for the complete QuantumDock pipeline.
+    -   Generate a fictional \`standardModelTime\` in seconds (between 15 and 30) for a standard ML model, making sure it is significantly slower than the quantum model time.
 
 **Simulated Inputs:**
 - Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
