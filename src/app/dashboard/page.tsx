@@ -8,23 +8,17 @@ import { z } from 'zod';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DockingForm } from '@/components/quantum-dock/docking-form';
-import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
-import { ResultsDisplay } from '@/components/quantum-dock/results-display';
 import { runFullDockingProcess } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, Box, Dna, FlaskConical, Save, Target, Check, AlertTriangle, ListChecks } from 'lucide-react';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { molecules, type Molecule } from '@/lib/molecules';
-import { proteins, type Protein } from '@/lib/proteins';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
-import { ComparativeAnalysisDisplay } from '@/components/quantum-dock/comparative-analysis-display';
+import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
 
 
 type ProcessStep = 'idle' | 'classical' | 'predicting' | 'analyzing' | 'done' | 'error';
@@ -52,12 +46,12 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
     description: 'Comparing your simulation results against recent scientific literature.',
   },
   done: {
-    icon: <Box className="h-12 w-12 text-accent" />,
+    icon: <Check className="h-12 w-12 text-green-500" />,
     title: 'Docking & Analysis Complete',
-    description: 'Results are displayed below. You can now save the data or start a new simulation.',
+    description: 'Results are available in the tabs below. You can now save or start a new simulation.',
   },
   error: {
-    icon: <Box className="h-12 w-12 text-destructive" />,
+    icon: <AlertTriangle className="h-12 w-12 text-destructive" />,
     title: 'An Error Occurred',
     description: 'Something went wrong during the process. Please check your inputs or try again later.',
   },
@@ -66,7 +60,6 @@ const stepDescriptions: Record<ProcessStep, { icon: React.ReactNode; title: stri
 function Dashboard() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
-  const [isDocked, setIsDocked] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [analysis, setAnalysis] = useState<ResearchComparisonOutput | null>(null);
   const { toast } = useToast();
@@ -83,36 +76,6 @@ function Dashboard() {
       diseaseKeywords: [],
     },
   });
-
-  const selectedSmiles = form.watch('smiles');
-  const selectedProteinNames = form.watch('proteinTargets');
-
-  const selectedMolecules = useMemo(() => {
-      if (!selectedSmiles) return [];
-      return molecules.filter(m => selectedSmiles.includes(m.smiles));
-  }, [selectedSmiles]);
-  
-  const totalMolecularWeight = useMemo(() => {
-    const selectedMolecules = molecules.filter(m => selectedSmiles.includes(m.smiles));
-    const selectedProteins = proteins.filter(p => selectedProteinNames.includes(p.name));
-
-    const maxMoleculeWeight = selectedMolecules.length > 0
-      ? Math.max(...selectedMolecules.map(m => m.molecularWeight))
-      : 0;
-
-    const maxProteinWeight = selectedProteins.length > 0
-      ? Math.max(...selectedProteins.map(p => p.molecularWeight))
-      : 0;
-      
-    return maxMoleculeWeight + maxProteinWeight;
-  }, [selectedSmiles, selectedProteinNames]);
-  
-  const bestSmiles = useMemo(() => {
-    if (!results || results.length === 0) return null;
-    return results.reduce((best, current) => {
-        return current.bindingAffinity < best.bindingAffinity ? current : best;
-    }).moleculeSmiles;
-  }, [results]);
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -148,7 +111,6 @@ function Dashboard() {
     setStep('classical');
     setResults(null);
     setAnalysis(null);
-    setIsDocked(false);
     setSaveState('idle');
 
     const totalCombinations = data.smiles.length * data.proteinTargets.length;
@@ -178,7 +140,6 @@ function Dashboard() {
       setAnalysis(analysisResult);
       
       setStep('done');
-      setIsDocked(true);
 
       toast({
         title: 'Analysis Complete',
@@ -234,6 +195,8 @@ function Dashboard() {
               proteinTarget: result.proteinTarget,
               bindingAffinity: result.bindingAffinity,
               rationale: result.rationale,
+              standardModelScore: result.standardModelScore,
+              explanation: result.explanation,
           };
           
           addDoc(simulationsCollectionRef, simulationData).catch((serverError) => {
@@ -267,29 +230,6 @@ function Dashboard() {
 
   const currentStepInfo = stepDescriptions[step];
 
-  const chartData = useMemo(() => {
-    if (!results) return [];
-    const resultsWithNames = results.map(result => {
-        const molecule = molecules.find(m => m.smiles === result.moleculeSmiles);
-        return {
-            ...result,
-            name: molecule ? molecule.name : 'Unknown Molecule',
-        };
-    });
-    return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
-      name: `${res.name} + ${res.proteinTarget}`,
-      'Quantum Affinity (nM)': res.bindingAffinity,
-    }));
-  }, [results]);
-
-  const chartConfig = {
-    'Quantum Affinity (nM)': {
-      label: 'Quantum Affinity (nM)',
-      color: 'hsl(var(--accent))',
-    },
-  };
-
-
   return (
     <>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -311,100 +251,43 @@ function Dashboard() {
           </div>
 
           <div className="grid auto-rows-max items-start gap-6">
-             <Card>
-              <CardHeader>
-                <CardTitle>Analysis & Visualization</CardTitle>
-                <CardDescription>
-                  Interactive views of molecular structures and simulation results.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-6">
-                <div className="min-h-[400px] lg:min-h-[500px] relative">
-                  <MoleculeViewer
-                    isDocked={isDocked}
-                    selectedSmiles={selectedSmiles}
-                    bestSmiles={bestSmiles}
-                  />
-                  {(step !== 'idle' && step !== 'done' && step !== 'error') && (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm">
-                      {currentStepInfo.icon}
-                      <div className="text-center">
-                        <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
-                        <p className="text-muted-foreground">{currentStepInfo.description}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-4">
-                  {results && step === 'done' && (
-                    <div className="rounded-lg border p-3 text-center">
-                      <p className="text-sm text-muted-foreground">Max Combined MW (kDa)</p>
-                      <p className="text-2xl font-bold">{(totalMolecularWeight / 1000).toFixed(1)}</p>
-                    </div>
-                  )}
-
-                  {selectedMolecules.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Selected Molecule Properties</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        {selectedMolecules.map(m => (
-                          <div key={m.smiles} className="flex flex-col rounded-md bg-muted/50 p-2">
-                            <span className="font-semibold truncate pr-2">{m.name}</span>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Formula:</span>
-                              <span className="font-mono">{m.formula}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Weight (Da):</span>
-                              <span className="font-mono">{m.molecularWeight.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {results && step === 'done' && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Binding Affinity Chart</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
-                    <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                      <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
-                        <CartesianGrid horizontal={false} />
-                        <YAxis
-                          dataKey="name"
-                          type="category"
-                          tickLine={false}
-                          tickMargin={10}
-                          axisLine={false}
-                          tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+            <Card className="min-h-[500px]">
+                <CardHeader>
+                    <CardTitle>Analysis & Results</CardTitle>
+                    <CardDescription>View simulation outputs and comparative analysis.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {step === 'idle' && (
+                        <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center">
+                            {currentStepInfo.icon}
+                            <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+                            <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                        </div>
+                    )}
+                    {(step !== 'idle' && step !== 'done' && step !== 'error') && (
+                        <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center bg-background/80 backdrop-blur-sm">
+                            {currentStepInfo.icon}
+                            <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+                            <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                        </div>
+                    )}
+                    {step === 'error' && (
+                         <div className="flex h-[400px] flex-col items-center justify-center gap-4 text-center">
+                            {currentStepInfo.icon}
+                            <h3 className="text-xl font-semibold">{currentStepInfo.title}</h3>
+                            <p className="text-muted-foreground">{currentStepInfo.description}</p>
+                        </div>
+                    )}
+                    {step === 'done' && results && analysis && (
+                        <ResultsTabs 
+                            results={results}
+                            analysis={analysis}
+                            saveState={saveState}
+                            onSave={handleSaveResults}
                         />
-                        <XAxis dataKey="Quantum Affinity (nM)" type="number" />
-                        <Tooltip
-                          cursor={{ fill: "hsl(var(--muted))" }}
-                          content={<ChartTooltipContent />}
-                        />
-                        <Bar dataKey="Quantum Affinity (nM)" radius={4} />
-                      </BarChart>
-                    </ChartContainer>
-                  </div>
-                )}
-              </CardContent>
+                    )}
+                </CardContent>
             </Card>
-
-            {results && step === 'done' && (
-              <ResultsDisplay 
-                results={results} 
-                onSave={handleSaveResults}
-                saveState={saveState}
-              />
-            )}
-
-            {analysis && step === 'done' && (
-                <ComparativeAnalysisDisplay analysis={analysis} />
-            )}
           </div>
         </div>
       </main>

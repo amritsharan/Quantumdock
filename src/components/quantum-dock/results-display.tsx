@@ -1,7 +1,6 @@
 
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, ChevronDown, ChevronsUpDown, Save, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
@@ -189,74 +188,72 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
   const { icon, text } = SaveButtonContent[saveState];
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between">
-        <div className='space-y-1.5'>
-          <CardTitle>Detailed Prediction Results</CardTitle>
-          <CardDescription>Tabular data for {results.length} combination(s) with AI analysis.</CardDescription>
-        </div>
-        <div className='flex items-center gap-2'>
-            <Button 
-                onClick={onSave} 
-                disabled={saveState === 'saving' || saveState === 'saved'}
-                variant={saveState === 'error' ? 'destructive' : 'default'}
-                size="sm"
-            >
-                {icon}
-                {text}
-            </Button>
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-                <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
-          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
-          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
-          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
-          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('standardModelScore')}>Standard ML (nM) {getSortIcon('standardModelScore')}</div>
-          <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('confidenceScore')}>Confidence {getSortIcon('confidenceScore')}</div>
-          <div className="w-2/12 text-left">Affinity Level</div>
+    <div className="space-y-4">
+        <div className='flex items-center justify-between'>
+          <h3 className="text-lg font-semibold">Detailed Prediction Results</h3>
+          <div className='flex items-center gap-2'>
+              <Button 
+                  onClick={onSave} 
+                  disabled={saveState === 'saving' || saveState === 'saved'}
+                  variant={saveState === 'error' ? 'destructive' : 'default'}
+                  size="sm"
+              >
+                  {icon}
+                  {text}
+              </Button>
+              <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExport('pdf')}>Export as PDF</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('docx')}>Export as DOCX</DropdownMenuItem>
+              </DropdownMenuContent>
+              </DropdownMenu>
+          </div>
         </div>
 
-        <Accordion type="single" collapsible className="w-full">
-          {sortedResults.map((result, index) => (
-            <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
-              <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline text-sm">
-                <div className="w-2/12 font-medium text-left">{result.name}</div>
-                <div className="w-2/12 font-medium text-left">{result.proteinTarget}</div>
-                <div className="w-2/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
-                <div className="w-2/12 text-left">{result.standardModelScore.toFixed(2)}</div>
-                <div className="w-2/12 text-left">{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
-                <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
-              </AccordionTrigger>
-              <AccordionContent>
-                 <div className="p-4 bg-muted/50 space-y-4">
-                  <div className='pt-4 border-t'>
-                    <p className="font-semibold text-sm">Model Score Comparison</p>
-                    <p className="text-xs text-muted-foreground">{result.explanation}</p>
-                  </div>
-                  <div className='pt-4 border-t'>
-                    <p className="font-semibold text-sm">Interaction Rationale</p>
-                    <p className="text-xs text-muted-foreground">{result.rationale}</p>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </CardContent>
-    </Card>
+        <div className="rounded-md border">
+            <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
+                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
+                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
+                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
+                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('standardModelScore')}>Standard ML (nM) {getSortIcon('standardModelScore')}</div>
+                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('confidenceScore')}>Confidence {getSortIcon('confidenceScore')}</div>
+                <div className="w-2/12 text-left">Affinity Level</div>
+            </div>
+
+            <Accordion type="single" collapsible className="w-full">
+            {sortedResults.map((result, index) => (
+                <AccordionItem value={`item-${index}`} key={`${result.moleculeSmiles}-${result.proteinTarget}-${index}`}>
+                <AccordionTrigger className="flex items-center p-4 hover:bg-muted/50 hover:no-underline text-sm">
+                    <div className="w-2/12 font-medium text-left">{result.name}</div>
+                    <div className="w-2/12 font-medium text-left">{result.proteinTarget}</div>
+                    <div className="w-2/12 text-left">{result.bindingAffinity.toFixed(2)}</div>
+                    <div className="w-2/12 text-left">{result.standardModelScore.toFixed(2)}</div>
+                    <div className="w-2/12 text-left">{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
+                    <div className="w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <div className="p-4 bg-muted/50 space-y-4">
+                    <div className='pt-4 border-t'>
+                        <p className="font-semibold text-sm">Model Score Comparison</p>
+                        <p className="text-xs text-muted-foreground">{result.explanation}</p>
+                    </div>
+                    <div className='pt-4 border-t'>
+                        <p className="font-semibold text-sm">Interaction Rationale</p>
+                        <p className="text-xs text-muted-foreground">{result.rationale}</p>
+                    </div>
+                    </div>
+                </AccordionContent>
+                </AccordionItem>
+            ))}
+            </Accordion>
+        </div>
+    </div>
   );
 }
