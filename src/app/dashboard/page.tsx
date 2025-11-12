@@ -217,8 +217,14 @@ function Dashboard() {
     const best = results.reduce((best, current) => {
         return current.bindingAffinity < best.bindingAffinity ? current : best;
     });
-    return molecules.find(m => m.smiles === best.moleculeSmiles) || null;
-  }, [results]);
+    const foundMolecule = molecules.find(m => m.smiles === best.moleculeSmiles);
+    if (!foundMolecule) return null;
+    
+    return {
+        ...best,
+        ...foundMolecule
+    };
+}, [results]);
 
   return (
     <>
@@ -228,7 +234,7 @@ function Dashboard() {
           <div className="grid auto-rows-max items-start gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Simulation Controls</CardTitle>
+                <CardTitle>QuantumDock</CardTitle>
                 <CardDescription>Select molecules, diseases, and protein targets to begin your simulation.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -330,7 +336,7 @@ function Dashboard() {
 
           <div className="grid auto-rows-max items-start gap-6">
             
-            <MoleculeViewer
+             <MoleculeViewer
               isDocked={!!results}
               molecules={selectedMolecules}
               bestResultMolecule={bestResult}
