@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { runFullDockingProcess, saveDockingResults } from '@/app/actions';
+import { runFullDockingProcess, saveDockingResults, retryPromise } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
@@ -159,7 +159,7 @@ function Dashboard() {
           aiCommentary: r.comparison.explanation,
       }));
 
-      analyzeResearchComparison(analysisInput)
+      retryPromise(() => analyzeResearchComparison(analysisInput), 3, 3000, "Literature analysis failed after multiple retries.")
         .then(analysisResult => {
             setAnalysis(analysisResult);
             toast({
@@ -172,11 +172,11 @@ function Dashboard() {
             toast({
                 variant: 'destructive',
                 title: 'Analysis Failed',
-                description: 'Could not compare results to literature.'
+                description: error.message || 'Could not compare results to literature.'
             });
         })
         .finally(() => {
-            setStep('done');
+            setStep('done'); // Set to done regardless of analysis outcome
         });
     }
   }, [step, results, toast]);
@@ -359,7 +359,7 @@ function Dashboard() {
               </Card>
             )}
 
-            {!isLoading && results && analysis && (
+            {step === 'done' && results && analysis && (
               <Card>
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
@@ -369,6 +369,18 @@ function Dashboard() {
                     <ResultsTabs results={results} analysis={analysis} onSave={handleSaveResults} saveState={saveState} />
                 </CardContent>
               </Card>
+            )}
+
+            {step === 'done' && results && !analysis && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Results</CardTitle>
+                        <CardDescription>The main simulation is complete, but the literature analysis could not be performed.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <ResultsTabs results={results} analysis={analysis} onSave={handleSaveResults} saveState={saveState} />
+                    </CardContent>
+                </Card>
             )}
             
           </div>
@@ -386,3 +398,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    

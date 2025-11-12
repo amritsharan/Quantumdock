@@ -9,24 +9,25 @@ import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } f
 
 
 // Helper function for retrying promises with exponential backoff
-async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay = 2000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
+export async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay = 2000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
   let lastError: Error | undefined;
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (error: any) {
       lastError = error;
-      if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded'))) {
-        console.log(`Attempt ${i + 1} failed. Retrying in ${delay * (i + 1)}ms...`);
+      // Check for common transient error messages
+      if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded') || error.message.toLowerCase().includes('rate limit'))) {
+        console.log(`Attempt ${i + 1} failed with transient error. Retrying in ${delay * (i + 1)}ms...`);
         await new Promise(res => setTimeout(res, delay * (i + 1)));
       } else {
-        // If the error is not a retryable one, break the loop immediately.
+        // If the error is not a known retryable one, break the loop immediately.
         break;
       }
     }
   }
    if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded'))) {
-      throw new Error("The AI model is currently overloaded. Please try the simulation again in a few moments.");
+      throw new Error("The AI model is currently overloaded. Please try again in a few moments.");
   }
   // If the loop finished because of a non-retryable error, throw that error.
   // Otherwise, throw the final error message.
@@ -278,3 +279,5 @@ export async function saveDockingResults(userId: string, results: DockingResults
         throw new Error("Could not save docking results due to a database error.");
     }
 }
+
+    
