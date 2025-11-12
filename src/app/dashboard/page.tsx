@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
@@ -22,12 +22,33 @@ import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
-import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 
 type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-async function saveDockingResults(firestore: any, userId: string, results: DockingResults[]) {
+function Dashboard() {
+  const [step, setStep] = useState<ProcessStep>('idle');
+  const [results, setResults] = useState<DockingResults[] | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const form = useForm<z.infer<typeof dockingSchema>>({
+    resolver: zodResolver(dockingSchema),
+    defaultValues: {
+      smiles: [],
+      proteinTargets: [],
+      diseaseKeywords: [],
+    },
+  });
+
+  const selectedSmiles = form.watch('smiles');
+  const selectedProteinNames = form.watch('proteinTargets');
+  const selectedDiseaseKeywords = form.watch('diseaseKeywords');
+
+  const saveDockingResults = async (firestore: any, userId: string, results: DockingResults[]) => {
     if (!firestore || !userId || !results || results.length === 0) {
       throw new Error("User ID, Firestore instance, and results are required to save.");
     }
@@ -63,34 +84,10 @@ async function saveDockingResults(firestore: any, userId: string, results: Docki
         await batch.commit();
     } catch (error) {
         console.error("Failed to save docking results: ", error);
-        // We can make this more user-friendly by checking the error type
-        // and re-throwing a FirestorePermissionError if applicable.
-        throw new Error("Could not save docking results due to a database error.");
+        throw new Error("Could not save docking results due to a database error or permissions issue.");
     }
 }
 
-
-function Dashboard() {
-  const [step, setStep] = useState<ProcessStep>('idle');
-  const [results, setResults] = useState<DockingResults[] | null>(null);
-  const [saveState, setSaveState] = useState<SaveState>('idle');
-  const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const { user } = useUser();
-  const firestore = useFirestore();
-
-  const form = useForm<z.infer<typeof dockingSchema>>({
-    resolver: zodResolver(dockingSchema),
-    defaultValues: {
-      smiles: [],
-      proteinTargets: [],
-      diseaseKeywords: [],
-    },
-  });
-
-  const selectedSmiles = form.watch('smiles');
-  const selectedProteinNames = form.watch('proteinTargets');
-  const selectedDiseaseKeywords = form.watch('diseaseKeywords');
 
   useEffect(() => {
     const smilesParam = searchParams.get('smiles');
@@ -388,3 +385,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    
