@@ -27,6 +27,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -49,6 +50,7 @@ function SignUpForm() {
   const [alertDescription, setAlertDescription] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,11 +68,17 @@ function SignUpForm() {
   });
 
   useEffect(() => {
-    const email = searchParams.get('email');
-    if (email) {
-      setValue('email', email);
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) {
+      const email = searchParams.get('email');
+      if (email) {
+        setValue('email', email);
+      }
     }
-  }, [searchParams, setValue]);
+  }, [searchParams, setValue, hydrated]);
 
   const handleSuccessfulSignUp = (user: User) => {
     toast({
@@ -112,6 +120,30 @@ function SignUpForm() {
       setIsLoading(false);
     }
   };
+
+  if (!hydrated) {
+    return (
+        <Card className="w-full max-w-sm">
+            <CardHeader className="text-center">
+                <div className="flex flex-col items-center gap-4 mb-4">
+                    <Skeleton className="h-14 w-14 rounded-full" />
+                    <Skeleton className="h-8 w-40" />
+                </div>
+                <Skeleton className="h-7 w-24 mx-auto" />
+                <Skeleton className="h-5 w-48 mx-auto" />
+            </CardHeader>
+            <CardContent className="grid gap-4">
+                <div className="grid gap-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-10 w-full" /></div>
+                <div className="grid gap-2"><Skeleton className="h-4 w-12" /><Skeleton className="h-10 w-full" /></div>
+                <div className="grid gap-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-10 w-full" /></div>
+                <div className="grid gap-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-10 w-full" /></div>
+                <div className="grid gap-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-10 w-full" /></div>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-5 w-56 mx-auto" />
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <>
@@ -238,5 +270,3 @@ export default function SignUpPage() {
         </Suspense>
     )
 }
-
-    
