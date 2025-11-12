@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, ChevronDown, ChevronsUpDown, Save, CheckCircle, AlertCircle, Loader2, Clock } from 'lucide-react';
+import { Download, ChevronDown, ChevronsUpDown, Save, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { DockingResults } from '@/lib/schema';
 import {
@@ -101,7 +101,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)", "Confidence", "Explanation"];
+      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)", "Confidence", "Rationale"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
@@ -110,7 +110,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               res.proteinTarget,
               res.bindingAffinity.toFixed(2),
               `${(res.confidenceScore * 100).toFixed(0)}%`,
-              res.explanation,
+              res.rationale,
           ];
           tableRows.push(row);
       });
@@ -132,7 +132,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Quantum Affinity (nM)", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Explanation", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Rationale", style: "strong" })] }),
             ],
         });
 
@@ -142,7 +142,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ children: [new Paragraph(res.proteinTarget)] }),
                 new DocxTableCell({ children: [new Paragraph(res.bindingAffinity.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${(res.confidenceScore * 100).toFixed(0)}%`)] }),
-                new DocxTableCell({ children: [new Paragraph(res.explanation)] }),
+                new DocxTableCell({ children: [new Paragraph(res.rationale)] }),
             ],
         }));
 
@@ -226,25 +226,6 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               </AccordionTrigger>
               <AccordionContent>
                  <div className="p-4 bg-muted/50 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                       <p className="font-semibold text-sm">Model Score Comparison</p>
-                       <div className='flex items-end gap-4'>
-                          <div>
-                            <p className='text-xs text-muted-foreground'>QuantumDock (nM)</p>
-                            <p className='text-2xl font-bold text-accent'>{result.bindingAffinity.toFixed(2)}</p>
-                          </div>
-                           <div>
-                            <p className='text-xs text-muted-foreground'>Standard ML (nM)</p>
-                            <p className='text-xl font-semibold'>{result.standardModelScore.toFixed(2)}</p>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                  <div className='pt-4 border-t'>
-                    <p className="font-semibold text-sm">Explanation</p>
-                    <p className="text-xs text-muted-foreground">{result.explanation}</p>
-                  </div>
                   <div className='pt-4 border-t'>
                     <p className="font-semibold text-sm">Interaction Rationale</p>
                     <p className="text-xs text-muted-foreground">{result.rationale}</p>
