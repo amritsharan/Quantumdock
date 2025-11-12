@@ -155,8 +155,8 @@ function Dashboard() {
           bindingAffinity: r.bindingAffinity,
           confidenceScore: r.confidenceScore,
           rationale: r.rationale,
-          standardModelScore: r.standardModelScore,
-          aiCommentary: r.explanation,
+          standardModelScore: r.comparison.standardModelScore,
+          aiCommentary: r.comparison.explanation,
       }));
 
       analyzeResearchComparison(analysisInput)

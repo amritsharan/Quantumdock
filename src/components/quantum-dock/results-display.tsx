@@ -53,6 +53,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
         return {
             ...result,
             name: molecule ? molecule.name : 'Unknown Molecule',
+            standardModelScore: result.comparison.standardModelScore, // Flatten for sorting/display
         };
     });
   }, [results]);
@@ -108,9 +109,9 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
               res.name,
               res.proteinTarget,
               res.bindingAffinity.toFixed(2),
-              res.standardModelScore.toFixed(2),
+              res.comparison.standardModelScore.toFixed(2),
               `${(res.confidenceScore * 100).toFixed(0)}%`,
-              res.explanation,
+              res.comparison.explanation,
           ];
           tableRows.push(row);
       });
@@ -142,7 +143,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ children: [new Paragraph(res.name)] }),
                 new DocxTableCell({ children: [new Paragraph(res.proteinTarget)] }),
                 new DocxTableCell({ children: [new Paragraph(res.bindingAffinity.toFixed(2))] }),
-                new DocxTableCell({ children: [new Paragraph(res.standardModelScore.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(res.comparison.standardModelScore.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${(res.confidenceScore * 100).toFixed(0)}%`)] }),
             ],
           }),
@@ -152,7 +153,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 columnSpan: 5,
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: "Explanation: ", bold: true }), new TextRun(res.explanation)]
+                    children: [new TextRun({ text: "Explanation: ", bold: true }), new TextRun(res.comparison.explanation)]
                   })
                 ]
               })
@@ -242,7 +243,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                     <div className="p-4 bg-muted/50 space-y-4">
                     <div className='pt-4 border-t'>
                         <p className="font-semibold text-sm">Model Score Comparison</p>
-                        <p className="text-xs text-muted-foreground">{result.explanation}</p>
+                        <p className="text-xs text-muted-foreground">{result.comparison.explanation}</p>
                     </div>
                     <div className='pt-4 border-t'>
                         <p className="font-semibold text-sm">Interaction Rationale</p>

@@ -14,4 +14,5 @@ export type DockingInput = z.infer<typeof dockingSchema>;
 export type DockingResults = PredictBindingAffinitiesOutput & {
   proteinTarget: string;
   moleculeSmiles: string;
+  // The fields from the 'comparison' object are now nested, matching the AI output
 };

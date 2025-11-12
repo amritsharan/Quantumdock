@@ -83,7 +83,7 @@ Your task is to analyze the methodology and results of a software project called
 QuantumDock is a web application that simulates molecular docking. Its workflow is as follows:
 1. It first performs a *simulated* classical docking to get a base score.
 2. It then performs a *simulated* quantum refinement step (representing a VQE/QAOA algorithm) to get a "quantum-refined energy".
-3. Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity, providing a rationale.
+3. Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity, providing a rationale and a comparison to a simulated 'standard' model.
 The project's key feature is this hybrid "Classical -> Quantum -> AI Interpretation" pipeline to predict binding affinities. The entire process is a simulation designed to demonstrate the potential of such a workflow.
 
 **Your Input:**
