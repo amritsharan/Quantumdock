@@ -10,9 +10,9 @@ export const dockingSchema = z.object({
 
 export type DockingInput = z.infer<typeof dockingSchema>;
 
-// This now correctly includes all fields from the AI's output.
 export type DockingResults = PredictBindingAffinitiesOutput & {
   proteinTarget: string;
   moleculeSmiles: string;
-  // The fields from the 'comparison' object are now nested, matching the AI output
 };
+
+    
