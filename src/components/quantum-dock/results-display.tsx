@@ -101,7 +101,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)", "Confidence", "AI Commentary"];
+      const tableColumn = ["Molecule", "Protein Target", "Quantum Affinity (nM)", "Confidence", "Explanation"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
@@ -132,7 +132,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Protein Target", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Quantum Affinity (nM)", style: "strong" })] }),
                 new DocxTableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
-                new DocxTableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "AI Commentary", style: "strong" })] }),
+                new DocxTableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ text: "Explanation", style: "strong" })] }),
             ],
         });
 
@@ -241,7 +241,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                        </div>
                     </div>
                      <div className="space-y-2">
-                      <p className="font-semibold text-sm">AI Commentary</p>
+                      <p className="font-semibold text-sm">Explanation</p>
                       <p className="text-xs text-muted-foreground">{result.aiCommentary}</p>
                     </div>
                   </div>
