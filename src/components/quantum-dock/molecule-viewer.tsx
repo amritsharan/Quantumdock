@@ -28,7 +28,7 @@ const MoleculeProperties = ({ molecule }: { molecule: Molecule }) => (
         </div>
         <div className='flex justify-between'>
             <span className='font-semibold'>Mol. Weight:</span>
-            <span className='font-mono'>{molecule.molecularWeight.toFixed(2)}</span>
+            <span className='font-mono'>{molecule.molecularWeight.toFixed(2)} Da</span>
         </div>
         <div className='flex justify-between'>
             <span className='font-semibold'>H-Donors:</span>
@@ -100,7 +100,7 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
                         <p className='font-semibold text-sm'>{mol.name}</p>
                         <div className="text-xs text-muted-foreground space-y-1 text-center">
                             <p className='font-mono'>{mol.formula}</p>
-                            <p className='font-mono'>MW: {mol.molecularWeight.toFixed(2)}</p>
+                            <p className='font-mono'>MW: {mol.molecularWeight.toFixed(2)} Da</p>
                         </div>
                       </div>
                   </div>
