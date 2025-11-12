@@ -180,7 +180,10 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
             throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
           }
           const finalResult: DockingResults = {
-            ...predictionResult,
+            bindingAffinity: predictionResult.bindingAffinity,
+            confidenceScore: predictionResult.confidenceScore,
+            rationale: predictionResult.rationale,
+            comparison: predictionResult.comparison,
             moleculeSmiles: smile,
             proteinTarget: protein,
           };
