@@ -24,6 +24,7 @@ async function predictWithRetry(input: PredictBindingAffinitiesInput, retries = 
     try {
       // Attempt to get the prediction
       const result = await predictBindingAffinities(input);
+      // VALIDATION: Ensure the response from the AI is valid before returning.
       if (!result || typeof result.bindingAffinity !== 'number') {
         throw new Error('Invalid response from prediction model.');
       }
@@ -32,7 +33,7 @@ async function predictWithRetry(input: PredictBindingAffinitiesInput, retries = 
       lastError = error;
       const errorMessage = error.message.toLowerCase();
       // Check for specific, retry-able error messages from the AI service
-      if (errorMessage.includes('503') || errorMessage.includes('429') || errorMessage.includes('overloaded') || errorMessage.includes('rate limit')) {
+      if (errorMessage.includes('503') || errorMessage.includes('429') || errorMessage.includes('overloaded') || errorMessage.includes('rate limit') || errorMessage.includes('invalid response')) {
         // If it's a retry-able error, wait and then continue to the next loop iteration
         console.log(`Attempt ${i + 1} failed with transient error. Retrying in ${delay}ms...`);
         await new Promise(res => setTimeout(res, delay));
@@ -142,5 +143,3 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     return [];
   }
 }
-
-    
