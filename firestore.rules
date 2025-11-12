@@ -1,23 +1,26 @@
 /**
  * @fileoverview Firestore Security Rules for QuantumDock application.
  *
- * WARNING: These rules have been modified to grant broad access.
- * Any authenticated user can read or write to any part of the database.
- * This is not recommended for production environments.
+ * These rules enforce a user-ownership model, where users can only read and
+ * write to their own data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule is necessary to allow the collectionGroup query in the saveDockingResults action.
-    // It allows any authenticated user to query across all 'loginHistory' collections.
-    match /{path=**}/loginHistory/{historyId} {
-      allow get, list: if request.auth != null;
-    }
+    // A user can read and write to their own user document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-    // Grant read and write access to all documents if the user is authenticated.
-    match /{path=**} {
-      allow read, write: if request.auth != null;
+      // A user can create and manage their own login history.
+      match /loginHistory/{historyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // A user can create and read their own docking simulations within a session.
+        match /dockingSimulations/{simulationId} {
+          allow read, create: if request.auth != null && request.auth.uid == userId;
+        }
+      }
     }
   }
 }
