@@ -279,5 +279,3 @@ export async function saveDockingResults(userId: string, results: DockingResults
         throw new Error("Could not save docking results due to a database error.");
     }
 }
-
-    

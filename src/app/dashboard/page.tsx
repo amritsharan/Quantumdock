@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { dockingSchema, type DockingResults } from '@/lib/schema';
 import { Toaster } from '@/components/ui/toaster';
 import { useUser } from '@/firebase';
-import { type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
@@ -22,34 +21,10 @@ import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
+import { analyzeResearchComparison, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 
 type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-// Helper function for retrying promises with exponential backoff
-async function retryPromise<T>(fn: () => Promise<T>, retries = 5, delay = 2000, finalErr: string = 'Failed after multiple retries'): Promise<T> {
-  let lastError: Error | undefined;
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      // Check for common transient error messages
-      if (error.message && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded') || error.message.toLowerCase().includes('rate limit'))) {
-        console.log(`Attempt ${i + 1} failed with transient error. Retrying in ${delay * (i + 1)}ms...`);
-        await new Promise(res => setTimeout(res, delay * (i + 1)));
-      } else {
-        // If the error is not a known retryable one, break the loop immediately.
-        break;
-      }
-    }
-  }
-   if (lastError && (lastError.message.includes('503') || lastError.message.toLowerCase().includes('overloaded'))) {
-      throw new Error("The AI model is currently overloaded. Please try again in a few moments.");
-  }
-  // If the loop finished because of a non-retryable error, throw the final error message.
-  throw lastError || new Error(finalErr);
-}
 
 
 function Dashboard() {
@@ -335,14 +310,14 @@ function Dashboard() {
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-muted-foreground">
-                      {step === 'predicting' ? 'Running docking simulations...' : 'Analyzing literature...'}
+                      Running docking simulations...
                     </p>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {step === 'done' && results && (
+            {step === 'done' && results && results.length > 0 && (
               <Card>
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
