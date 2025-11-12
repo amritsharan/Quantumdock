@@ -254,10 +254,10 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                        </div>
                     </div>
                   </div>
-                   <div className="space-y-2 pt-4 border-t">
-                      <p className="font-semibold text-sm">Explanation</p>
-                      <p className="text-xs text-muted-foreground">{result.explanation}</p>
-                    </div>
+                  <div className='pt-4 border-t'>
+                    <p className="font-semibold text-sm">Explanation</p>
+                    <p className="text-xs text-muted-foreground">{result.explanation}</p>
+                  </div>
                   <div className='pt-4 border-t'>
                     <p className="font-semibold text-sm">Interaction Rationale</p>
                     <p className="text-xs text-muted-foreground">{result.rationale}</p>
@@ -271,3 +271,5 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     </Card>
   );
 }
+
+    
