@@ -176,7 +176,7 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
             return retryPromise(() => predictBindingAffinities(predictionInput));
         })
         .then(async (predictionResult) => {
-          if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number') {
+          if (!predictionResult || typeof predictionResult.bindingAffinity !== 'number' || !predictionResult.comparison) {
             throw new Error(`Failed to get a valid binding affinity prediction for ${smile} with ${protein}.`);
           }
           const finalResult: DockingResults = {
@@ -211,6 +211,8 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
   if (successfulResults.length === 0 && results.length > 0) {
       const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
       if (firstError) {
+        // Ensure we throw the actual error, not a generic one.
+        // The AI model overload error is a custom Error object that should be thrown.
         throw firstError.reason;
       }
       throw new Error("All docking simulations failed. Please check the server logs for more details.");
@@ -276,5 +278,3 @@ export async function saveDockingResults(userId: string, results: DockingResults
         throw new Error("Could not save docking results due to a database error.");
     }
 }
-
-    

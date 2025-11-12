@@ -142,7 +142,7 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    if (step === 'done' && results) {
+    if (step === 'done' && results && results.length > 0) {
       setStep('analyzing');
       toast({
         title: 'Analyzing Results',
@@ -229,7 +229,7 @@ function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Simulation Controls</CardTitle>
-                <CardDescription>Select molecules and protein targets to begin your docking simulation.</CardDescription>
+                <CardDescription>Select molecules, diseases, and protein targets to begin your simulation.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">

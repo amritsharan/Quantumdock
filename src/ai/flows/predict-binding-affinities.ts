@@ -45,10 +45,10 @@ const PredictBindingAffinitiesOutputSchema = z.object({
     .describe(
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
-  comparison: z.object({
-    standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated standard ML model (e.g., a GNN) for comparison.'),
-    explanation: z.string().describe('A brief explanation comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
-  }),
+    comparison: z.object({
+      standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated standard ML model (e.g., a GNN) for comparison.'),
+      explanation: z.string().describe('A brief explanation comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+    }),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
@@ -100,5 +100,3 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

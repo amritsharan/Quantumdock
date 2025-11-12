@@ -235,7 +235,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                     <div className="w-full md:w-2/12 font-medium text-left"><span className='md:hidden font-bold'>Molecule: </span>{result.name}</div>
                     <div className="w-full md:w-2/12 font-medium text-left"><span className='md:hidden font-bold'>Protein: </span>{result.proteinTarget}</div>
                     <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Quantum Affinity (nM): </span>{result.bindingAffinity.toFixed(2)}</div>
-                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Standard ML (nM): </span>{result.standardModelScore.toFixed(2)}</div>
+                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Standard ML (nM): </span>{result.comparison.standardModelScore.toFixed(2)}</div>
                     <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Confidence: </span>{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
                     <div className="w-full md:w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
                 </AccordionTrigger>
@@ -258,5 +258,3 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
     </div>
   );
 }
-
-    
