@@ -226,7 +226,7 @@ function Dashboard() {
                         <Label>1. Select Molecules ({selectedMolecules.length})</Label>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-molecule')}>
-                                Change Selection
+                                {selectedMolecules.length > 0 ? `Change Molecule Selection` : 'Select Molecules'}
                             </Link>
                         </Button>
                     </div>
@@ -235,7 +235,7 @@ function Dashboard() {
                         <Label>2. Select Diseases ({selectedDiseaseKeywords.length}) (Optional)</Label>
                         <Button asChild variant="outline">
                             <Link href={buildLink('/select-disease')}>
-                                Select Diseases
+                                {selectedDiseaseKeywords.length > 0 ? `Change Disease Selection` : 'Select Diseases'}
                             </Link>
                         </Button>
                     </div>
@@ -263,7 +263,7 @@ function Dashboard() {
                         </Card>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-protein')}>
-                                Change Protein Selection
+                                {selectedProteins.length > 0 ? 'Change Protein Selection' : 'Select Protein Targets'}
                             </Link>
                         </Button>
                     </div>
@@ -340,3 +340,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    
