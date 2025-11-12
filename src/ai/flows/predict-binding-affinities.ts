@@ -47,8 +47,6 @@ const PredictBindingAffinitiesOutputSchema = z.object({
     ),
     standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated standard ML model (e.g., a GNN) for comparison.'),
     explanation: z.string().describe('A brief explanation comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
-    quantumModelTime: z.number().describe('A fictional time in seconds (e.g., between 2.5 and 4.0) representing how long the entire QuantumDock pipeline (classical + quantum + AI) took.'),
-    standardModelTime: z.number().describe('A fictional time in seconds (e.g., between 15 and 30) representing how long a standard, non-quantum ML model would take to run the same analysis.'),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
@@ -77,9 +75,6 @@ Your tasks are:
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Simulate a Standard Model Score:** Generate a *fictional* binding affinity score that a conventional ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
 5.  **Provide an Explanation:** Write a brief explanation for why your quantum-informed prediction might differ from the standard model's score. Mention sensitivity to quantum effects.
-6.  **Simulate Performance Times:**
-    -   Generate a fictional \`quantumModelTime\` in seconds (between 2.5 and 4.0) for the complete QuantumDock pipeline.
-    -   Generate a fictional \`standardModelTime\` in seconds (between 15 and 30) for a standard ML model, making sure it is significantly slower than the quantum model time.
 
 **Simulated Inputs:**
 - Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol

@@ -240,19 +240,6 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                           </div>
                        </div>
                     </div>
-                     <div className="space-y-2">
-                       <p className="font-semibold text-sm flex items-center"><Clock className="mr-2 h-4 w-4" />Performance Comparison</p>
-                       <div className='flex items-end gap-4'>
-                          <div>
-                            <p className='text-xs text-muted-foreground'>QuantumDock (sec)</p>
-                            <p className='text-2xl font-bold text-accent'>{result.quantumModelTime?.toFixed(2)}</p>
-                          </div>
-                           <div>
-                            <p className='text-xs text-muted-foreground'>Standard ML (sec)</p>
-                            <p className='text-xl font-semibold'>{result.standardModelTime?.toFixed(2)}</p>
-                          </div>
-                       </div>
-                    </div>
                   </div>
                   <div className='pt-4 border-t'>
                     <p className="font-semibold text-sm">Explanation</p>
