@@ -38,7 +38,7 @@ const PredictBindingAffinitiesOutputSchema = z.object({
   confidenceScore: z
     .number()
     .describe(
-      'A confidence score indicating the reliability of the prediction.'
+      'A confidence score indicating the reliability of the prediction. This must be a value between 0.0 and 1.0.'
     ),
   rationale: z
     .string()
@@ -72,11 +72,11 @@ You will be given:
 3.  A protein target's name.
 
 Your tasks are:
-1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
-2.  **Provide a Confidence Score:** Give a confidence score for your prediction. This result must be deterministic.
+1.  **Predict Binding Affinity:** Based on the inputs, predict a deterministic binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity.
+2.  **Provide a Confidence Score:** Give a deterministic confidence score for your prediction (between 0.0 and 1.0).
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
-    - **standardModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
+    - **standardModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but different from your own prediction.
     - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the advanced model's score. Mention sensitivity to quantum effects.
 
 
