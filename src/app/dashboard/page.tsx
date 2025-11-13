@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,7 @@ import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { useUser, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -230,7 +230,7 @@ function DashboardPage() {
                 // Step 1: Simulate Quantum Refinement
                 updateResult({ status: 'simulating', step: 'refining', progress: 25 });
                 setCurrentStep(`[${i+1}/${totalSims}] Refining energy for ${molecule.name} + ${protein.name}`);
-                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000)); // Simulate async work
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Simulate async work
                 
                 const seed = simpleHash(`${molecule.smiles}${protein.name}`);
                 const pseudoRandom = () => {
@@ -249,6 +249,9 @@ function DashboardPage() {
                 updateResult({ status: 'analyzing', step: 'predicting', progress: 75 });
                 setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
                 
+                // Add a delay here to avoid hitting API rate limits
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
                 const prediction = await predictBindingAffinities({
                     quantumRefinedEnergy: refinedEnergy,
                     moleculeSmiles: molecule.smiles,
@@ -352,7 +355,7 @@ function DashboardPage() {
                         {/* Molecules Section */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">Molecules</h3>
-                             <Card className="p-4">
+                            <Card className="p-4">
                                 {selectedMolecules.length > 0 ? (
                                     <ScrollArea className="h-24">
                                         <ul className="space-y-1 text-sm text-muted-foreground">
@@ -365,17 +368,17 @@ function DashboardPage() {
                                     </div>
                                 )}
                             </Card>
-                            <Button asChild variant="outline" size="sm" className="w-full">
+                             <Button asChild variant="outline" size="sm" className="w-full">
                                 <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
                                     Molecules selection
                                 </Link>
                             </Button>
                         </div>
-
-                         {/* Diseases Section */}
+                        
+                        {/* Diseases Section */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">Select Diseases</h3>
-                             <Card className="p-4">
+                            <Card className="p-4">
                                 {selectedDiseases.length > 0 ? (
                                     <ScrollArea className="h-24">
                                         <div className="flex flex-wrap gap-2">
@@ -417,8 +420,9 @@ function DashboardPage() {
                                 </Link>
                             </Button>
                         </div>
+                        
                          <Button onClick={runSimulation} disabled={isRunning || selectedMolecules.length === 0 || selectedProteins.length === 0}>
-                            {isRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                            {isRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Run docking for ({selectedMolecules.length * selectedProteins.length}) combinations
                         </Button>
                     </CardContent>
@@ -484,3 +488,5 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
+    
