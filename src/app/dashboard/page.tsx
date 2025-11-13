@@ -67,7 +67,7 @@ async function saveDockingResults(firestore: any, userId: string, results: Docki
 }
 
 
-function Dashboard() {
+function DashboardContent() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -361,7 +361,7 @@ function Dashboard() {
               <Card>
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
-                    <CardDescription>Explore the detailed analysis.</CardDescription>
+                    <CardDescription>Explore the detailed analysis</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ResultsTabs results={results} onSave={handleSaveResults} saveState={saveState} />
@@ -380,7 +380,7 @@ function Dashboard() {
 export default function DashboardPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <Dashboard />
+      <DashboardContent />
     </Suspense>
   );
 }
