@@ -64,7 +64,7 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
-  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction.
+  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. The results must be deterministic for the given inputs.
 
 You will be given:
 1.  A simulated quantum-refined binding energy (in kcal/mol). This represents the final energy state of the molecule-protein complex after quantum refinement.
@@ -85,7 +85,7 @@ Your tasks are:
 - Molecule SMILES: {{{moleculeSmiles}}}
 - Protein Target: {{{proteinTargetName}}}
 
-Please provide the output in the required JSON format. The results must be deterministic for the given inputs.
+Please provide the output in the required JSON format.
 `,
 });
 
