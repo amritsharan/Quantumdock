@@ -231,8 +231,8 @@ function DashboardPage() {
                         <div className="md:col-span-1 flex flex-col gap-6">
                             {/* Molecules Section */}
                             <div className="space-y-2">
-                                <h3 className="flex items-center gap-2 font-semibold">Molecules</h3>
-                                <Card className="p-4">
+                                <h3 className="font-semibold">Molecules</h3>
+                                 <Card className="p-4">
                                     {selectedMolecules.length > 0 ? (
                                         <ScrollArea className="h-24">
                                             <ul className="space-y-1 text-sm text-muted-foreground">
@@ -254,7 +254,7 @@ function DashboardPage() {
                             
                             {/* Diseases Section */}
                             <div className="space-y-2">
-                                <h3 className="flex items-center gap-2 font-semibold">Select Diseases</h3>
+                                <h3 className="font-semibold">Select Diseases</h3>
                                  <Card className="p-4">
                                     {selectedDiseases.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -277,7 +277,7 @@ function DashboardPage() {
 
                             {/* Proteins Section */}
                             <div className="space-y-2">
-                                <h3 className="flex items-center gap-2 font-semibold">Protein Targets</h3>
+                                <h3 className="font-semibold">Protein Targets</h3>
                                 <Card className="p-4">
                                     {selectedProteins.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -299,7 +299,7 @@ function DashboardPage() {
                             </div>
                              <Button onClick={runSimulation} disabled={isRunning || selectedMolecules.length === 0 || selectedProteins.length === 0}>
                                 {isRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
-                                Run Docking ({selectedMolecules.length * selectedProteins.length})
+                                Run docking for ({selectedMolecules.length * selectedProteins.length}) combinations
                             </Button>
                         </div>
                         <div className="md:col-span-2">
