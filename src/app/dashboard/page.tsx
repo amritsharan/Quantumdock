@@ -488,14 +488,22 @@ function DashboardPage() {
                     }]);
 
                 } catch (error: any) {
-                    if (error.message && (error.message.includes('429') || error.message.includes('Too Many Requests'))) {
+                     const isRetryableError = error.message && (
+                        error.message.includes('429') || 
+                        error.message.includes('Too Many Requests') ||
+                        error.message.includes('503') ||
+                        error.message.includes('Service Unavailable')
+                    );
+
+                    if (isRetryableError) {
                         retries--;
                         const delay = 5000; // Wait 5 seconds before retrying
-                        setCurrentStep(`[${i+1}/${totalSims}] Rate limit hit. Retrying in ${delay / 1000}s... (${retries} retries left)`);
+                        const retryMessage = error.message.includes('429') ? 'Rate limit hit' : 'Service unavailable';
+                        setCurrentStep(`[${i+1}/${totalSims}] ${retryMessage}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
                         await new Promise(resolve => setTimeout(resolve, delay));
                         if(retries === 0) {
                             console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
-                            const errorMessage = "API rate limit exceeded after multiple retries. Please wait and try again later.";
+                            const errorMessage = "API is overloaded. Please wait and try again later.";
                             updateResult({ status: 'error', error: errorMessage, progress: 100 });
                             setCompletedSimulations(prev => [...prev, {
                                 molecule,
