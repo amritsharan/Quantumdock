@@ -4,6 +4,7 @@
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 import type { PredictBindingAffinitiesInput, PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
+import { analyzeResearchComparison, type ResearchComparisonInput, type ResearchComparisonOutput } from '@/ai/flows/compare-to-literature';
 
 
 /**
@@ -127,5 +128,25 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     console.error("Error suggesting proteins:", error);
     // Return empty array on failure to prevent crashing the selection page
     return [];
+  }
+}
+
+export async function runLiteratureComparison(simulationResults: DockingResults[]): Promise<ResearchComparisonOutput> {
+  try {
+    const inputForAnalisys: ResearchComparisonInput = simulationResults.map(r => ({
+      moleculeSmiles: r.moleculeSmiles,
+      proteinTarget: r.proteinTarget,
+      bindingAffinity: r.bindingAffinity,
+      confidenceScore: r.confidenceScore,
+      rationale: r.rationale,
+      standardModelScore: r.comparison.standardModelScore,
+      aiCommentary: r.comparison.explanation,
+    }));
+
+    const analysis = await analyzeResearchComparison(inputForAnalisys);
+    return analysis;
+  } catch (error) {
+    console.error("Failed to run literature comparison:", error);
+    throw new Error("Failed to get analysis from the AI model. The service may be temporarily unavailable.");
   }
 }
