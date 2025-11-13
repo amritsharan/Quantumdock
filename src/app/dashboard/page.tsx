@@ -87,23 +87,25 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
     const erroredResults = results.filter(r => r.status === 'error');
 
     const handleDownloadPdf = () => {
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'landscape' });
         const docTitle = "QuantumDock - Detailed Simulation Results";
         
         doc.setFontSize(18);
         doc.text(docTitle, 14, 22);
 
-        const tableColumn = ["Molecule", "Protein", "Affinity (nM)", "Level", "Confidence", "Std. Model (nM)", "Rationale"];
+        const tableColumn = ["Combination", "Affinity (nM)", "Level", "Confidence", "Std. Model (nM)", "Comb. MW (Da)", "H-Donors", "H-Acceptors", "Rationale"];
         const tableRows: any[][] = [];
 
         completedResults.forEach(res => {
             const rowData = [
-                res.molecule.name,
-                res.protein.name,
+                `${res.molecule.name} + ${res.protein.name}`,
                 res.prediction.bindingAffinity.toFixed(2),
                 getAffinityLevel(res.prediction.bindingAffinity).level,
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
                 res.prediction.comparison.standardModelScore.toFixed(2),
+                (res.molecule.molecularWeight + res.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                res.molecule.donors,
+                res.molecule.acceptors,
                 res.prediction.rationale
             ];
             tableRows.push(rowData);
@@ -117,7 +119,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
                 columnStyles: {
-                    6: { cellWidth: 'wrap' } // Wrap rationale text
+                    8: { cellWidth: 'wrap' }
                 }
             });
         } else {
@@ -136,24 +138,28 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
 
         const tableHeader = new DocxTableRow({
             children: [
-                new DocxTableCell({ children: [new Paragraph({ text: "Molecule", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Protein", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Affinity (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Level", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Standard Model (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Combined MW (Da)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "H-Donors", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "H-Acceptors", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Rationale", bold: true })] }),
             ],
         });
 
         const tableRows = completedResults.map(res => new DocxTableRow({
             children: [
-                new DocxTableCell({ children: [new Paragraph(res.molecule.name)] }),
-                new DocxTableCell({ children: [new Paragraph(res.protein.name)] }),
+                new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(getAffinityLevel(res.prediction.bindingAffinity).level)] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.standardModelScore.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph((res.molecule.molecularWeight + res.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 }))] }),
+                new DocxTableCell({ children: [new Paragraph(String(res.molecule.donors))] }),
+                new DocxTableCell({ children: [new Paragraph(String(res.molecule.acceptors))] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.rationale)] }),
             ],
         }));
@@ -247,15 +253,16 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                     <TableHead>Combination</TableHead>
                                     <TableHead>Affinity (nM)</TableHead>
                                     <TableHead>Affinity Level</TableHead>
-                                    <TableHead>Confidence</TableHead>
-                                    <TableHead>Standard Model (nM)</TableHead>
+                                    <TableHead>Comb. MW (Da)</TableHead>
+                                    <TableHead>H-Donors</TableHead>
+                                    <TableHead>H-Acceptors</TableHead>
                                     <TableHead>AI Rationale</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {completedResults.length === 0 && erroredResults.length === 0 && (
                                      <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">
+                                        <TableCell colSpan={7} className="h-24 text-center">
                                             No results yet. Run a simulation to see the output.
                                         </TableCell>
                                     </TableRow>
@@ -274,8 +281,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                 {affinityInfo.level}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
-                                        <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
+                                        <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                                        <TableCell>{result.molecule.donors}</TableCell>
+                                        <TableCell>{result.molecule.acceptors}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">{result.prediction.rationale}</TableCell>
                                      </TableRow>
                                 )})}
@@ -285,7 +293,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                             <div>{result.molecule.name}</div>
                                             <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                         </TableCell>
-                                         <TableCell colSpan={5}>
+                                         <TableCell colSpan={6}>
                                             <Alert variant="destructive" className="bg-transparent border-0 p-0">
                                                 <AlertDescription>{result.error}</AlertDescription>
                                             </Alert>
@@ -555,12 +563,8 @@ function DashboardPage() {
                     userId: user.uid,
                 }));
 
-            // In a real app, we might save this as a single "Experiment" document
-            // For simplicity here, we'll save the first result as a sample.
-            // A more robust implementation would create an "experiments" collection.
             if (resultsToSave.length > 0) {
                 const dockingResultRef = collection(firestore, 'users', user.uid, 'dockingResults');
-                // Saving each result individually
                 for (const result of resultsToSave) {
                      await addDoc(dockingResultRef, {
                         ...result,
@@ -773,9 +777,9 @@ function DashboardPage() {
                                                             className="rounded-md bg-white p-2 border"
                                                             unoptimized
                                                         />
-                                                        <div className="text-center">
-                                                            <p className="text-sm font-mono">{molecule.formula}</p>
-                                                            <p className="text-xs text-muted-foreground">{molecule.molecularWeight.toFixed(2)} g/mol</p>
+                                                        <div className="text-left w-full text-xs space-y-1">
+                                                            <p><span className="font-semibold">Molecular Formula:</span> <span className="font-mono">{molecule.formula}</span></p>
+                                                            <p><span className="font-semibold">Molecular Weight:</span> {molecule.molecularWeight.toFixed(2)} g/mol</p>
                                                         </div>
                                                     </CardContent>
                                                 </Card>
@@ -806,10 +810,5 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
-
-    
-
-    
 
     
