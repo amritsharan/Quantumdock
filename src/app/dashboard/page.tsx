@@ -24,6 +24,9 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+
 
 type SimulationStatus = 'idle' | 'preparing' | 'simulating' | 'analyzing' | 'complete' | 'error';
 type SimulationStep = 'preparing' | 'classifying' | 'docking' | 'refining' | 'predicting' | 'done';
@@ -52,12 +55,62 @@ const simpleHash = (str: string): number => {
 
 
 function SimulationResultsDisplay({ results, title }: { results: Result[], title: string }) {
+    const chartData = useMemo(() => {
+        return results
+            .filter(r => r.status === 'complete' && r.prediction)
+            .map(r => ({
+                name: `${r.molecule.name.substring(0, 10)}... + ${r.protein.name.substring(0, 10)}...`,
+                bindingAffinity: r.prediction.bindingAffinity,
+            }))
+            .sort((a, b) => a.bindingAffinity - b.bindingAffinity); // Sort for better visualization
+    }, [results]);
+
+    const chartConfig = {
+        bindingAffinity: {
+            label: "Binding Affinity (nM)",
+            color: "hsl(var(--accent))",
+        },
+    };
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>{title}</CardTitle>
+                 <CardDescription>
+                    Lower binding affinity (nM) indicates a stronger, more favorable interaction.
+                </CardDescription>
             </CardHeader>
             <CardContent>
+                {chartData.length > 0 && (
+                    <div className="mb-8">
+                         <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
+                        <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                            <ResponsiveContainer>
+                                <BarChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis
+                                        dataKey="name"
+                                        tickLine={false}
+                                        tickMargin={10}
+                                        axisLine={false}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={60}
+                                        fontSize={10}
+                                    />
+                                    <YAxis 
+                                        label={{ value: 'Binding Affinity (nM)', angle: -90, position: 'insideLeft' }}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'hsl(var(--muted))' }}
+                                        content={<ChartTooltipContent />}
+                                    />
+                                    <Bar dataKey="bindingAffinity" fill="var(--color-bindingAffinity)" radius={4} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    </div>
+                )}
                 <Accordion type="single" collapsible className="w-full">
                     {results.map((result, index) => (
                         <AccordionItem value={`item-${index}`} key={`${result.molecule.smiles}-${result.protein.name}`}>
