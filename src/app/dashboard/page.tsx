@@ -271,6 +271,32 @@ function DashboardPage() {
                                     )}
                                 </Card>
                             </div>
+
+                             {/* Diseases Section */}
+                             <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> Select Diseases</h3>
+                                     <Button asChild variant="outline" size="sm">
+                                        <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
+                                            <ArrowRight className="mr-2 h-4 w-4" />
+                                            Get Suggestions
+                                        </Link>
+                                    </Button>
+                                </div>
+                                <Card className="p-4">
+                                    {selectedDiseases.length > 0 ? (
+                                        <ScrollArea className="h-24">
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedDiseases.map(d => <Badge key={d} variant="secondary">{d}</Badge>)}
+                                            </div>
+                                        </ScrollArea>
+                                    ) : (
+                                        <div className="text-center text-sm text-muted-foreground py-8">
+                                            No diseases for suggestions.
+                                        </div>
+                                    )}
+                                </Card>
+                            </div>
                             
                             {/* Proteins Section */}
                             <div className="space-y-2">
@@ -293,32 +319,6 @@ function DashboardPage() {
                                     ) : (
                                         <div className="text-center text-sm text-muted-foreground py-8">
                                             No proteins selected.
-                                        </div>
-                                    )}
-                                </Card>
-                            </div>
-
-                            {/* Diseases Section */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> AI Target Suggestions</h3>
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
-                                            <ArrowRight className="mr-2 h-4 w-4" />
-                                            Get Suggestions
-                                        </Link>
-                                    </Button>
-                                </div>
-                                <Card className="p-4">
-                                    {selectedDiseases.length > 0 ? (
-                                        <ScrollArea className="h-24">
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedDiseases.map(d => <Badge key={d} variant="secondary">{d}</Badge>)}
-                                            </div>
-                                        </ScrollArea>
-                                    ) : (
-                                        <div className="text-center text-sm text-muted-foreground py-8">
-                                            No diseases for suggestions.
                                         </div>
                                     )}
                                 </Card>
@@ -418,5 +418,6 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
 
     
