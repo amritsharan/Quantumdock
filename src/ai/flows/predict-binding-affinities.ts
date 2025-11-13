@@ -37,6 +37,8 @@ const PredictBindingAffinitiesOutputSchema = z.object({
     ),
   confidenceScore: z
     .number()
+    .min(0.70)
+    .max(0.85)
     .describe(
       'A confidence score (from 0.70 to 0.85) indicating the reliability of the prediction. It must be a value between 0.70 and 0.85.'
     ),

@@ -171,7 +171,7 @@ function DashboardPage() {
 
     try {
       const onProgress = (currentStep: 'classifying' |'refining' | 'predicting') => setStep(currentStep);
-      const finalResults = await runFullDockingProcess(data, user.uid, onProgress);
+      const finalResults = await runFullDockingProcess(data, onProgress);
 
       setResults(finalResults);
       setStep('done');

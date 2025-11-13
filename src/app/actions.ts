@@ -38,7 +38,6 @@ async function runQuantumRefinementSimulation(classicalScore: number): Promise<n
 
 export async function runFullDockingProcess(
     data: DockingInput, 
-    userId: string, 
     onProgress: (step: 'classifying' | 'refining' | 'predicting') => void
 ): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
