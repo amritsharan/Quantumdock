@@ -68,7 +68,7 @@ async function saveDockingResults(firestore: any, userId: string, results: Docki
 }
 
 
-function DashboardContent() {
+function DashboardPage() {
   const [step, setStep] = useState<ProcessStep>('idle');
   const [results, setResults] = useState<DockingResults[] | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -262,7 +262,7 @@ function DashboardContent() {
                         </Card>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-molecule')}>
-                                {selectedMolecules.length > 0 ? `Change Molecule Selection` : 'Select Molecules'}
+                                {selectedMolecules.length > 0 ? 'Molecule Selection' : 'Select Molecules'}
                             </Link>
                         </Button>
                     </div>
@@ -290,7 +290,7 @@ function DashboardContent() {
                         </Card>
                         <Button asChild variant="outline">
                             <Link href={buildLink('/select-disease')}>
-                                {selectedDiseaseKeywords.length > 0 ? `Change Disease Selection` : 'Select Diseases'}
+                                {selectedDiseaseKeywords.length > 0 ? 'Disease Selection' : 'Select Diseases'}
                             </Link>
                         </Button>
                     </div>
@@ -318,7 +318,7 @@ function DashboardContent() {
                         </Card>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-protein')}>
-                                {selectedProteins.length > 0 ? 'Change Protein Selection' : 'Select Protein Targets'}
+                                {selectedProteins.length > 0 ? 'Protein Selection' : 'Select Protein Targets'}
                             </Link>
                         </Button>
                     </div>
@@ -380,10 +380,12 @@ function DashboardContent() {
   );
 }
 
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <DashboardContent />
-    </Suspense>
-  );
+export default function Dashboard() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <DashboardPage />
+        </Suspense>
+    )
 }
+
+    
