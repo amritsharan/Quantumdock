@@ -253,16 +253,15 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                     <TableHead>Combination</TableHead>
                                     <TableHead>Affinity (nM)</TableHead>
                                     <TableHead>Affinity Level</TableHead>
-                                    <TableHead>Combined MW (Da)</TableHead>
-                                    <TableHead>H-Donors</TableHead>
-                                    <TableHead>H-Acceptors</TableHead>
+                                    <TableHead>Confidence</TableHead>
+                                    <TableHead>Std. Model (nM)</TableHead>
                                     <TableHead>AI Rationale</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {completedResults.length === 0 && erroredResults.length === 0 && (
                                      <TableRow>
-                                        <TableCell colSpan={7} className="h-24 text-center">
+                                        <TableCell colSpan={6} className="h-24 text-center">
                                             No results yet. Run a simulation to see the output.
                                         </TableCell>
                                     </TableRow>
@@ -281,9 +280,8 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                 {affinityInfo.level}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
-                                        <TableCell>{result.molecule.donors}</TableCell>
-                                        <TableCell>{result.molecule.acceptors}</TableCell>
+                                        <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
+                                        <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">{result.prediction.rationale}</TableCell>
                                      </TableRow>
                                 )})}
@@ -293,7 +291,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                             <div>{result.molecule.name}</div>
                                             <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                         </TableCell>
-                                         <TableCell colSpan={6}>
+                                         <TableCell colSpan={5}>
                                             <Alert variant="destructive" className="bg-transparent border-0 p-0">
                                                 <AlertDescription>{result.error}</AlertDescription>
                                             </Alert>
@@ -707,11 +705,11 @@ function DashboardPage() {
                 </Card>
             </div>
             <div className="md:col-span-2 flex flex-col gap-6">
-                <Card className="h-full">
+                <Card>
                     <CardHeader>
                         <CardTitle>Visualisation</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex h-full min-h-[300px] items-start justify-center bg-muted/30 border-dashed -mt-6 rounded-b-lg p-6">
+                    <CardContent className="flex flex-col min-h-[calc(100vh-14rem)] items-start justify-start bg-muted/30 border-dashed -mt-6 rounded-b-lg p-6">
                          {isRunning ? (
                             <div className="w-full p-6 space-y-4">
                                 <div className="space-y-2">
@@ -809,3 +807,4 @@ export default function Dashboard() {
     )
 }
 
+    
