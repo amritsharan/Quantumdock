@@ -17,11 +17,12 @@ import { MoleculeViewer } from '@/components/quantum-dock/molecule-viewer';
 import { molecules } from '@/lib/molecules';
 import { proteins } from '@/lib/proteins';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
+import { Input } from '@/components/ui/input';
 
 type ProcessStep = 'idle' | 'classifying' | 'refining' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -340,6 +341,28 @@ function DashboardPage() {
                     </Button>
                 </form>
               </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>API Key Management</CardTitle>
+                    <CardDescription>
+                        Manage your Gemini API Key. A new key needs to be added to your 
+                        <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">.env</code> file.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="api-key-input">Gemini API Key</Label>
+                        <Input id="api-key-input" placeholder="Enter your API Key here" />
+                    </div>
+                    <Button variant="outline" className="w-full" asChild>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+                           <KeyRound className="mr-2 h-4 w-4" />
+                           Generate New Key in Google AI Studio
+                        </a>
+                    </Button>
+                </CardContent>
             </Card>
 
           </div>
