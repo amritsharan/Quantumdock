@@ -289,7 +289,7 @@ function DashboardPage() {
                                 <Button asChild variant="outline" size="sm" className="w-full">
                                     <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
                                         <ArrowRight className="mr-2 h-4 w-4" />
-                                        Get Suggestions
+                                        Disease selection
                                     </Link>
                                 </Button>
                             </div>
@@ -313,7 +313,7 @@ function DashboardPage() {
                                 <Button asChild variant="outline" size="sm" className="w-full">
                                     <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
                                         <Settings className="mr-2 h-4 w-4" />
-                                        {selectedProteins.length > 0 ? `Manage (${selectedProteins.length})` : 'Select'}
+                                        {selectedProteins.length > 0 ? `Target selection (${selectedProteins.length})` : 'Target selection'}
                                     </Link>
                                 </Button>
                             </div>
@@ -412,6 +412,5 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
 
     
