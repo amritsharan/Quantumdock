@@ -248,15 +248,7 @@ function DashboardPage() {
                         <div className="md:col-span-1 flex flex-col gap-6">
                             {/* Molecules Section */}
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="flex items-center gap-2 font-semibold"><Beaker className="h-5 w-5" /> Molecules</h3>
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
-                                            <Settings className="mr-2 h-4 w-4" />
-                                            {selectedMolecules.length > 0 ? `Manage (${selectedMolecules.length})` : 'Select'}
-                                        </Link>
-                                    </Button>
-                                </div>
+                                <h3 className="flex items-center gap-2 font-semibold"><Beaker className="h-5 w-5" /> Molecules</h3>
                                 <Card className="p-4">
                                     {selectedMolecules.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -270,19 +262,17 @@ function DashboardPage() {
                                         </div>
                                     )}
                                 </Card>
+                                <Button asChild variant="outline" size="sm" className="w-full">
+                                    <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Molecules selection
+                                    </Link>
+                                </Button>
                             </div>
 
                              {/* Diseases Section */}
                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> Select Diseases</h3>
-                                     <Button asChild variant="outline" size="sm">
-                                        <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
-                                            <ArrowRight className="mr-2 h-4 w-4" />
-                                            Get Suggestions
-                                        </Link>
-                                    </Button>
-                                </div>
+                                <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> Select Diseases</h3>
                                 <Card className="p-4">
                                     {selectedDiseases.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -296,19 +286,17 @@ function DashboardPage() {
                                         </div>
                                     )}
                                 </Card>
+                                <Button asChild variant="outline" size="sm" className="w-full">
+                                    <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
+                                        <ArrowRight className="mr-2 h-4 w-4" />
+                                        Get Suggestions
+                                    </Link>
+                                </Button>
                             </div>
                             
                             {/* Proteins Section */}
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="flex items-center gap-2 font-semibold"><Dna className="h-5 w-5" /> Protein Targets</h3>
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
-                                            <Settings className="mr-2 h-4 w-4" />
-                                            {selectedProteins.length > 0 ? `Manage (${selectedProteins.length})` : 'Select'}
-                                        </Link>
-                                    </Button>
-                                </div>
+                                <h3 className="flex items-center gap-2 font-semibold"><Dna className="h-5 w-5" /> Protein Targets</h3>
                                 <Card className="p-4">
                                     {selectedProteins.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -322,6 +310,12 @@ function DashboardPage() {
                                         </div>
                                     )}
                                 </Card>
+                                <Button asChild variant="outline" size="sm" className="w-full">
+                                    <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        {selectedProteins.length > 0 ? `Manage (${selectedProteins.length})` : 'Select'}
+                                    </Link>
+                                </Button>
                             </div>
                         </div>
                         <div className="md:col-span-2">
