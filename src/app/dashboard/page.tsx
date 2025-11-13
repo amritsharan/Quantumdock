@@ -22,9 +22,20 @@ import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
+import { ProjectSummary } from '@/components/quantum-dock/project-summary';
 
-type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
+type ProcessStep = 'idle' | 'classifying' | 'refining' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+const stepDescriptions: Record<ProcessStep, string> = {
+    idle: 'Awaiting simulation start.',
+    classifying: 'Running classical docking simulation...',
+    refining: 'Simulating quantum refinement...',
+    predicting: 'Predicting binding affinities with AI...',
+    done: 'Simulations complete.',
+    error: 'An error occurred.',
+};
+
 
 async function saveDockingResults(firestore: any, userId: string, results: DockingResults[]) {
     if (!firestore || !userId || !results || results.length === 0) {
@@ -139,7 +150,7 @@ function DashboardPage() {
         });
         return;
     }
-    setStep('predicting');
+    setStep('classifying');
     setResults(null);
     setSaveState('idle');
 
@@ -160,7 +171,9 @@ function DashboardPage() {
     });
 
     try {
-      const finalResults = await runFullDockingProcess(data, user.uid);
+      const onProgress = (currentStep: 'refining' | 'predicting') => setStep(currentStep);
+      const finalResults = await runFullDockingProcess(data, user.uid, onProgress);
+
       setResults(finalResults);
       setStep('done');
       toast({
@@ -208,7 +221,7 @@ function DashboardPage() {
     return `${pathname}?${params.toString()}`;
   }
 
-  const isLoading = step === 'predicting';
+  const isLoading = step === 'classifying' || step === 'refining' || step === 'predicting';
   
   const bestResult = useMemo(() => {
     if (!results || results.length === 0) return null;
@@ -344,14 +357,14 @@ function DashboardPage() {
             {isLoading && (
               <Card>
                 <CardHeader>
-                    <CardTitle>Detailed Prediction Results</CardTitle>
+                    <CardTitle>Simulation in Progress</CardTitle>
                     <CardDescription>Please wait while the simulation completes.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center min-h-[200px]">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-muted-foreground">
-                      Running docking simulations...
+                      {stepDescriptions[step]}
                     </p>
                   </div>
                 </CardContent>
@@ -362,10 +375,11 @@ function DashboardPage() {
               <Card>
                 <CardHeader>
                     <CardTitle>Detailed Prediction Results</CardTitle>
-                    <CardDescription>Explore the detailed analysis</CardDescription>
+                    <CardDescription>Explore the detailed analysis of the docking simulation.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <ResultsDisplay results={results} onSave={handleSaveResults} saveState={saveState} />
+                    <ProjectSummary />
                 </CardContent>
               </Card>
             )}
@@ -385,5 +399,3 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
-    

@@ -3,7 +3,7 @@
 
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
-import type { PredictBindingAffinitiesInput, PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
+import { predictBindingAffinities, type PredictBindingAffinitiesInput, type PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
 
 
 /**
@@ -28,66 +28,35 @@ async function runClassicalDocking(smile: string, protein: string): Promise<numb
  * @returns A promise that resolves with a mock quantum-refined energy.
  */
 async function runQuantumRefinementSimulation(classicalScore: number): Promise<number> {
-    console.log(`[SIMULATION] Running quantum refinement simulation...`);
+    console.log(`[SIMULATION] Simulating quantum refinement...`);
+    await new Promise(resolve => setTimeout(resolve, 1500));
     const mockQuantumRefinedEnergy = classicalScore - 1.25; 
+    console.log(`[SIMULATION] Quantum refinement complete. Energy: ${mockQuantumRefinedEnergy}`);
     return mockQuantumRefinedEnergy;
 }
 
-/**
- * [SIMULATION] Simulates the response from the AI prediction model.
- * This is 100% reliable and avoids any network errors from the real AI service.
- * @param input The input that would normally go to the AI model.
- * @returns A promise that resolves with a simulated prediction result.
- */
-async function runSimulatedAIPrediction(input: PredictBindingAffinitiesInput): Promise<PredictBindingAffinitiesOutput> {
-    console.log('[SIMULATION] Running simulated AI prediction...');
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate a short delay
 
-    const { quantumRefinedEnergy, moleculeSmiles, proteinTargetName } = input;
-
-    // DETERMINISTIC calculation based on input lengths
-    const stabilityFactor = (moleculeSmiles.length + proteinTargetName.length) % 100 / 100;
-    
-    // Base affinity on energy - more negative energy = stronger affinity (lower nM)
-    const baseAffinity = Math.pow(10, (quantumRefinedEnergy + 8) / -1.36); // Rough biophysical model
-    const finalAffinity = Math.max(0.1, baseAffinity * (0.9 + stabilityFactor * 0.2)); // Make it deterministic
-
-    // Generate other plausible, deterministic data
-    const confidence = 0.75 + ((quantumRefinedEnergy * -1) % 10 / 100); // Deterministic, between 0.75 and 0.85
-    const advancedModelScore = finalAffinity * 1.2; // Ensure the advanced model score is always 20% worse (higher)
-
-    return {
-        bindingAffinity: parseFloat(finalAffinity.toFixed(2)),
-        confidenceScore: parseFloat(confidence.toFixed(2)),
-        rationale: `Simulated analysis for ${moleculeSmiles} on ${proteinTargetName} indicates strong potential. The quantum-refined energy of ${quantumRefinedEnergy.toFixed(2)} kcal/mol suggests favorable electronic interactions within the binding pocket, leading to the predicted high affinity.`,
-        comparison: {
-            standardModelScore: parseFloat(advancedModelScore.toFixed(2)),
-            explanation: `The AI model, informed by quantum energy states, predicts a higher affinity (lower nM value) than the advanced ML model. This discrepancy is likely due to the AI's enhanced sensitivity to subtle electronic and quantum tunneling effects not fully captured by classical force fields.`,
-        },
-    };
-}
-
-
-export async function runFullDockingProcess(data: DockingInput, userId: string): Promise<DockingResults[]> {
+export async function runFullDockingProcess(data: DockingInput, userId: string, onProgress: (step: 'refining' | 'predicting') => void): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
   const successfulResults: DockingResults[] = [];
 
-  // Process each combination sequentially to avoid overwhelming any service
   for (const smile of validatedData.smiles) {
     for (const protein of validatedData.proteinTargets) {
       try {
         console.log(`Processing combination: ${smile} + ${protein}`);
         const classicalScore = await runClassicalDocking(smile, protein);
+        
+        onProgress('refining');
         const quantumRefinedEnergy = await runQuantumRefinementSimulation(classicalScore);
         
-        const predictionInput = {
+        onProgress('predicting');
+        const predictionInput: PredictBindingAffinitiesInput = {
             quantumRefinedEnergy: quantumRefinedEnergy,
             moleculeSmiles: smile,
             proteinTargetName: protein,
         };
 
-        // Use the new 100% reliable simulated prediction function
-        const predictionResult = await runSimulatedAIPrediction(predictionInput);
+        const predictionResult = await predictBindingAffinities(predictionInput);
 
         const finalResult: DockingResults = {
           bindingAffinity: predictionResult.bindingAffinity,
@@ -100,14 +69,12 @@ export async function runFullDockingProcess(data: DockingInput, userId: string):
         successfulResults.push(finalResult);
 
       } catch (error) {
-         // This block will now only catch truly unexpected programming errors
          console.error(`Error processing combination: ${smile} + ${protein}. Error:`, error);
          throw new Error("An unexpected internal error occurred during the simulation.");
       }
     }
   }
 
-  // This check is important. If the loops were entered but no results were successful, it's an issue.
   if (successfulResults.length === 0 && validatedData.smiles.length > 0 && validatedData.proteinTargets.length > 0) {
       throw new Error("All docking simulations failed. Please check the server logs for more details.");
   }
@@ -126,7 +93,6 @@ export async function getProteinSuggestions(keywords: string[]): Promise<string[
     return [...new Set(allProteins)];
   } catch (error) {
     console.error("Error suggesting proteins:", error);
-    // Return empty array on failure to prevent crashing the selection page
     return [];
   }
 }
