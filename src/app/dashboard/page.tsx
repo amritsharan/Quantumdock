@@ -361,7 +361,7 @@ function Dashboard() {
               <Card>
                 <CardHeader>
                     <CardTitle>Analysis & Results</CardTitle>
-                    <CardDescription>Explore the detailed results and AI-powered analysis of your simulation.</CardDescription>
+                    <CardDescription>Explore the detailed analysis.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ResultsTabs results={results} onSave={handleSaveResults} saveState={saveState} />
