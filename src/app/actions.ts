@@ -73,7 +73,7 @@ export async function runFullDockingProcess(
         };
         successfulResults.push(finalResult);
 
-      } catch (error) {
+      } catch (error: any) {
          console.error(`Error processing combination: ${smile} + ${protein}. Error:`, error);
          throw new Error("An unexpected internal error occurred during the simulation.");
       }
