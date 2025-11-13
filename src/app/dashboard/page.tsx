@@ -22,14 +22,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-
-// Helper to generate a deterministic but seemingly random energy value
-const generateRefinedEnergy = (smiles: string, proteinName: string): number => {
-    const charCodes = (smiles + proteinName).split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const random = Math.sin(charCodes) * 10000;
-    const value = -12 + (random - Math.floor(random)) * 6; // Range: -12 to -6
-    return parseFloat(value.toFixed(2));
-};
+import { Separator } from '@/components/ui/separator';
 
 type SimulationStatus = 'idle' | 'preparing' | 'simulating' | 'analyzing' | 'complete' | 'error';
 type SimulationStep = 'preparing' | 'classifying' | 'docking' | 'refining' | 'predicting' | 'done';
@@ -187,133 +180,12 @@ function DashboardPage() {
             });
             return;
         }
-
-        setIsRunning(true);
-        setCompletedSimulations([]); // Clear previous completed results
-        
-        const combinations = selectedMolecules.flatMap(mol =>
-            selectedProteins.map(prot => ({ molecule: mol, protein: prot }))
-        );
-
-        const initialResults: Result[] = combinations.map(({ molecule, protein }) => ({
-            molecule,
-            protein,
-            status: 'preparing',
-            step: 'preparing',
-            progress: 0,
-            refinedEnergy: null,
-            prediction: null,
-        }));
-        setSimulationResults(initialResults);
-
-        let completedCount = 0;
-
-        const updateResult = (index: number, updates: Partial<Result>) => {
-            setSimulationResults(prev => {
-                const newResults = [...prev];
-                newResults[index] = { ...newResults[index], ...updates };
-                return newResults;
-            });
-        };
-
-        const totalSimulations = combinations.length;
-
-        for (let i = 0; i < totalSimulations; i++) {
-            const { molecule, protein } = combinations[i];
-            const resultIndex = i;
-
-            try {
-                // Step 1: Preparing
-                updateResult(resultIndex, { status: 'simulating', step: 'preparing', progress: 10 });
-                setCurrentStep(`[${i + 1}/${totalSimulations}] Preparing: ${molecule.name} + ${protein.name}`);
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Step 2: Docking
-                updateResult(resultIndex, { step: 'docking', progress: 40 });
-                setCurrentStep(`[${i + 1}/${totalSimulations}] Docking: ${molecule.name} + ${protein.name}`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Step 3: Quantum Refinement
-                updateResult(resultIndex, { step: 'refining', progress: 70 });
-                setCurrentStep(`[${i + 1}/${totalSimulations}] Quantum Refinement: ${molecule.name} + ${protein.name}`);
-                const refinedEnergy = generateRefinedEnergy(molecule.smiles, protein.name);
-                updateResult(resultIndex, { refinedEnergy: refinedEnergy });
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                // Step 4: AI Prediction
-                updateResult(resultIndex, { status: 'analyzing', step: 'predicting', progress: 90 });
-                setCurrentStep(`[${i + 1}/${totalSimulations}] AI Analysis: ${molecule.name} + ${protein.name}`);
-                
-                // The predictBindingAffinities function was removed, so this is commented out.
-                // const prediction = await predictBindingAffinities({
-                //     quantumRefinedEnergy: refinedEnergy,
-                //     moleculeSmiles: molecule.smiles,
-                //     proteinTargetName: protein.name,
-                // });
-                
-                // Mocking prediction for now
-                const prediction = {
-                    bindingAffinity: Math.random() * 100,
-                    confidenceScore: Math.random(),
-                    rationale: "This is a mock rationale because the AI flow was removed.",
-                    comparison: {
-                        standardModelScore: Math.random() * 100,
-                        explanation: "This is a mock comparison because the AI flow was removed.",
-                    }
-                }
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-
-                updateResult(resultIndex, { status: 'complete', step: 'done', progress: 100, prediction: prediction });
-                
-                if (user && firestore) {
-                    try {
-                        const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
-                        const latestSessionQuery = query(historyCollectionRef, orderBy('loginTime', 'desc'), limit(1));
-                        const sessionSnapshot = await getDocs(latestSessionQuery);
-                        if (!sessionSnapshot.empty) {
-                            const sessionId = sessionSnapshot.docs[0].id;
-                            const simulationLogRef = collection(firestore, 'users', user.uid, 'loginHistory', sessionId, 'dockingSimulations');
-                            await addDoc(simulationLogRef, {
-                                timestamp: serverTimestamp(),
-                                moleculeSmiles: molecule.smiles,
-                                proteinTarget: protein.name,
-                                bindingAffinity: prediction.bindingAffinity,
-                            });
-                        }
-                    } catch (e: any) {
-                         // Non-blocking, just log it. This is a background task.
-                         console.error("Failed to log simulation history:", e);
-                         errorEmitter.emit(
-                            'permission-error',
-                            new FirestorePermissionError({
-                                path: `users/${user?.uid}/loginHistory/.../dockingSimulations`,
-                                operation: 'create',
-                            })
-                         );
-                    }
-                }
-
-
-            } catch (error: any) {
-                console.error("Simulation error:", error);
-                const errorMessage = error.message || 'An unexpected internal error occurred during simulation.';
-                updateResult(resultIndex, { status: 'error', progress: 100, error: errorMessage });
-                 toast({
-                    variant: 'destructive',
-                    title: `Simulation Failed for ${molecule.name}`,
-                    description: errorMessage,
-                });
-            } finally {
-                completedCount++;
-                setTotalProgress((completedCount / totalSimulations) * 100);
-            }
-        }
-        
-        setCurrentStep('All simulations complete!');
-        setCompletedSimulations(prev => [...prev, ...simulationResults]);
-        setSimulationResults([]);
-        setIsRunning(false);
+        toast({
+            variant: 'destructive',
+            title: 'Simulation Failed',
+            description: 'The simulation logic has been removed. Please re-implement it.',
+        });
+        return;
     };
 
     const buildQueryString = (param: string, value: any[]) => {
@@ -338,9 +210,9 @@ function DashboardPage() {
     <>
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6">
                 {/* Simulation Control */}
-                <Card className="lg:col-span-3">
+                <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                         <div>
@@ -357,126 +229,115 @@ function DashboardPage() {
                   </CardHeader>
                 </Card>
 
-                {/* Molecules */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Beaker className="h-5 w-5" /> Molecules
-                        </CardTitle>
-                         <CardDescription>
-                            Small-molecule compounds to be tested.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {selectedMolecules.length > 0 ? (
-                           <ScrollArea className="h-40">
-                            <div className="space-y-2">
-                                {selectedMolecules.map(m => (
-                                    <div key={m.smiles} className="flex items-center gap-2 text-sm">
-                                        <Image 
-                                             src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(m.smiles)}/image?width=40&height=40`}
-                                             alt={`Structure of ${m.name}`}
-                                             width={40}
-                                             height={40}
-                                             className="rounded-md bg-white p-1"
-                                             unoptimized
-                                        />
-                                        <div>
-                                            <p className="font-medium">{m.name}</p>
-                                            <p className="text-muted-foreground">{m.formula}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                           </ScrollArea>
-                        ) : (
-                            <div className="text-center text-sm text-muted-foreground py-10">
-                                No molecules selected.
-                            </div>
-                        )}
-                    </CardContent>
-                    <CardFooter>
-                        <Button asChild variant="outline" className="w-full">
-                            <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
-                                <Settings className="mr-2 h-4 w-4" />
-                                {selectedMolecules.length > 0 ? `Manage Selection (${selectedMolecules.length})` : 'Select Molecules'}
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-
-                {/* Proteins */}
+                {/* Molecule Viewer Card */}
                  <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Dna className="h-5 w-5" /> Protein Targets
-                        </CardTitle>
-                         <CardDescription>
-                            Biological targets for the molecules.
+                        <CardTitle>Molecule Viewer</CardTitle>
+                        <CardDescription>
+                            Select molecules, protein targets, and get AI-driven suggestions based on diseases.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                         {selectedProteins.length > 0 ? (
-                           <ScrollArea className="h-40">
-                            <div className="space-y-4">
-                                 {selectedProteins.map(p => (
-                                    <div key={p.name} className="text-sm">
-                                        <p className="font-medium">{p.name}</p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
-                                    </div>
-                                 ))}
+                    <CardContent className="grid gap-6 md:grid-cols-3">
+                        {/* Molecules Section */}
+                        <div className="flex flex-col gap-4">
+                             <div className="space-y-1">
+                                <h3 className="flex items-center gap-2 font-semibold"><Beaker className="h-5 w-5" /> Molecules</h3>
+                                <p className="text-sm text-muted-foreground">Small-molecule compounds to be tested.</p>
                             </div>
-                           </ScrollArea>
-                        ) : (
-                            <div className="text-center text-sm text-muted-foreground py-10">
-                                No proteins selected.
+                           
+                            {selectedMolecules.length > 0 ? (
+                               <ScrollArea className="h-40">
+                                <div className="space-y-2">
+                                    {selectedMolecules.map(m => (
+                                        <div key={m.smiles} className="flex items-center gap-2 text-sm">
+                                            <Image 
+                                                 src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(m.smiles)}/image?width=40&height=40`}
+                                                 alt={`Structure of ${m.name}`}
+                                                 width={40}
+                                                 height={40}
+                                                 className="rounded-md bg-white p-1"
+                                                 unoptimized
+                                            />
+                                            <div>
+                                                <p className="font-medium">{m.name}</p>
+                                                <p className="text-muted-foreground">{m.formula}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                               </ScrollArea>
+                            ) : (
+                                <div className="text-center text-sm text-muted-foreground py-10">
+                                    No molecules selected.
+                                </div>
+                            )}
+                             <Button asChild variant="outline" className="w-full mt-auto">
+                                <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    {selectedMolecules.length > 0 ? `Manage Selection (${selectedMolecules.length})` : 'Select Molecules'}
+                                </Link>
+                            </Button>
+                        </div>
+                        
+                        {/* Proteins Section */}
+                        <div className="flex flex-col gap-4">
+                            <div className="space-y-1">
+                                <h3 className="flex items-center gap-2 font-semibold"><Dna className="h-5 w-5" /> Protein Targets</h3>
+                                <p className="text-sm text-muted-foreground">Biological targets for the molecules.</p>
                             </div>
-                        )}
+                            {selectedProteins.length > 0 ? (
+                               <ScrollArea className="h-40">
+                                <div className="space-y-4">
+                                     {selectedProteins.map(p => (
+                                        <div key={p.name} className="text-sm">
+                                            <p className="font-medium">{p.name}</p>
+                                            <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                                        </div>
+                                     ))}
+                                </div>
+                               </ScrollArea>
+                            ) : (
+                                <div className="text-center text-sm text-muted-foreground py-10">
+                                    No proteins selected.
+                                </div>
+                            )}
+                             <Button asChild variant="outline" className="w-full mt-auto">
+                                <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                     {selectedProteins.length > 0 ? `Manage Selection (${selectedProteins.length})` : 'Select Proteins'}
+                                </Link>
+                            </Button>
+                        </div>
+
+                        {/* Diseases Section */}
+                        <div className="flex flex-col gap-4">
+                           <div className="space-y-1">
+                                <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> AI Target Suggestions</h3>
+                                <p className="text-sm text-muted-foreground">Get protein target ideas for specific diseases.</p>
+                            </div>
+                            {selectedDiseases.length > 0 ? (
+                               <ScrollArea className="h-40">
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedDiseases.map(d => (
+                                        <Badge key={d} variant="secondary">{d}</Badge>
+                                    ))}
+                                </div>
+                               </ScrollArea>
+                            ) : (
+                                <div className="text-center text-sm text-muted-foreground py-10">
+                                    No diseases selected for suggestions.
+                                </div>
+                            )}
+                            <Button asChild variant="outline" className="w-full mt-auto">
+                                <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
+                                    <ArrowRight className="mr-2 h-4 w-4" />
+                                    Get Suggestions
+                                </Link>
+                            </Button>
+                        </div>
                     </CardContent>
-                    <CardFooter>
-                       <Button asChild variant="outline" className="w-full">
-                            <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
-                                <Settings className="mr-2 h-4 w-4" />
-                                 {selectedProteins.length > 0 ? `Manage Selection (${selectedProteins.length})` : 'Select Proteins'}
-                            </Link>
-                        </Button>
-                    </CardFooter>
                 </Card>
 
-                {/* Diseases */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Bot className="h-5 w-5" /> AI Target Suggestions
-                        </CardTitle>
-                        <CardDescription>
-                            Get protein target ideas for specific diseases.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {selectedDiseases.length > 0 ? (
-                           <ScrollArea className="h-40">
-                            <div className="flex flex-wrap gap-2">
-                                {selectedDiseases.map(d => (
-                                    <Badge key={d} variant="secondary">{d}</Badge>
-                                ))}
-                            </div>
-                           </ScrollArea>
-                        ) : (
-                            <div className="text-center text-sm text-muted-foreground py-10">
-                                No diseases selected for suggestions.
-                            </div>
-                        )}
-                    </CardContent>
-                     <CardFooter>
-                       <Button asChild variant="outline" className="w-full">
-                            <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
-                                <ArrowRight className="mr-2 h-4 w-4" />
-                                Get Suggestions
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
             </div>
 
             {isRunning && (
