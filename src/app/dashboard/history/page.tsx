@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, where, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { useCollection, type WithId } from '@/firebase/firestore/use-collection';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -99,10 +99,12 @@ function DailyActivityDialog({ loginRecord, isOpen, onOpenChange }: { loginRecor
         doc.save(`QuantumDock_Activity_${format(date, 'yyyy-MM-dd_HH-mm')}.pdf`);
     };
 
-    const date = loginRecord ? new Date(loginRecord.loginTime.seconds * 1000) : null;
     if (!loginRecord) {
         return null;
     }
+    
+    const date = loginRecord.loginTime ? new Date(loginRecord.loginTime.seconds * 1000) : null;
+
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -320,3 +322,4 @@ export default function HistoryPage() {
     </main>
   );
 }
+
