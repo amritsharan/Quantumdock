@@ -279,95 +279,128 @@ function DashboardPage() {
                 setSimulationResults(prev => prev.map((r, idx) => idx === i ? { ...r, ...update } : r));
             };
 
-            try {
-                // Step 1: Simulate Quantum Refinement
-                updateResult({ status: 'simulating', step: 'refining', progress: 25 });
-                setCurrentStep(`[${i+1}/${totalSims}] Refining energy for ${molecule.name} + ${protein.name}`);
-                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Simulate async work
-                
-                const seed = simpleHash(`${molecule.smiles}${protein.name}`);
-                const pseudoRandom = () => {
-                    let state = seed;
-                    return () => {
-                        let x = Math.sin(state++) * 10000;
-                        return x - Math.floor(x);
+            let prediction;
+            let success = false;
+            let retries = 3; // Number of retries
+            
+            while(retries > 0 && !success) {
+                try {
+                    // Step 1: Simulate Quantum Refinement
+                    updateResult({ status: 'simulating', step: 'refining', progress: 25 });
+                    setCurrentStep(`[${i+1}/${totalSims}] Refining energy for ${molecule.name} + ${protein.name}`);
+                    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Simulate async work
+                    
+                    const seed = simpleHash(`${molecule.smiles}${protein.name}`);
+                    const pseudoRandom = () => {
+                        let state = seed;
+                        return () => {
+                            let x = Math.sin(state++) * 10000;
+                            return x - Math.floor(x);
+                        };
                     };
-                };
-                const random = pseudoRandom();
-                const refinedEnergy = -12.0 + (random() * 6.0 - 3.0);
-                
-                updateResult({ refinedEnergy, progress: 50 });
+                    const random = pseudoRandom();
+                    const refinedEnergy = -12.0 + (random() * 6.0 - 3.0);
+                    
+                    updateResult({ refinedEnergy, progress: 50 });
 
-                // Step 2: AI-powered Prediction
-                updateResult({ status: 'analyzing', step: 'predicting', progress: 75 });
-                setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
-                
-                // Add a delay here to avoid hitting API rate limits
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Step 2: AI-powered Prediction
+                    updateResult({ status: 'analyzing', step: 'predicting', progress: 75 });
+                    setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
+                    
+                    // Add a delay here to avoid hitting API rate limits
+                    await new Promise(resolve => setTimeout(resolve, 1000));
 
-                const prediction = await predictBindingAffinities({
-                    quantumRefinedEnergy: refinedEnergy,
-                    moleculeSmiles: molecule.smiles,
-                    proteinTargetName: protein.name,
-                });
+                    prediction = await predictBindingAffinities({
+                        quantumRefinedEnergy: refinedEnergy,
+                        moleculeSmiles: molecule.smiles,
+                        proteinTargetName: protein.name,
+                    });
+                    
+                    success = true; // Mark as successful if no error was thrown
+                    
+                    updateResult({ prediction, status: 'complete', step: 'done', progress: 100 });
+                    
+                    // Log to Firestore
+                     if (user && firestore) {
+                        try {
+                            const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
+                            const q = query(historyCollectionRef, where('status', '==', 'active'), orderBy('loginTime', 'desc'), limit(1));
+                            const querySnapshot = await getDocs(q);
 
-                updateResult({ prediction, status: 'complete', step: 'done', progress: 100 });
-                
-                // Log to Firestore
-                 if (user && firestore) {
-                    try {
-                        const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
-                        const q = query(historyCollectionRef, where('status', '==', 'active'), orderBy('loginTime', 'desc'), limit(1));
-                        const querySnapshot = await getDocs(q);
-
-                        if (!querySnapshot.empty) {
-                            const activeSessionRef = querySnapshot.docs[0].ref;
-                            const simulationsCollectionRef = collection(activeSessionRef, 'dockingSimulations');
-                            await addDoc(simulationsCollectionRef, {
-                                userId: user.uid,
-                                timestamp: serverTimestamp(),
-                                moleculeSmiles: molecule.smiles,
-                                proteinTarget: protein.name,
-                                bindingAffinity: prediction.bindingAffinity,
-                            });
+                            if (!querySnapshot.empty) {
+                                const activeSessionRef = querySnapshot.docs[0].ref;
+                                const simulationsCollectionRef = collection(activeSessionRef, 'dockingSimulations');
+                                await addDoc(simulationsCollectionRef, {
+                                    userId: user.uid,
+                                    timestamp: serverTimestamp(),
+                                    moleculeSmiles: molecule.smiles,
+                                    proteinTarget: protein.name,
+                                    bindingAffinity: prediction.bindingAffinity,
+                                });
+                            }
+                        } catch (e: any) {
+                             // A permission error here is not critical to the UI flow,
+                             // so we'll just toast it instead of throwing a global error.
+                             toast({
+                                variant: "destructive",
+                                title: "Could not save simulation history",
+                                description: "Please check your Firestore security rules.",
+                             });
                         }
-                    } catch (e: any) {
-                         // A permission error here is not critical to the UI flow,
-                         // so we'll just toast it instead of throwing a global error.
-                         toast({
-                            variant: "destructive",
-                            title: "Could not save simulation history",
-                            description: "Please check your Firestore security rules.",
-                         });
+                    }
+
+                     // Move to completed
+                     setCompletedSimulations(prev => [...prev, {
+                        molecule,
+                        protein,
+                        status: 'complete',
+                        step: 'done',
+                        progress: 100,
+                        refinedEnergy,
+                        prediction,
+                    }]);
+
+                } catch (error: any) {
+                    if (error.message && error.message.includes('429')) {
+                        retries--;
+                        const delay = 5000; // Wait 5 seconds before retrying
+                        setCurrentStep(`[${i+1}/${totalSims}] Rate limit hit. Retrying in ${delay / 1000}s... (${retries} retries left)`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        if(retries === 0) {
+                            console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
+                            const errorMessage = "API rate limit exceeded after multiple retries. Please wait and try again later.";
+                            updateResult({ status: 'error', error: errorMessage, progress: 100 });
+                            setCompletedSimulations(prev => [...prev, {
+                                molecule,
+                                protein,
+                                status: 'error',
+                                step: 'done',
+                                progress: 100,
+                                error: errorMessage,
+                                refinedEnergy: null,
+                                prediction: null,
+                            }]);
+                        }
+                    } else {
+                        // Non-retryable error
+                        console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
+                        const errorMessage = error.message || 'An unexpected error occurred during AI prediction.';
+                        updateResult({ status: 'error', error: errorMessage, progress: 100 });
+                        setCompletedSimulations(prev => [...prev, {
+                            molecule,
+                            protein,
+                            status: 'error',
+                            step: 'done',
+                            progress: 100,
+                            error: errorMessage,
+                            refinedEnergy: null,
+                            prediction: null,
+                        }]);
+                        retries = 0; // Stop retrying for this combination
                     }
                 }
-
-                 // Move to completed
-                 setCompletedSimulations(prev => [...prev, {
-                    molecule,
-                    protein,
-                    status: 'complete',
-                    step: 'done',
-                    progress: 100,
-                    refinedEnergy,
-                    prediction,
-                }]);
-
-            } catch (error: any) {
-                console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
-                const errorMessage = error.message || 'An unexpected error occurred during AI prediction.';
-                updateResult({ status: 'error', error: errorMessage, progress: 100 });
-                setCompletedSimulations(prev => [...prev, {
-                    molecule,
-                    protein,
-                    status: 'error',
-                    step: 'done',
-                    progress: 100,
-                    error: errorMessage,
-                    refinedEnergy: null,
-                    prediction: null,
-                }]);
             }
+
 
             completedSims++;
             setTotalProgress(Math.round((completedSims / totalSims) * 100));
@@ -584,3 +617,5 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
+    
