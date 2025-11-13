@@ -50,25 +50,25 @@ export async function analyzeResearchComparison(
 
 const literatureSurvey = `
 LITERATURE SURVEY
-PAPER NAME: Recent Advances in Quantum Computing for Drug Discovery and Development(2020)
-AUTHOR(S): Gautam Kumar, Sahil Yadav, Aniruddha Mukherjee, Vikas Hassija, Mohsen Guizani
-DESCRIPTION: The paper shows how quantum computing speeds up drug discovery, and our project supports this by providing molecule analysis and visualization as groundwork for quantum-assisted methods.
-DRAWBACKS: The paper gives insights into quantum-assisted drug discovery, but is limited by noisy hardware, small-molecule focus, and lack of real-world validation.
+PAPER NAME: Hybrid quantum cycle generative adversarial network for small molecule generation (2023 / late 2023)
+AUTHOR(S): Matvei Anoshin, Asel Sagingalieva, Christopher Mansell, Dmitry Zhiganov, Vishal Shete, Markus Pflitsch, Alexey Melnikov
+DESCRIPTION: Proposes hybrid quantum generative models (quantum circuits + classical GAN architecture) to generate small drug-like molecules; shows improvement in drug-likeness metrics and pharmacokinetic properties on benchmark datasets.
+DRAWBACKS: Purely generative; generated molecules may not be synthesizable or biologically active; results depend heavily on quality of benchmarks but do not include wet lab validation.
 
-PAPER NAME: Quantum Machine Learning Predicting ADME-Tox Properties in Drug Discovery (2023)
-AUTHOR(S): Amandeep Singh Bhatia, Mandeep Kaur Saggi, Sabre Kais
-DESCRIPTION: Proposes a quantum machine learning model using quantum kernels with classical SVM to predict ADME-Tox properties of small molecules, achieving strong accuracy (AUC-ROC ≈ 0.80-0.95).
-DRAWBACKS: Fully based on simulations; real quantum hardware constraints not fully addressed; dataset size and complexity limited.
+PAPER NAME: A Hybrid Quantum Computing Pipeline for Real World Drug Discovery (2024)
+AUTHOR(S): Weitang Li, Zhi Yin, Xiaoran Li, Dongqiang Ma, Shuang Yi, Zhenxing Zhang, Chenji Zou, Kunliang Bu, Maochun Dai, Jie Yue, Yuzong Chen, Xiaojin Zhang, Shengvu Zhang
+DESCRIPTION: Develops a hybrid pipeline targeting realistic drug design tasks: Gibbs free energy profiles for prodrug activation, simulation of covalent bond interactions; tries to move beyond toy models.
+DRAWBACKS: Even this “real-world” pipeline still has limitations: scale of molecules/proteins studied is modest; challenges with noise, hardware availability; may still rely on simulated or approximated quantum parts.
 
-PAPER NAME: Hybrid quantum-classical convolutional neural network to improve molecular protein binding affinity predictions (2023)
-AUTHOR(S): L. Domingo, M. Djukic, C. Johnson, F. Borondo
-DESCRIPTION: Introduces a hybrid quantum-classical CNN to predict protein-ligand binding affinities. Achieves similar performance to classical methods with reduced complexity
-DRAWBACKS: Still benchmarked on small or idealized datasets; quantum portions may assume lower noise than exists in practice; scalability to large proteins not tested.
+PAPER NAME: Quantum Long Short-Term Memory for Drug Discovery (2024)
+AUTHOR(S): Liang Zhang, Yin Xu, Mohan Wu, Liang Wang, Hua Xu
+DESCRIPTION: Presents a quantum variant of Long Short-Term Memory (LSTM) model for drug discovery tasks; shows better convergence and robustness to noise; increasing qubit count improves performance.
+DRAWBACKS: Likely simulated (not large scale hardware); may not yet handle full chemical diversity; the improvement may be marginal in real drug pipelines; computational overhead / noise sensitivity may grow with size.
 
-PAPER NAME: QDπ: A Quantum Deep Potential Interaction Model for Drug Discovery (2023)
-AUTHOR(S): Jinzhe Zeng, Yujun Tao, Timothy J. Giese, Darrin M. York
-DESCRIPTION: Builds a model combining quantum electronic structure methods with machine-learning potential to capture interactions important in drug discovery; aims to improve accuracy of interaction potentials.
-DRAWBACKS: Computational cost high; still limited to relatively small molecular systems; real-world binding / biological activity not fully validated.
+PAPER NAME: Quantum-machine-assisted Drug Discovery: Survey and Perspective (2024)
+AUTHOR(S): Yidong Zhou, Jintai Chen, Jinglei Cheng, Gopal Karemore, Marinka Zitnik, Frederic T. Chong, Junyu Liu, Tianfan Fu, Zhiding Liang
+DESCRIPTION: A comprehensive survey discussing how quantum computing can assist many stages: molecular simulation, prediction, optimization; discusses current challenges and future prospects.
+DRAWBACKS: Being a survey, it doesn't contribute new experimental data; general discussion detailed case studies or proof on real drug leads; many claims are prospective rather than demonstrated.
 `;
 
 const prompt = ai.definePrompt({
