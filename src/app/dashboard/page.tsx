@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Beaker, Dna, FileText, Loader2, Play, Settings, Bot, Building } from 'lucide-react';
+import { ArrowRight, Beaker, Dna, FileText, Loader2, Play, Bot, Building } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -264,7 +264,6 @@ function DashboardPage() {
                                 </Card>
                                 <Button asChild variant="outline" size="sm" className="w-full">
                                     <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
-                                        <Settings className="mr-2 h-4 w-4" />
                                         Molecules selection
                                     </Link>
                                 </Button>
@@ -288,7 +287,6 @@ function DashboardPage() {
                                 </Card>
                                 <Button asChild variant="outline" size="sm" className="w-full">
                                     <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
-                                        <ArrowRight className="mr-2 h-4 w-4" />
                                         Disease selection
                                     </Link>
                                 </Button>
@@ -312,7 +310,6 @@ function DashboardPage() {
                                 </Card>
                                 <Button asChild variant="outline" size="sm" className="w-full">
                                     <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
-                                        <Settings className="mr-2 h-4 w-4" />
                                         {selectedProteins.length > 0 ? `Target selection (${selectedProteins.length})` : 'Target selection'}
                                     </Link>
                                 </Button>
@@ -413,4 +410,3 @@ export default function Dashboard() {
     )
 }
 
-    
