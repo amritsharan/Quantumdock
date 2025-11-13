@@ -83,7 +83,7 @@ Your task is to analyze the methodology and results of a software project called
 QuantumDock is a web application that simulates molecular docking. Its workflow is as follows:
 1. It first performs a *simulated* classical docking to get a base score.
 2. It then performs a *simulated* quantum refinement step (representing a VQE/QAOA algorithm) to get a "quantum-refined energy".
-3. Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity, providing a rationale and a comparison to a simulated 'standard' model.
+3. Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity, providing a rationale and a comparison to a simulated 'advanced' model.
 The project's key feature is this hybrid "Classical -> Quantum -> AI Interpretation" pipeline to predict binding affinities. The entire process is a simulation designed to demonstrate the potential of such a workflow.
 
 **Your Input:**
@@ -122,7 +122,20 @@ const compareToLiteratureFlow = ai.defineFlow(
     outputSchema: ResearchComparisonOutputSchema,
   },
   async input => {
-    const resultsJson = JSON.stringify(input, null, 2);
+    // Re-structure the input to match the prompt's expectations more simply
+    const resultsForPrompt = input.map(item => ({
+      moleculeSmiles: item.moleculeSmiles,
+      proteinTarget: item.proteinTarget,
+      bindingAffinity: item.bindingAffinity,
+      confidenceScore: item.confidenceScore,
+      rationale: item.rationale,
+      comparison: {
+        advancedModelScore: item.standardModelScore, // Keep original field name
+        explanation: item.aiCommentary
+      }
+    }));
+    
+    const resultsJson = JSON.stringify(resultsForPrompt, null, 2);
     const {output} = await prompt({ resultsJson });
     return output!;
   }
