@@ -48,6 +48,7 @@ export async function runFullDockingProcess(
     for (const protein of validatedData.proteinTargets) {
       try {
         console.log(`Processing combination: ${smile} + ${protein}`);
+        
         onProgress('classifying');
         const classicalScore = await runClassicalDocking(smile, protein);
         
