@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 type SimulationStatus = 'idle' | 'preparing' | 'simulating' | 'analyzing' | 'complete' | 'error';
@@ -72,6 +73,9 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
         },
     };
 
+    const completedResults = results.filter(r => r.status === 'complete' && r.prediction);
+    const erroredResults = results.filter(r => r.status === 'error');
+
     return (
         <Card>
             <CardHeader>
@@ -80,9 +84,9 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                     Lower binding affinity (nM) indicates a stronger, more favorable interaction.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-8">
                 {chartData.length > 0 && (
-                    <div className="mb-8">
+                    <div>
                          <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
                         <ChartContainer config={chartConfig} className="h-[250px] w-full">
                             <ResponsiveContainer>
@@ -111,71 +115,57 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                         </ChartContainer>
                     </div>
                 )}
-                <Accordion type="single" collapsible className="w-full">
-                    {results.map((result, index) => (
-                        <AccordionItem value={`item-${index}`} key={`${result.molecule.smiles}-${result.protein.name}`}>
-                            <AccordionTrigger>
-                                <div className="flex items-center gap-4 w-full">
-                                    <div className="flex-1 text-left font-medium">{result.molecule.name} + {result.protein.name}</div>
-                                    <Badge variant={result.status === 'complete' ? 'default' : (result.status === 'error' ? 'destructive' : 'secondary')} className={result.status === 'complete' ? 'bg-green-500' : ''}>
-                                        {result.status}
-                                    </Badge>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                {result.status === 'error' && (
-                                    <Alert variant="destructive">
-                                        <AlertTitle>Simulation Failed</AlertTitle>
-                                        <AlertDescription>{result.error || 'An unexpected error occurred.'}</AlertDescription>
-                                    </Alert>
+                
+                <div>
+                    <CardTitle className="text-lg mb-4">Detailed Simulation Results</CardTitle>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Combination</TableHead>
+                                    <TableHead className="text-right">Affinity (nM)</TableHead>
+                                    <TableHead className="text-right">Confidence</TableHead>
+                                    <TableHead className="text-right">Standard Model (nM)</TableHead>
+                                    <TableHead>AI Rationale</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {completedResults.length === 0 && erroredResults.length === 0 && (
+                                     <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center">
+                                            No results yet. Run a simulation to see the output.
+                                        </TableCell>
+                                    </TableRow>
                                 )}
-                                {result.prediction && (
-                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
-                                        <div className="md:col-span-1 space-y-4">
-                                            <Card>
-                                                <CardHeader className="pb-2">
-                                                    <CardDescription>Binding Affinity</CardDescription>
-                                                    <CardTitle className="text-3xl">{result.prediction.bindingAffinity.toFixed(2)} nM</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <p className="text-xs text-muted-foreground">Lower is better. Indicates stronger binding.</p>
-                                                </CardContent>
-                                            </Card>
-                                             <Card>
-                                                <CardHeader className="pb-2">
-                                                    <CardDescription>Confidence Score</CardDescription>
-                                                    <CardTitle className="text-3xl">{Math.round(result.prediction.confidenceScore * 100)}%</CardTitle>
-                                                </CardHeader>
-                                                 <CardContent>
-                                                    <p className="text-xs text-muted-foreground">AI model's confidence in the prediction.</p>
-                                                 </CardContent>
-                                            </Card>
-                                        </div>
-                                        <div className="md:col-span-2 space-y-4">
-                                            <Card>
-                                                <CardHeader>
-                                                    <CardTitle>AI Rationale</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <p className="text-sm text-muted-foreground">{result.prediction.rationale}</p>
-                                                </CardContent>
-                                            </Card>
-                                             <Card>
-                                                <CardHeader>
-                                                    <CardTitle>Comparative Analysis</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                     <p className="text-sm text-muted-foreground mb-2"><strong>Standard Model Score:</strong> {result.prediction.comparison.standardModelScore.toFixed(2)} nM</p>
-                                                    <p className="text-sm text-muted-foreground">{result.prediction.comparison.explanation}</p>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    </div>
-                                )}
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
-                </Accordion>
+                                {completedResults.map((result, index) => (
+                                     <TableRow key={index}>
+                                        <TableCell className="font-medium">
+                                            <div>{result.molecule.name}</div>
+                                            <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                        </TableCell>
+                                        <TableCell className="text-right">{result.prediction.bindingAffinity.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
+                                        <TableCell className="text-right">{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{result.prediction.rationale}</TableCell>
+                                     </TableRow>
+                                ))}
+                                {erroredResults.map((result, index) => (
+                                    <TableRow key={`error-${index}`}>
+                                        <TableCell className="font-medium">
+                                            <div>{result.molecule.name}</div>
+                                            <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                        </TableCell>
+                                         <TableCell colSpan={4}>
+                                            <Alert variant="destructive" className="bg-transparent border-0 p-0">
+                                                <AlertDescription>{result.error}</AlertDescription>
+                                            </Alert>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
             </CardContent>
         </Card>
     );
@@ -361,7 +351,7 @@ function DashboardPage() {
                     }]);
 
                 } catch (error: any) {
-                    if (error.message && error.message.includes('429')) {
+                    if (error.message && (error.message.includes('429') || error.message.includes('Too Many Requests'))) {
                         retries--;
                         const delay = 5000; // Wait 5 seconds before retrying
                         setCurrentStep(`[${i+1}/${totalSims}] Rate limit hit. Retrying in ${delay / 1000}s... (${retries} retries left)`);
@@ -617,5 +607,6 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
 
     
