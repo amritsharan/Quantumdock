@@ -220,23 +220,6 @@ function DashboardPage() {
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6">
             <div className="grid gap-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Quantum Docking Simulation</CardTitle>
-                            <CardDescription>
-                                Select your molecules and protein targets to begin.
-                            </CardDescription>
-                        </div>
-                        <Button onClick={runSimulation} disabled={isRunning || selectedMolecules.length === 0 || selectedProteins.length === 0}>
-                            {isRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
-                            Run Docking ({selectedMolecules.length * selectedProteins.length})
-                        </Button>
-                    </div>
-                  </CardHeader>
-                </Card>
-
                  <Card>
                     <CardHeader>
                         <CardTitle>Molecule Viewer</CardTitle>
@@ -248,7 +231,7 @@ function DashboardPage() {
                         <div className="md:col-span-1 flex flex-col gap-6">
                             {/* Molecules Section */}
                             <div className="space-y-2">
-                                <h3 className="flex items-center gap-2 font-semibold"><Beaker className="h-5 w-5" /> Molecules</h3>
+                                <h3 className="flex items-center gap-2 font-semibold">Molecules</h3>
                                 <Card className="p-4">
                                     {selectedMolecules.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -268,11 +251,11 @@ function DashboardPage() {
                                     </Link>
                                 </Button>
                             </div>
-
-                             {/* Diseases Section */}
-                             <div className="space-y-2">
-                                <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> Select Diseases</h3>
-                                <Card className="p-4">
+                            
+                            {/* Diseases Section */}
+                            <div className="space-y-2">
+                                <h3 className="flex items-center gap-2 font-semibold">Select Diseases</h3>
+                                 <Card className="p-4">
                                     {selectedDiseases.length > 0 ? (
                                         <ScrollArea className="h-24">
                                             <div className="flex flex-wrap gap-2">
@@ -291,10 +274,10 @@ function DashboardPage() {
                                     </Link>
                                 </Button>
                             </div>
-                            
+
                             {/* Proteins Section */}
                             <div className="space-y-2">
-                                <h3 className="flex items-center gap-2 font-semibold"><Dna className="h-5 w-5" /> Protein Targets</h3>
+                                <h3 className="flex items-center gap-2 font-semibold">Protein Targets</h3>
                                 <Card className="p-4">
                                     {selectedProteins.length > 0 ? (
                                         <ScrollArea className="h-24">
@@ -310,10 +293,14 @@ function DashboardPage() {
                                 </Card>
                                 <Button asChild variant="outline" size="sm" className="w-full">
                                     <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
-                                        {selectedProteins.length > 0 ? `Target selection (${selectedProteins.length})` : 'Target selection'}
+                                        Target selection
                                     </Link>
                                 </Button>
                             </div>
+                             <Button onClick={runSimulation} disabled={isRunning || selectedMolecules.length === 0 || selectedProteins.length === 0}>
+                                {isRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                                Run Docking ({selectedMolecules.length * selectedProteins.length})
+                            </Button>
                         </div>
                         <div className="md:col-span-2">
                             {/* Placeholder for future content, perhaps a 3D viewer or results summary */}
@@ -357,44 +344,6 @@ function DashboardPage() {
                 <SimulationResultsDisplay results={completedSimulations} title="Completed Simulations" />
             )}
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Building className="h-5 w-5" />
-                        API Key Management
-                    </CardTitle>
-                    <CardDescription>
-                        Manage your Gemini API key. You can generate a new key from Google AI Studio.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <label htmlFor="apiKey" className="text-sm font-medium">Your Gemini API Key</label>
-                        <Input
-                            id="apiKey"
-                            type="password"
-                            placeholder="Enter your API key here"
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Your key is stored in an environment variable. This field is for display and update purposes.
-                        </p>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Button asChild variant="outline">
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
-                            Generate New Key in AI Studio
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </a>
-                    </Button>
-                    <Button onClick={() => toast({ title: "API Key", description: "Functionality to update the key is not yet implemented." })}>
-                        Save Key
-                    </Button>
-                </CardFooter>
-            </Card>
-
         </div>
       </main>
       <Toaster />
@@ -410,3 +359,4 @@ export default function Dashboard() {
     )
 }
 
+    
