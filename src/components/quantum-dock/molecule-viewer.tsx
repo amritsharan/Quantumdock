@@ -113,7 +113,7 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule, result
         <Card>
             <CardHeader>
                 <CardTitle>Visualization & Properties</CardTitle>
-                <CardDescription>Best molecule: {bestResultMolecule.name}. Properties shown for all {molecules.length} selected molecule(s).</CardDescription>
+                <CardDescription>Best molecule: {bestResultMolecule.name}</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="min-h-[250px] relative rounded-md border flex items-center justify-center p-4">
