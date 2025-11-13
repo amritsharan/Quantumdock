@@ -410,31 +410,18 @@ function DashboardPage() {
                             <h3 className="font-semibold">Molecules</h3>
                             <Card className="p-4">
                                 {selectedMolecules.length > 0 ? (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-center">
-                                            <Image
-                                                src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(selectedMolecules[0].smiles)}/image?width=150&height=150`}
-                                                alt={`Structure of ${selectedMolecules[0].name}`}
-                                                width={150}
-                                                height={150}
-                                                className="rounded-md bg-white p-2 border"
-                                                unoptimized
-                                            />
+                                    <ScrollArea className="h-24">
+                                        <div className="space-y-3">
+                                            {selectedMolecules.map(m => (
+                                                <div key={m.smiles} className="text-sm">
+                                                    <p className="font-medium">{m.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {m.formula} &bull; {m.molecularWeight.toFixed(2)} g/mol
+                                                    </p>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <Separator />
-                                        <ScrollArea className="h-24">
-                                            <div className="space-y-3">
-                                                {selectedMolecules.map(m => (
-                                                    <div key={m.smiles} className="text-sm">
-                                                        <p className="font-medium">{m.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {m.formula} &bull; {m.molecularWeight.toFixed(2)} g/mol
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    </div>
+                                    </ScrollArea>
                                 ) : (
                                     <div className="text-center text-sm text-muted-foreground py-8">
                                         No molecules selected.
@@ -524,7 +511,17 @@ function DashboardPage() {
                                                 ) : null}
                                             </CardHeader>
                                             <CardContent>
-                                                <div className="text-xs text-muted-foreground capitalize">{result.step}...</div>
+                                                <div className="flex justify-center my-2">
+                                                    <Image
+                                                        src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(result.molecule.smiles)}/image?width=100&height=100`}
+                                                        alt={`Structure of ${result.molecule.name}`}
+                                                        width={100}
+                                                        height={100}
+                                                        className="rounded-md bg-white p-2 border"
+                                                        unoptimized
+                                                    />
+                                                </div>
+                                                <div className="text-xs text-muted-foreground capitalize text-center">{result.step}...</div>
                                                 <Progress value={result.progress} className="mt-2 h-2" />
                                             </CardContent>
                                         </Card>
