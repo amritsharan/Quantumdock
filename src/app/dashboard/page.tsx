@@ -253,7 +253,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                     <TableHead>Combination</TableHead>
                                     <TableHead>Affinity (nM)</TableHead>
                                     <TableHead>Affinity Level</TableHead>
-                                    <TableHead>Comb. MW (Da)</TableHead>
+                                    <TableHead>Combined MW (Da)</TableHead>
                                     <TableHead>H-Donors</TableHead>
                                     <TableHead>H-Acceptors</TableHead>
                                     <TableHead>AI Rationale</TableHead>
@@ -749,14 +749,12 @@ function DashboardPage() {
                             </div>
                         ) : completedSimulations.length > 0 ? (
                                 <div className="w-full">
-                                    <ScrollArea className="h-[calc(100vh-18rem)]">
-                                        <SimulationResultsDisplay 
-                                            results={completedSimulations}
-                                            title="Completed Simulations"
-                                            onSaveResults={handleSaveResults}
-                                            isSaving={isSaving}
-                                        />
-                                    </ScrollArea>
+                                    <SimulationResultsDisplay 
+                                        results={completedSimulations}
+                                        title="Completed Simulations"
+                                        onSaveResults={handleSaveResults}
+                                        isSaving={isSaving}
+                                    />
                                 </div>
                             ) : selectedMolecules.length > 0 ? (
                                 <div className="w-full">
@@ -811,4 +809,3 @@ export default function Dashboard() {
     )
 }
 
-    
