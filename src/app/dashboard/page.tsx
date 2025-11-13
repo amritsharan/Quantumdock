@@ -495,31 +495,19 @@ function DashboardPage() {
                         error.message.includes('Service Unavailable')
                     );
 
-                    if (isRetryableError) {
+                    if (isRetryableError && retries > 0) {
                         retries--;
                         const delay = 5000; // Wait 5 seconds before retrying
                         const retryMessage = error.message.includes('429') ? 'Rate limit hit' : 'Service unavailable';
                         setCurrentStep(`[${i+1}/${totalSims}] ${retryMessage}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        if(retries === 0) {
-                            console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
-                            const errorMessage = "API is overloaded. Please wait and try again later.";
-                            updateResult({ status: 'error', error: errorMessage, progress: 100 });
-                            setCompletedSimulations(prev => [...prev, {
-                                molecule,
-                                protein,
-                                status: 'error',
-                                step: 'done',
-                                progress: 100,
-                                error: errorMessage,
-                                refinedEnergy: null,
-                                prediction: null,
-                            }]);
-                        }
                     } else {
-                        // Non-retryable error
+                        // Non-retryable error or retries exhausted
                         console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
-                        const errorMessage = error.message || 'An unexpected error occurred during AI prediction.';
+                        const errorMessage = isRetryableError 
+                            ? "API is overloaded. Please wait and try again later."
+                            : error.message || 'An unexpected error occurred during AI prediction.';
+
                         updateResult({ status: 'error', error: errorMessage, progress: 100 });
                         setCompletedSimulations(prev => [...prev, {
                             molecule,
@@ -629,7 +617,7 @@ function DashboardPage() {
              <div className="md:col-span-1 flex flex-col gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Configuration</CardTitle>
+                        <CardTitle>Molecule Viewer</CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-6">
                         <div className="space-y-2">
