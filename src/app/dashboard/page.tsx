@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,10 @@ import { Separator } from '@/components/ui/separator';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { Document, Packer, Paragraph, TextRun, Table as DocxTable, TableCell as DocxTableCell, TableRow as DocxTableRow, WidthType } from 'docx';
+import { saveAs } from 'file-saver';
 
 
 type SimulationStatus = 'idle' | 'preparing' | 'simulating' | 'analyzing' | 'complete' | 'error';
@@ -76,13 +80,118 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
     const completedResults = results.filter(r => r.status === 'complete' && r.prediction);
     const erroredResults = results.filter(r => r.status === 'error');
 
+    const handleDownloadPdf = () => {
+        const doc = new jsPDF();
+        const docTitle = "QuantumDock - Detailed Simulation Results";
+        
+        doc.setFontSize(18);
+        doc.text(docTitle, 14, 22);
+
+        const tableColumn = ["Molecule", "Protein", "Affinity (nM)", "Confidence", "Std. Model (nM)", "Rationale"];
+        const tableRows: any[][] = [];
+
+        completedResults.forEach(res => {
+            const rowData = [
+                res.molecule.name,
+                res.protein.name,
+                res.prediction.bindingAffinity.toFixed(2),
+                `${Math.round(res.prediction.confidenceScore * 100)}%`,
+                res.prediction.comparison.standardModelScore.toFixed(2),
+                res.prediction.rationale
+            ];
+            tableRows.push(rowData);
+        });
+
+        if (tableRows.length > 0) {
+            (doc as any).autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: 30,
+                theme: 'striped',
+                headStyles: { fillColor: [46, 82, 102] },
+                columnStyles: {
+                    5: { cellWidth: 'wrap' } // Wrap rationale text
+                }
+            });
+        } else {
+             doc.setFontSize(12);
+             doc.text("No completed simulation data to export.", 14, 40);
+        }
+
+        doc.save(`QuantumDock_Results_${new Date().toISOString()}.pdf`);
+    };
+
+    const handleDownloadDocx = () => {
+        if (completedResults.length === 0) {
+            alert("No completed simulation data to export.");
+            return;
+        }
+
+        const tableHeader = new DocxTableRow({
+            children: [
+                new DocxTableCell({ children: [new Paragraph({ text: "Molecule", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Protein", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Affinity (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Standard Model (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Rationale", bold: true })] }),
+            ],
+        });
+
+        const tableRows = completedResults.map(res => new DocxTableRow({
+            children: [
+                new DocxTableCell({ children: [new Paragraph(res.molecule.name)] }),
+                new DocxTableCell({ children: [new Paragraph(res.protein.name)] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.standardModelScore.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.rationale)] }),
+            ],
+        }));
+
+        const table = new DocxTable({
+            rows: [tableHeader, ...tableRows],
+            width: {
+                size: 100,
+                type: WidthType.PERCENTAGE,
+            },
+        });
+
+        const doc = new Document({
+            sections: [{
+                children: [
+                    new Paragraph({
+                        children: [new TextRun({ text: "QuantumDock - Detailed Simulation Results", bold: true, size: 36 })],
+                    }),
+                    table
+                ],
+            }],
+        });
+
+        Packer.toBlob(doc).then(blob => {
+            saveAs(blob, `QuantumDock_Results_${new Date().toISOString()}.docx`);
+        });
+    };
+
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{title}</CardTitle>
-                 <CardDescription>
-                    Lower binding affinity (nM) indicates a stronger, more favorable interaction.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                     <div>
+                        <CardTitle>{title}</CardTitle>
+                         <CardDescription>
+                            Lower binding affinity (nM) indicates a stronger, more favorable interaction.
+                        </CardDescription>
+                     </div>
+                     <div className="flex gap-2">
+                         <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={completedResults.length === 0}>
+                            <Download className="mr-2 h-4 w-4" /> PDF
+                         </Button>
+                         <Button variant="outline" size="sm" onClick={handleDownloadDocx} disabled={completedResults.length === 0}>
+                            <Download className="mr-2 h-4 w-4" /> DOCX
+                         </Button>
+                     </div>
+                </div>
             </CardHeader>
             <CardContent className="space-y-8">
                 {chartData.length > 0 && (
@@ -608,5 +717,7 @@ export default function Dashboard() {
     )
 }
 
+
+    
 
     
