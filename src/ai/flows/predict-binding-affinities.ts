@@ -37,10 +37,8 @@ const PredictBindingAffinitiesOutputSchema = z.object({
     ),
   confidenceScore: z
     .number()
-    .min(0.70)
-    .max(0.85)
     .describe(
-      'A confidence score (from 0.70 to 0.85) indicating the reliability of the prediction. It must be a value between 0.70 and 0.85.'
+      'A confidence score indicating the reliability of the prediction.'
     ),
   rationale: z
     .string()
@@ -75,7 +73,7 @@ You will be given:
 
 Your tasks are:
 1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
-2.  **Provide a Confidence Score:** Give a confidence score from 0.70 to 0.85 for your prediction. This value MUST be between 0.70 and 0.85, inclusive. This result must be deterministic.
+2.  **Provide a Confidence Score:** Give a confidence score for your prediction. This result must be deterministic.
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
     - **standardModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
