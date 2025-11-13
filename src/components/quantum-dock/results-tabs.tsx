@@ -31,7 +31,7 @@ export function ResultsTabs({ results, saveState, onSave }: ResultsTabsProps) {
     return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
       name: `${res.name} + ${res.proteinTarget}`,
       'Quantum Affinity (nM)': res.bindingAffinity,
-      'Standard Model (nM)': res.comparison.standardModelScore,
+      'Advanced Model (nM)': res.comparison.standardModelScore,
     }));
   }, [results]);
 
@@ -40,8 +40,8 @@ export function ResultsTabs({ results, saveState, onSave }: ResultsTabsProps) {
       label: 'Quantum Affinity (nM)',
       color: 'hsl(var(--accent))',
     },
-    'Standard Model (nM)': {
-        label: 'Standard Model (nM)',
+    'Advanced Model (nM)': {
+        label: 'Advanced Model (nM)',
         color: 'hsl(var(--primary))',
     }
   };
@@ -76,7 +76,7 @@ export function ResultsTabs({ results, saveState, onSave }: ResultsTabsProps) {
                     />
                      <Legend content={<ChartLegendContent />} />
                     <Bar dataKey="Quantum Affinity (nM)" radius={4} />
-                    <Bar dataKey="Standard Model (nM)" radius={4} />
+                    <Bar dataKey="Advanced Model (nM)" radius={4} />
                     </BarChart>
                 </ChartContainer>
             </div>
@@ -88,5 +88,3 @@ export function ResultsTabs({ results, saveState, onSave }: ResultsTabsProps) {
     </Tabs>
   );
 }
-
-    

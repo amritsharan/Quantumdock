@@ -101,7 +101,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
       doc.setFontSize(22);
       doc.text(docTitle, 20, 20);
       
-      const tableColumn = ["Molecule", "Protein", "Quantum Affinity (nM)", "Standard ML (nM)", "Confidence", "Explanation"];
+      const tableColumn = ["Molecule", "Protein", "Quantum Affinity (nM)", "Advanced ML (nM)", "Confidence", "Explanation"];
       const tableRows: any[][] = [];
 
       sortedResults.forEach(res => {
@@ -132,7 +132,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 new DocxTableCell({ children: [new Paragraph({ text: "Molecule", style: "strong" })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Protein", style: "strong" })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", style: "strong" })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Standard ML (nM)", style: "strong" })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Advanced ML (nM)", style: "strong" })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", style: "strong" })] }),
             ],
         });
@@ -223,7 +223,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('name')}>Molecule {getSortIcon('name')}</div>
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('proteinTarget')}>Protein {getSortIcon('proteinTarget')}</div>
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('bindingAffinity')}>Quantum Affinity (nM) {getSortIcon('bindingAffinity')}</div>
-                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('standardModelScore')}>Standard ML (nM) {getSortIcon('standardModelScore')}</div>
+                <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('standardModelScore')}>Advanced ML (nM) {getSortIcon('standardModelScore')}</div>
                 <div className="w-2/12 cursor-pointer flex items-center" onClick={() => handleSort('confidenceScore')}>Confidence {getSortIcon('confidenceScore')}</div>
                 <div className="w-2/12 text-left">Affinity Level</div>
             </div>
@@ -235,7 +235,7 @@ export function ResultsDisplay({ results, onSave, saveState }: ResultsDisplayPro
                     <div className="w-full md:w-2/12 font-medium text-left"><span className='md:hidden font-bold'>Molecule: </span>{result.name}</div>
                     <div className="w-full md:w-2/12 font-medium text-left"><span className='md:hidden font-bold'>Protein: </span>{result.proteinTarget}</div>
                     <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Quantum Affinity (nM): </span>{result.bindingAffinity.toFixed(2)}</div>
-                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Standard ML (nM): </span>{result.comparison.standardModelScore.toFixed(2)}</div>
+                    <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Advanced ML (nM): </span>{result.comparison.standardModelScore.toFixed(2)}</div>
                     <div className="w-full md:w-2/12 text-left"><span className='md:hidden font-bold'>Confidence: </span>{`${(result.confidenceScore * 100).toFixed(0)}%`}</div>
                     <div className="w-full md:w-2/12 text-left">{getAffinityBadge(result.bindingAffinity)}</div>
                 </AccordionTrigger>

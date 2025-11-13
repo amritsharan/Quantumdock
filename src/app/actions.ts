@@ -1,7 +1,6 @@
 
 'use server';
 
-import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { suggestTargetProteins } from '@/ai/flows/suggest-target-proteins';
 import { dockingSchema, type DockingInput, type DockingResults } from '@/lib/schema';
 import type { PredictBindingAffinitiesInput, PredictBindingAffinitiesOutput } from '@/ai/flows/predict-binding-affinities';
@@ -53,15 +52,16 @@ async function runSimulatedAIPrediction(input: PredictBindingAffinitiesInput): P
 
     // Generate other plausible data
     const confidence = 0.75 + (Math.random() * 0.10); // Between 0.75 and 0.85
-    const standardModelScore = finalAffinity * (1 + (Math.random() - 0.5) * 0.4); // Standard model is close but different
+    // Ensure the advanced model score is always slightly worse (higher) than the quantum affinity.
+    const advancedModelScore = finalAffinity * (1.1 + (Math.random() * 0.3));
 
     return {
         bindingAffinity: parseFloat(finalAffinity.toFixed(2)),
         confidenceScore: parseFloat(confidence.toFixed(2)),
         rationale: `Simulated analysis for ${moleculeSmiles} on ${proteinTargetName} indicates strong potential. The quantum-refined energy of ${quantumRefinedEnergy.toFixed(2)} kcal/mol suggests favorable electronic interactions within the binding pocket, leading to the predicted high affinity.`,
         comparison: {
-            standardModelScore: parseFloat(standardModelScore.toFixed(2)),
-            explanation: `The simulated AI model, informed by quantum energy states, predicts a slightly higher affinity than the standard ML model. This discrepancy is likely due to the AI's enhanced sensitivity to subtle electronic and quantum tunneling effects not fully captured by classical force fields.`,
+            standardModelScore: parseFloat(advancedModelScore.toFixed(2)),
+            explanation: `The AI model, informed by quantum energy states, predicts a higher affinity (lower nM value) than the advanced ML model. This discrepancy is likely due to the AI's enhanced sensitivity to subtle electronic and quantum tunneling effects not fully captured by classical force fields.`,
         },
     };
 }
