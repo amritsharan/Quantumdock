@@ -14,6 +14,7 @@ import type { Molecule } from '@/lib/molecules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '../ui/badge';
+import { useMemo } from 'react';
 
 
 interface MoleculeViewerProps {
@@ -38,6 +39,21 @@ const MoleculeProperties = ({ molecule }: { molecule: Molecule }) => (
 export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: MoleculeViewerProps) {
 
   const hasSelection = molecules && molecules.length > 0;
+
+  const combinedProperties = useMemo(() => {
+    if (!molecules || molecules.length === 0) {
+      return { totalWeight: 0, totalDonors: 0, totalAcceptors: 0 };
+    }
+    return molecules.reduce(
+      (acc, mol) => {
+        acc.totalWeight += mol.molecularWeight;
+        acc.totalDonors += mol.donors;
+        acc.totalAcceptors += mol.acceptors;
+        return acc;
+      },
+      { totalWeight: 0, totalDonors: 0, totalAcceptors: 0 }
+    );
+  }, [molecules]);
   
   if (!hasSelection && !bestResultMolecule) {
     return (
@@ -64,11 +80,11 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
      return (
         <Card>
             <CardHeader>
-                <CardTitle>Visualization</CardTitle>
-                <CardDescription>Best simulation result: {bestResultMolecule.name}</CardDescription>
+                <CardTitle>Visualization & Properties</CardTitle>
+                <CardDescription>Best molecule: {bestResultMolecule.name}. Properties shown for all {molecules.length} selected molecule(s).</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="min-h-[250px] relative rounded-md border flex items-center justify-center">
+                <div className="min-h-[250px] relative rounded-md border flex items-center justify-center p-4">
                     <Image
                         src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(bestResultMolecule.smiles)}/image?width=250&height=250`}
                         alt={`Structure of ${bestResultMolecule.name}`}
@@ -78,22 +94,33 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
                         unoptimized
                     />
                 </div>
-                <Tabs defaultValue="donors" className="w-full mt-4">
-                    <TabsList className="grid w-full grid-cols-2">
+                <Tabs defaultValue="weight" className="w-full mt-4">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="weight">Mol. Weight</TabsTrigger>
                         <TabsTrigger value="donors">H-Donors</TabsTrigger>
                         <TabsTrigger value="acceptors">H-Acceptors</TabsTrigger>
                     </TabsList>
+                    <TabsContent value="weight">
+                        <Card>
+                        <CardHeader className="p-4 flex-row items-center justify-between">
+                            <CardTitle>Combined Weight</CardTitle>
+                             <p className='text-lg font-mono'>{combinedProperties.totalWeight.toFixed(2)} Da</p>
+                        </CardHeader>
+                        </Card>
+                    </TabsContent>
                     <TabsContent value="donors">
                         <Card>
-                        <CardHeader className="p-4">
-                            <CardTitle className="text-center">{bestResultMolecule.donors}</CardTitle>
+                        <CardHeader className="p-4 flex-row items-center justify-between">
+                            <CardTitle>Total H-Donors</CardTitle>
+                            <p className='text-lg font-mono'>{combinedProperties.totalDonors}</p>
                         </CardHeader>
                         </Card>
                     </TabsContent>
                     <TabsContent value="acceptors">
                         <Card>
-                        <CardHeader className="p-4">
-                             <CardTitle className="text-center">{bestResultMolecule.acceptors}</CardTitle>
+                        <CardHeader className="p-4 flex-row items-center justify-between">
+                             <CardTitle>Total H-Acceptors</CardTitle>
+                             <p className='text-lg font-mono'>{combinedProperties.totalAcceptors}</p>
                         </CardHeader>
                         </Card>
                     </TabsContent>
