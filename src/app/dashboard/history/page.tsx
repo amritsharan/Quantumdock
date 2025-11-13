@@ -100,6 +100,9 @@ function DailyActivityDialog({ loginRecord, isOpen, onOpenChange }: { loginRecor
     };
 
     const date = loginRecord ? new Date(loginRecord.loginTime.seconds * 1000) : null;
+    if (!loginRecord) {
+        return null;
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
