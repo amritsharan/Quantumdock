@@ -15,4 +15,15 @@ export type DockingResults = PredictBindingAffinitiesOutput & {
   moleculeSmiles: string;
 };
 
+export type ResearchComparisonInput = z.infer<typeof ResearchComparisonInputSchema>;
+
+const ResearchComparisonInputSchema = z.array(z.object({
+    moleculeSmiles: z.string(),
+    proteinTarget: z.string(),
+    bindingAffinity: z.number(),
+    confidenceScore: z.number(),
+    rationale: z.string(),
+    standardModelScore: z.number(),
+    aiCommentary: z.string(),
+}));
     

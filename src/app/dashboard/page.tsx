@@ -22,7 +22,6 @@ import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
-import { LiteratureAnalysis } from '@/components/quantum-dock/literature-analysis';
 
 type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -262,7 +261,7 @@ function DashboardPage() {
                         </Card>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-molecule')}>
-                                {selectedMolecules.length > 0 ? 'Molecule Selection' : 'Select Molecules'}
+                                Molecule Selection
                             </Link>
                         </Button>
                     </div>
@@ -290,7 +289,7 @@ function DashboardPage() {
                         </Card>
                         <Button asChild variant="outline">
                             <Link href={buildLink('/select-disease')}>
-                                {selectedDiseaseKeywords.length > 0 ? 'Disease Selection' : 'Select Diseases'}
+                                Disease Selection
                             </Link>
                         </Button>
                     </div>
@@ -318,7 +317,7 @@ function DashboardPage() {
                         </Card>
                          <Button asChild variant="outline">
                             <Link href={buildLink('/select-protein')}>
-                                {selectedProteins.length > 0 ? 'Protein Selection' : 'Select Protein Targets'}
+                                Protein Selection
                             </Link>
                         </Button>
                     </div>
@@ -367,7 +366,6 @@ function DashboardPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <ResultsDisplay results={results} onSave={handleSaveResults} saveState={saveState} />
-                    <LiteratureAnalysis results={results} />
                 </CardContent>
               </Card>
             )}
