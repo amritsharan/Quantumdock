@@ -36,7 +36,7 @@ async function runQuantumRefinementSimulation(classicalScore: number): Promise<n
 }
 
 
-export async function runFullDockingProcess(data: DockingInput, userId: string, onProgress: (step: 'refining' | 'predicting') => void): Promise<DockingResults[]> {
+export async function runFullDockingProcess(data: DockingInput, userId: string, onProgress: (step: 'classifying' |'refining' | 'predicting') => void): Promise<DockingResults[]> {
   const validatedData = dockingSchema.parse(data);
   const successfulResults: DockingResults[] = [];
 
@@ -44,6 +44,7 @@ export async function runFullDockingProcess(data: DockingInput, userId: string, 
     for (const protein of validatedData.proteinTargets) {
       try {
         console.log(`Processing combination: ${smile} + ${protein}`);
+        onProgress('classifying');
         const classicalScore = await runClassicalDocking(smile, protein);
         
         onProgress('refining');
