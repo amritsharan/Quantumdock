@@ -83,8 +83,7 @@ Your task is to analyze the methodology and results of a software project called
 QuantumDock is a web application that simulates molecular docking. Its workflow is as follows:
 1.  It first performs a *simulated* classical docking to get a base score.
 2.  It then performs a *simulated* quantum refinement step (representing a VQE/QAOA algorithm) to get a "quantum-refined energy".
-3.  Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity.
-The key innovation is this "Classical -> Quantum -> AI Interpretation" pipeline. The project also provides a comparative score from a simulated "Advanced ML Model" to highlight the potential difference a quantum-informed approach could make. The entire process is a simulation designed to demonstrate the potential of such a workflow.
+3.  Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity. The key innovation is this "Classical -> Quantum -> AI Interpretation" pipeline. The project also provides a comparative score from a simulated "Advanced ML Model" to highlight the potential difference a quantum-informed approach could make. The entire process is a simulation designed to demonstrate the potential of such a workflow.
 
 **Your Input:**
 1.  **Literature Survey:** A list of recent papers, their descriptions, and their noted drawbacks.
@@ -123,20 +122,9 @@ const compareToLiteratureFlow = ai.defineFlow(
   },
   async input => {
     // This is the data that is passed to the prompt. It must match what the prompt expects.
-    const resultsForPrompt = input.map(item => ({
-      moleculeSmiles: item.moleculeSmiles,
-      proteinTarget: item.proteinTarget,
-      bindingAffinity: item.bindingAffinity,
-      confidenceScore: item.confidenceScore,
-      rationale: item.rationale,
-      // The prompt expects the comparison object directly
-      comparison: {
-        standardModelScore: item.standardModelScore,
-        explanation: item.aiCommentary,
-      },
-    }));
-    
-    const resultsJson = JSON.stringify(resultsForPrompt, null, 2);
+    // The prompt expects a single object with a `resultsJson` key which is a string.
+    // The `input` to this flow is an array of objects. We just need to stringify it.
+    const resultsJson = JSON.stringify(input, null, 2);
     const {output} = await prompt({ resultsJson });
     return output!;
   }
