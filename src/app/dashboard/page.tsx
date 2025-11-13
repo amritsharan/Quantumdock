@@ -59,9 +59,9 @@ const simpleHash = (str: string): number => {
 };
 
 const getAffinityLevel = (affinity: number): { level: 'Low' | 'Moderate' | 'High', className: string } => {
-    if (affinity < 10) return { level: 'Low', className: 'bg-green-500 hover:bg-green-500/80' };
+    if (affinity < 10) return { level: 'High', className: 'bg-green-500 hover:bg-green-500/80' };
     if (affinity <= 100) return { level: 'Moderate', className: 'bg-yellow-500 hover:bg-yellow-500/80' };
-    return { level: 'High', className: 'bg-red-500 hover:bg-red-500/80' };
+    return { level: 'Low', className: 'bg-red-500 hover:bg-red-500/80' };
 };
 
 
@@ -93,7 +93,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         doc.setFontSize(18);
         doc.text(docTitle, 14, 22);
 
-        const tableColumn = ["Combination", "Affinity (nM)", "Level", "Confidence", "Std. Model (nM)", "Comb. MW (Da)", "H-Donors", "H-Acceptors", "Rationale"];
+        const tableColumn = ["Combination", "Quantum Affinity (nM)", "Level", "Confidence", "CNN ML Model (nM)", "Comb. MW (Da)", "H-Donors", "H-Acceptors", "Rationale"];
         const tableRows: any[][] = [];
 
         completedResults.forEach(res => {
@@ -139,10 +139,10 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         const tableHeader = new DocxTableRow({
             children: [
                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Affinity (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Level", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Standard Model (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "CNN ML Model (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Combined MW (Da)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "H-Donors", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "H-Acceptors", bold: true })] }),
@@ -251,10 +251,10 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Combination</TableHead>
-                                    <TableHead>Affinity (nM)</TableHead>
+                                    <TableHead>Quantum Affinity (nM)</TableHead>
                                     <TableHead>Affinity Level</TableHead>
                                     <TableHead>Confidence</TableHead>
-                                    <TableHead>Std. Model (nM)</TableHead>
+                                    <TableHead>CNN ML Model (nM)</TableHead>
                                     <TableHead>AI Rationale</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -765,8 +765,7 @@ function DashboardPage() {
                             ) : selectedMolecules.length > 0 ? (
                                 <div className="w-full">
                                     <CardTitle className="mb-4">Selected Molecules</CardTitle>
-                                    <ScrollArea className="h-[calc(100vh-22rem)]">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {selectedMolecules.map(molecule => (
                                                 <Card key={molecule.smiles}>
                                                     <CardHeader>
@@ -789,7 +788,6 @@ function DashboardPage() {
                                                 </Card>
                                             ))}
                                         </div>
-                                    </ScrollArea>
                                 </div>
                             ) : (
                                 <div className="text-center text-muted-foreground m-auto">
@@ -814,5 +812,6 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
 
     
