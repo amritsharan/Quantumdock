@@ -357,18 +357,38 @@ function DashboardPage() {
                             <h3 className="font-semibold">Molecules</h3>
                             <Card className="p-4">
                                 {selectedMolecules.length > 0 ? (
-                                    <ScrollArea className="h-24">
-                                        <ul className="space-y-1 text-sm text-muted-foreground">
-                                            {selectedMolecules.map(m => <li key={m.smiles}>{m.name}</li>)}
-                                        </ul>
-                                    </ScrollArea>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-center">
+                                            <Image
+                                                src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(selectedMolecules[0].smiles)}/image?width=150&height=150`}
+                                                alt={`Structure of ${selectedMolecules[0].name}`}
+                                                width={150}
+                                                height={150}
+                                                className="rounded-md bg-white p-2 border"
+                                                unoptimized
+                                            />
+                                        </div>
+                                        <Separator />
+                                        <ScrollArea className="h-24">
+                                            <div className="space-y-3">
+                                                {selectedMolecules.map(m => (
+                                                    <div key={m.smiles} className="text-sm">
+                                                        <p className="font-medium">{m.name}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {m.formula} &bull; {m.molecularWeight.toFixed(2)} g/mol
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
                                 ) : (
                                     <div className="text-center text-sm text-muted-foreground py-8">
                                         No molecules selected.
                                     </div>
                                 )}
                             </Card>
-                             <Button asChild variant="outline" size="sm" className="w-full">
+                            <Button asChild variant="outline" size="sm" className="w-full">
                                 <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
                                     Molecules selection
                                 </Link>
