@@ -15,11 +15,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '../ui/badge';
 import { useMemo } from 'react';
+import type { DockingResults } from '@/lib/schema';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { molecules } from '@/lib/molecules';
 
 
 interface MoleculeViewerProps {
   isDocked: boolean;
   molecules: Molecule[];
+  results: DockingResults[] | null;
   bestResultMolecule: Molecule | null;
 }
 
@@ -36,7 +41,7 @@ const MoleculeProperties = ({ molecule }: { molecule: Molecule }) => (
     </div>
 );
 
-export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: MoleculeViewerProps) {
+export function MoleculeViewer({ isDocked, molecules, bestResultMolecule, results }: MoleculeViewerProps) {
 
   const hasSelection = molecules && molecules.length > 0;
 
@@ -54,6 +59,33 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
       { totalWeight: 0, totalDonors: 0, totalAcceptors: 0 }
     );
   }, [molecules]);
+
+    const chartData = useMemo(() => {
+    if (!results) return [];
+    const resultsWithNames = results.map(result => {
+        const molecule = molecules.find(m => m.smiles === result.moleculeSmiles);
+        return {
+            ...result,
+            name: molecule ? molecule.name : 'Unknown Molecule',
+        };
+    });
+    return resultsWithNames.sort((a, b) => a.bindingAffinity - b.bindingAffinity).map(res => ({
+      name: `${res.name} + ${res.proteinTarget}`,
+      'Quantum Affinity (nM)': res.bindingAffinity,
+      'Advanced Model (nM)': res.comparison.standardModelScore,
+    }));
+  }, [results]);
+
+  const chartConfig = {
+    'Quantum Affinity (nM)': {
+      label: 'Quantum Affinity (nM)',
+      color: 'hsl(var(--accent))',
+    },
+    'Advanced Model (nM)': {
+        label: 'Advanced Model (nM)',
+        color: 'hsl(var(--primary))',
+    }
+  };
   
   if (!hasSelection && !bestResultMolecule) {
     return (
@@ -76,7 +108,7 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
     );
   }
 
-  if (isDocked && bestResultMolecule) {
+  if (isDocked && bestResultMolecule && results) {
      return (
         <Card>
             <CardHeader>
@@ -125,6 +157,35 @@ export function MoleculeViewer({ isDocked, molecules, bestResultMolecule }: Mole
                         </Card>
                     </TabsContent>
                 </Tabs>
+
+                <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-2">Binding Affinity Comparison</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Lower values indicate stronger binding affinity.</p>
+                    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                        <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 120, right: 20 }}>
+                        <CartesianGrid horizontal={false} />
+                        <YAxis
+                            dataKey="name"
+                            type="category"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                            width={200}
+                        />
+                        <XAxis dataKey="Quantum Affinity (nM)" type="number" />
+                        <Tooltip
+                            cursor={{ fill: "hsl(var(--muted))" }}
+                            content={<ChartTooltipContent indicator="dot" />}
+                        />
+                        <Legend content={<ChartLegendContent />} />
+                        <Bar dataKey="Quantum Affinity (nM)" radius={4} />
+                        <Bar dataKey="Advanced Model (nM)" radius={4} />
+                        </BarChart>
+                    </ChartContainer>
+                </div>
+
+
             </CardContent>
        </Card>
       );

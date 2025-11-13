@@ -21,7 +21,8 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ResultsTabs } from '@/components/quantum-dock/results-tabs';
+import { ResultsDisplay } from '@/components/quantum-dock/results-display';
+import { LiteratureAnalysis } from '@/components/quantum-dock/literature-analysis';
 
 type ProcessStep = 'idle' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -338,6 +339,7 @@ function DashboardContent() {
               isDocked={!!results}
               molecules={selectedMolecules}
               bestResultMolecule={bestResult}
+              results={results}
             />
             
             {isLoading && (
@@ -360,11 +362,12 @@ function DashboardContent() {
             {step === 'done' && results && results.length > 0 && (
               <Card>
                 <CardHeader>
-                    <CardTitle>Analysis & Results</CardTitle>
+                    <CardTitle>Detailed Prediction Results</CardTitle>
                     <CardDescription>Explore the detailed analysis</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <ResultsTabs results={results} onSave={handleSaveResults} saveState={saveState} />
+                <CardContent className="space-y-6">
+                    <ResultsDisplay results={results} onSave={handleSaveResults} saveState={saveState} />
+                    <LiteratureAnalysis results={results} />
                 </CardContent>
               </Card>
             )}
