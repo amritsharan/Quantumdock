@@ -88,7 +88,7 @@ The key innovation is this "Classical -> Quantum -> AI Interpretation" pipeline.
 
 **Your Input:**
 1.  **Literature Survey:** A list of recent papers, their descriptions, and their noted drawbacks.
-2.  **QuantumDock Simulation Results:** A JSON object containing the results from a recent simulation run within the app.
+2.  **QuantumDock Simulation Results:** A JSON object containing the results from a recent simulation run within the app. The key innovation to analyze is the comparison between our quantum-informed model and the "Advanced ML Model" score.
 
 **Literature Survey:**
 ${literatureSurvey}
@@ -129,6 +129,7 @@ const compareToLiteratureFlow = ai.defineFlow(
       bindingAffinity: item.bindingAffinity,
       confidenceScore: item.confidenceScore,
       rationale: item.rationale,
+      // The prompt expects the comparison object directly
       comparison: {
         standardModelScore: item.standardModelScore,
         explanation: item.aiCommentary,
