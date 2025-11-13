@@ -402,10 +402,9 @@ function DashboardPage() {
              <div className="md:col-span-1 flex flex-col gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Molecule Viewer</CardTitle>
+                        <CardTitle>Configuration</CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-6">
-                        {/* Molecules Section */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">Molecules</h3>
                             <Card className="p-4">
@@ -415,7 +414,7 @@ function DashboardPage() {
                                             {selectedMolecules.map(m => (
                                                 <div key={m.smiles} className="text-sm">
                                                     <p className="font-medium">{m.name}</p>
-                                                    <p className="text-xs text-muted-foreground">
+                                                     <p className="text-xs text-muted-foreground">
                                                         {m.formula} &bull; {m.molecularWeight.toFixed(2)} g/mol
                                                     </p>
                                                 </div>
@@ -435,7 +434,6 @@ function DashboardPage() {
                             </Button>
                         </div>
                         
-                        {/* Diseases Section */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">Select Diseases</h3>
                             <Card className="p-4">
@@ -458,7 +456,6 @@ function DashboardPage() {
                             </Button>
                         </div>
                         
-                        {/* Proteins Section */}
                         <div className="space-y-2">
                             <h3 className="font-semibold">Protein Targets</h3>
                             <Card className="p-4">
@@ -474,7 +471,7 @@ function DashboardPage() {
                                     </div>
                                 )}
                             </Card>
-                            <Button asChild variant="outline" size="sm" className="w-full">
+                             <Button asChild variant="outline" size="sm" className="w-full">
                                 <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
                                     Target selection
                                 </Link>
@@ -493,7 +490,7 @@ function DashboardPage() {
                     <CardHeader>
                         <CardTitle>Visualisation</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex h-full min-h-[300px] items-center justify-center bg-muted/30 border-dashed -mt-6 rounded-b-lg">
+                    <CardContent className="flex h-full min-h-[300px] items-start justify-center bg-muted/30 border-dashed -mt-6 rounded-b-lg p-6">
                          {isRunning ? (
                             <div className="w-full p-6 space-y-4">
                                 <div className="space-y-2">
@@ -535,8 +532,37 @@ function DashboardPage() {
                                         <SimulationResultsDisplay results={completedSimulations} title="Completed Simulations" />
                                     </ScrollArea>
                                 </div>
+                            ) : selectedMolecules.length > 0 ? (
+                                <div className="w-full">
+                                    <CardTitle className="mb-4">Selected Molecules</CardTitle>
+                                    <ScrollArea className="h-[calc(100vh-22rem)]">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {selectedMolecules.map(molecule => (
+                                                <Card key={molecule.smiles}>
+                                                    <CardHeader>
+                                                        <CardTitle className="text-base">{molecule.name}</CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="flex flex-col items-center gap-2">
+                                                         <Image
+                                                            src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(molecule.smiles)}/image?width=150&height=150`}
+                                                            alt={`Structure of ${molecule.name}`}
+                                                            width={150}
+                                                            height={150}
+                                                            className="rounded-md bg-white p-2 border"
+                                                            unoptimized
+                                                        />
+                                                        <div className="text-center">
+                                                            <p className="text-sm font-mono">{molecule.formula}</p>
+                                                            <p className="text-xs text-muted-foreground">{molecule.molecularWeight.toFixed(2)} g/mol</p>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </div>
                             ) : (
-                                <div className="text-center text-muted-foreground">
+                                <div className="text-center text-muted-foreground m-auto">
                                     <p>Select molecules and proteins, then run the simulation.</p>
                                     <p>Results will appear here.</p>
                                 </div>
@@ -558,5 +584,3 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
-    
