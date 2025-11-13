@@ -17,7 +17,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useUser, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -180,12 +180,21 @@ function DashboardPage() {
             });
             return;
         }
+
+        if (!user || !firestore) {
+            toast({
+                variant: 'destructive',
+                title: 'Authentication Error',
+                description: 'User not authenticated or Firestore is not available.',
+            });
+            return;
+        }
+
         toast({
-            variant: 'destructive',
-            title: 'Simulation Failed',
-            description: 'The simulation logic has been removed. Please re-implement it.',
+            variant: 'default',
+            title: 'Simulation Not Implemented',
+            description: 'The docking simulation logic needs to be re-implemented.',
         });
-        return;
     };
 
     const buildQueryString = (param: string, value: any[]) => {
@@ -211,7 +220,6 @@ function DashboardPage() {
       <main className="flex min-h-[calc(100vh_-_4rem)] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6">
             <div className="grid gap-6">
-                {/* Simulation Control */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -229,7 +237,6 @@ function DashboardPage() {
                   </CardHeader>
                 </Card>
 
-                {/* Molecule Viewer Card */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Molecule Viewer</CardTitle>
@@ -237,103 +244,93 @@ function DashboardPage() {
                             Select molecules, protein targets, and get AI-driven suggestions based on diseases.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="grid gap-6 md:grid-cols-3">
-                        {/* Molecules Section */}
-                        <div className="flex flex-col gap-4">
-                             <div className="space-y-1">
-                                <h3 className="flex items-center gap-2 font-semibold"><Beaker className="h-5 w-5" /> Molecules</h3>
-                                <p className="text-sm text-muted-foreground">Small-molecule compounds to be tested.</p>
-                            </div>
-                           
-                            {selectedMolecules.length > 0 ? (
-                               <ScrollArea className="h-40">
-                                <div className="space-y-2">
-                                    {selectedMolecules.map(m => (
-                                        <div key={m.smiles} className="flex items-center gap-2 text-sm">
-                                            <Image 
-                                                 src={`https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(m.smiles)}/image?width=40&height=40`}
-                                                 alt={`Structure of ${m.name}`}
-                                                 width={40}
-                                                 height={40}
-                                                 className="rounded-md bg-white p-1"
-                                                 unoptimized
-                                            />
-                                            <div>
-                                                <p className="font-medium">{m.name}</p>
-                                                <p className="text-muted-foreground">{m.formula}</p>
-                                            </div>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-1 flex flex-col gap-6">
+                            {/* Molecules Section */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="flex items-center gap-2 font-semibold"><Beaker className="h-5 w-5" /> Molecules</h3>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
+                                            <Settings className="mr-2 h-4 w-4" />
+                                            {selectedMolecules.length > 0 ? `Manage (${selectedMolecules.length})` : 'Select'}
+                                        </Link>
+                                    </Button>
+                                </div>
+                                <Card className="p-4">
+                                    {selectedMolecules.length > 0 ? (
+                                        <ScrollArea className="h-24">
+                                            <ul className="space-y-1 text-sm text-muted-foreground">
+                                                {selectedMolecules.map(m => <li key={m.smiles}>{m.name}</li>)}
+                                            </ul>
+                                        </ScrollArea>
+                                    ) : (
+                                        <div className="text-center text-sm text-muted-foreground py-8">
+                                            No molecules selected.
                                         </div>
-                                    ))}
-                                </div>
-                               </ScrollArea>
-                            ) : (
-                                <div className="text-center text-sm text-muted-foreground py-10">
-                                    No molecules selected.
-                                </div>
-                            )}
-                             <Button asChild variant="outline" className="w-full mt-auto">
-                                <Link href={`/select-molecule?${proteinQueryString}&${diseaseQueryString}`}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    {selectedMolecules.length > 0 ? `Manage Selection (${selectedMolecules.length})` : 'Select Molecules'}
-                                </Link>
-                            </Button>
-                        </div>
-                        
-                        {/* Proteins Section */}
-                        <div className="flex flex-col gap-4">
-                            <div className="space-y-1">
-                                <h3 className="flex items-center gap-2 font-semibold"><Dna className="h-5 w-5" /> Protein Targets</h3>
-                                <p className="text-sm text-muted-foreground">Biological targets for the molecules.</p>
+                                    )}
+                                </Card>
                             </div>
-                            {selectedProteins.length > 0 ? (
-                               <ScrollArea className="h-40">
-                                <div className="space-y-4">
-                                     {selectedProteins.map(p => (
-                                        <div key={p.name} className="text-sm">
-                                            <p className="font-medium">{p.name}</p>
-                                            <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                            
+                            {/* Proteins Section */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="flex items-center gap-2 font-semibold"><Dna className="h-5 w-5" /> Protein Targets</h3>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
+                                            <Settings className="mr-2 h-4 w-4" />
+                                            {selectedProteins.length > 0 ? `Manage (${selectedProteins.length})` : 'Select'}
+                                        </Link>
+                                    </Button>
+                                </div>
+                                <Card className="p-4">
+                                    {selectedProteins.length > 0 ? (
+                                        <ScrollArea className="h-24">
+                                            <ul className="space-y-1 text-sm text-muted-foreground">
+                                                {selectedProteins.map(p => <li key={p.name}>{p.name}</li>)}
+                                            </ul>
+                                        </ScrollArea>
+                                    ) : (
+                                        <div className="text-center text-sm text-muted-foreground py-8">
+                                            No proteins selected.
                                         </div>
-                                     ))}
-                                </div>
-                               </ScrollArea>
-                            ) : (
-                                <div className="text-center text-sm text-muted-foreground py-10">
-                                    No proteins selected.
-                                </div>
-                            )}
-                             <Button asChild variant="outline" className="w-full mt-auto">
-                                <Link href={`/select-protein?${moleculeQueryString}&${diseaseQueryString}`}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                     {selectedProteins.length > 0 ? `Manage Selection (${selectedProteins.length})` : 'Select Proteins'}
-                                </Link>
-                            </Button>
-                        </div>
+                                    )}
+                                </Card>
+                            </div>
 
-                        {/* Diseases Section */}
-                        <div className="flex flex-col gap-4">
-                           <div className="space-y-1">
-                                <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> AI Target Suggestions</h3>
-                                <p className="text-sm text-muted-foreground">Get protein target ideas for specific diseases.</p>
+                            {/* Diseases Section */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-5 w-5" /> AI Target Suggestions</h3>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
+                                            <ArrowRight className="mr-2 h-4 w-4" />
+                                            Get Suggestions
+                                        </Link>
+                                    </Button>
+                                </div>
+                                <Card className="p-4">
+                                    {selectedDiseases.length > 0 ? (
+                                        <ScrollArea className="h-24">
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedDiseases.map(d => <Badge key={d} variant="secondary">{d}</Badge>)}
+                                            </div>
+                                        </ScrollArea>
+                                    ) : (
+                                        <div className="text-center text-sm text-muted-foreground py-8">
+                                            No diseases for suggestions.
+                                        </div>
+                                    )}
+                                </Card>
                             </div>
-                            {selectedDiseases.length > 0 ? (
-                               <ScrollArea className="h-40">
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedDiseases.map(d => (
-                                        <Badge key={d} variant="secondary">{d}</Badge>
-                                    ))}
+                        </div>
+                        <div className="md:col-span-2">
+                            {/* Placeholder for future content, perhaps a 3D viewer or results summary */}
+                            <Card className="flex h-full items-center justify-center bg-muted/30 border-dashed">
+                                <div className="text-center text-muted-foreground">
+                                    <p>Simulation results will appear here.</p>
                                 </div>
-                               </ScrollArea>
-                            ) : (
-                                <div className="text-center text-sm text-muted-foreground py-10">
-                                    No diseases selected for suggestions.
-                                </div>
-                            )}
-                            <Button asChild variant="outline" className="w-full mt-auto">
-                                <Link href={`/select-disease?${moleculeQueryString}&${proteinQueryString}`}>
-                                    <ArrowRight className="mr-2 h-4 w-4" />
-                                    Get Suggestions
-                                </Link>
-                            </Button>
+                            </Card>
                         </div>
                     </CardContent>
                 </Card>
@@ -421,3 +418,5 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
+    
