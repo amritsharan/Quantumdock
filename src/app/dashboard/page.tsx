@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, Save } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -58,8 +58,14 @@ const simpleHash = (str: string): number => {
     return hash;
 };
 
+const getAffinityLevel = (affinity: number): { level: 'Low' | 'Moderate' | 'High', className: string } => {
+    if (affinity < 10) return { level: 'Low', className: 'bg-green-500 hover:bg-green-500/80' };
+    if (affinity <= 100) return { level: 'Moderate', className: 'bg-yellow-500 hover:bg-yellow-500/80' };
+    return { level: 'High', className: 'bg-red-500 hover:bg-red-500/80' };
+};
 
-function SimulationResultsDisplay({ results, title }: { results: Result[], title: string }) {
+
+function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: { results: Result[], title: string, onSaveResults: () => void, isSaving: boolean }) {
     const chartData = useMemo(() => {
         return results
             .filter(r => r.status === 'complete' && r.prediction)
@@ -87,7 +93,7 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
         doc.setFontSize(18);
         doc.text(docTitle, 14, 22);
 
-        const tableColumn = ["Molecule", "Protein", "Affinity (nM)", "Confidence", "Std. Model (nM)", "Rationale"];
+        const tableColumn = ["Molecule", "Protein", "Affinity (nM)", "Level", "Confidence", "Std. Model (nM)", "Rationale"];
         const tableRows: any[][] = [];
 
         completedResults.forEach(res => {
@@ -95,6 +101,7 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                 res.molecule.name,
                 res.protein.name,
                 res.prediction.bindingAffinity.toFixed(2),
+                getAffinityLevel(res.prediction.bindingAffinity).level,
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
                 res.prediction.comparison.standardModelScore.toFixed(2),
                 res.prediction.rationale
@@ -110,7 +117,7 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
                 columnStyles: {
-                    5: { cellWidth: 'wrap' } // Wrap rationale text
+                    6: { cellWidth: 'wrap' } // Wrap rationale text
                 }
             });
         } else {
@@ -132,6 +139,7 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                 new DocxTableCell({ children: [new Paragraph({ text: "Molecule", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Protein", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Affinity (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Level", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Standard Model (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Rationale", bold: true })] }),
@@ -143,6 +151,7 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                 new DocxTableCell({ children: [new Paragraph(res.molecule.name)] }),
                 new DocxTableCell({ children: [new Paragraph(res.protein.name)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(getAffinityLevel(res.prediction.bindingAffinity).level)] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.standardModelScore.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.rationale)] }),
@@ -190,6 +199,10 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                          <Button variant="outline" size="sm" onClick={handleDownloadDocx} disabled={completedResults.length === 0}>
                             <Download className="mr-2 h-4 w-4" /> DOCX
                          </Button>
+                         <Button variant="default" size="sm" onClick={onSaveResults} disabled={completedResults.length === 0 || isSaving}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                             Save Results
+                         </Button>
                      </div>
                 </div>
             </CardHeader>
@@ -232,39 +245,47 @@ function SimulationResultsDisplay({ results, title }: { results: Result[], title
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Combination</TableHead>
-                                    <TableHead className="text-right">Affinity (nM)</TableHead>
-                                    <TableHead className="text-right">Confidence</TableHead>
-                                    <TableHead className="text-right">Standard Model (nM)</TableHead>
+                                    <TableHead>Affinity (nM)</TableHead>
+                                    <TableHead>Affinity Level</TableHead>
+                                    <TableHead>Confidence</TableHead>
+                                    <TableHead>Standard Model (nM)</TableHead>
                                     <TableHead>AI Rationale</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {completedResults.length === 0 && erroredResults.length === 0 && (
                                      <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
+                                        <TableCell colSpan={6} className="h-24 text-center">
                                             No results yet. Run a simulation to see the output.
                                         </TableCell>
                                     </TableRow>
                                 )}
-                                {completedResults.map((result, index) => (
+                                {completedResults.map((result, index) => {
+                                     const affinityInfo = getAffinityLevel(result.prediction.bindingAffinity);
+                                     return (
                                      <TableRow key={index}>
                                         <TableCell className="font-medium">
                                             <div>{result.molecule.name}</div>
                                             <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                         </TableCell>
-                                        <TableCell className="text-right">{result.prediction.bindingAffinity.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
-                                        <TableCell className="text-right">{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
+                                        <TableCell className="font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="default" className={affinityInfo.className}>
+                                                {affinityInfo.level}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
+                                        <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">{result.prediction.rationale}</TableCell>
                                      </TableRow>
-                                ))}
+                                )})}
                                 {erroredResults.map((result, index) => (
                                     <TableRow key={`error-${index}`}>
                                         <TableCell className="font-medium">
                                             <div>{result.molecule.name}</div>
                                             <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                         </TableCell>
-                                         <TableCell colSpan={4}>
+                                         <TableCell colSpan={5}>
                                             <Alert variant="destructive" className="bg-transparent border-0 p-0">
                                                 <AlertDescription>{result.error}</AlertDescription>
                                             </Alert>
@@ -291,6 +312,7 @@ function DashboardPage() {
     const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
     
     const [isRunning, setIsRunning] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [simulationResults, setSimulationResults] = useState<Result[]>([]);
     const [completedSimulations, setCompletedSimulations] = useState<Result[]>([]);
     const [currentStep, setCurrentStep] = useState<string>('Not started');
@@ -509,6 +531,69 @@ function DashboardPage() {
         setIsRunning(false);
     };
 
+    const handleSaveResults = async () => {
+        if (!user || !firestore || completedSimulations.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Cannot Save Results',
+                description: 'There are no completed simulation results to save, or user is not logged in.',
+            });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const resultsToSave = completedSimulations
+                .filter(r => r.status === 'complete' && r.prediction)
+                .map(r => ({
+                    moleculeId: r.molecule.smiles, // Using SMILES as a proxy for ID
+                    targetProteinId: r.protein.name,
+                    dockingScore: -1, // Placeholder as we don't have a classical score
+                    refinedEnergy: r.refinedEnergy,
+                    pose: 'N/A', // Placeholder
+                    bindingAffinity: r.prediction.bindingAffinity,
+                    userId: user.uid,
+                }));
+
+            // In a real app, we might save this as a single "Experiment" document
+            // For simplicity here, we'll save the first result as a sample.
+            // A more robust implementation would create an "experiments" collection.
+            if (resultsToSave.length > 0) {
+                const dockingResultRef = collection(firestore, 'users', user.uid, 'dockingResults');
+                // Saving each result individually
+                for (const result of resultsToSave) {
+                     await addDoc(dockingResultRef, {
+                        ...result,
+                        createdAt: serverTimestamp(),
+                     });
+                }
+            }
+
+            toast({
+                title: 'Results Saved',
+                description: `Successfully saved ${resultsToSave.length} docking results to your profile.`,
+            });
+
+        } catch (error: any) {
+            errorEmitter.emit(
+                'permission-error',
+                new FirestorePermissionError({
+                    path: `users/${user.uid}/dockingResults`,
+                    operation: 'create',
+                    requestResourceData: { results: '...' }
+                })
+            );
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not save docking results. You may not have the required permissions.',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+
     const buildQueryString = (param: string, value: any[]) => {
         const params = new URLSearchParams(searchParams.toString());
         if (value.length > 0) {
@@ -661,7 +746,12 @@ function DashboardPage() {
                         ) : completedSimulations.length > 0 ? (
                                 <div className="w-full">
                                     <ScrollArea className="h-[calc(100vh-18rem)]">
-                                        <SimulationResultsDisplay results={completedSimulations} title="Completed Simulations" />
+                                        <SimulationResultsDisplay 
+                                            results={completedSimulations}
+                                            title="Completed Simulations"
+                                            onSaveResults={handleSaveResults}
+                                            isSaving={isSaving}
+                                        />
                                     </ScrollArea>
                                 </div>
                             ) : selectedMolecules.length > 0 ? (
@@ -717,6 +807,8 @@ export default function Dashboard() {
     )
 }
 
+
+    
 
     
 

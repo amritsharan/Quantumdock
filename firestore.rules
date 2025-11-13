@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Firestore Security Rules for QuantumDock application.
  *
@@ -21,6 +22,13 @@ service cloud.firestore {
           allow read, create: if request.auth != null && request.auth.uid == userId;
         }
       }
+      
+      // A user can create and read their own docking results.
+      match /dockingResults/{dockingResultId} {
+        allow read, create: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }
+
+    
