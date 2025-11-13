@@ -46,15 +46,16 @@ async function runSimulatedAIPrediction(input: PredictBindingAffinitiesInput): P
 
     const { quantumRefinedEnergy, moleculeSmiles, proteinTargetName } = input;
 
+    // DETERMINISTIC calculation based on input lengths
+    const stabilityFactor = (moleculeSmiles.length + proteinTargetName.length) % 100 / 100;
+    
     // Base affinity on energy - more negative energy = stronger affinity (lower nM)
     const baseAffinity = Math.pow(10, (quantumRefinedEnergy + 8) / -1.36); // Rough biophysical model
-    const affinityNoise = (Math.random() - 0.5) * 20; // Add some randomness
-    const finalAffinity = Math.max(0.1, baseAffinity + affinityNoise);
+    const finalAffinity = Math.max(0.1, baseAffinity * (0.9 + stabilityFactor * 0.2)); // Make it deterministic
 
-    // Generate other plausible data
-    const confidence = 0.75 + (Math.random() * 0.10); // Between 0.75 and 0.85
-    // Ensure the advanced model score is always slightly worse (higher) than the quantum affinity.
-    const advancedModelScore = finalAffinity * (1.1 + (Math.random() * 0.3));
+    // Generate other plausible, deterministic data
+    const confidence = 0.75 + ((quantumRefinedEnergy * -1) % 10 / 100); // Deterministic, between 0.75 and 0.85
+    const advancedModelScore = finalAffinity * 1.2; // Ensure the advanced model score is always 20% worse (higher)
 
     return {
         bindingAffinity: parseFloat(finalAffinity.toFixed(2)),

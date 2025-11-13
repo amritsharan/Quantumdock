@@ -81,10 +81,10 @@ Your task is to analyze the methodology and results of a software project called
 
 **QuantumDock Project Description:**
 QuantumDock is a web application that simulates molecular docking. Its workflow is as follows:
-1. It first performs a *simulated* classical docking to get a base score.
-2. It then performs a *simulated* quantum refinement step (representing a VQE/QAOA algorithm) to get a "quantum-refined energy".
-3. Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity, providing a rationale and a comparison to a simulated 'advanced' model.
-The project's key feature is this hybrid "Classical -> Quantum -> AI Interpretation" pipeline to predict binding affinities. The entire process is a simulation designed to demonstrate the potential of such a workflow.
+1.  It first performs a *simulated* classical docking to get a base score.
+2.  It then performs a *simulated* quantum refinement step (representing a VQE/QAOA algorithm) to get a "quantum-refined energy".
+3.  Finally, it uses a large language model (like Gemini) to interpret this quantum-refined energy and predict a final binding affinity.
+The key innovation is this "Classical -> Quantum -> AI Interpretation" pipeline. The project also provides a comparative score from a simulated "Advanced ML Model" to highlight the potential difference a quantum-informed approach could make. The entire process is a simulation designed to demonstrate the potential of such a workflow.
 
 **Your Input:**
 1.  **Literature Survey:** A list of recent papers, their descriptions, and their noted drawbacks.
@@ -103,12 +103,12 @@ Here are the results from the latest simulation run:
 Based on all the information above, generate a comprehensive comparative analysis. Your tone should be professional, insightful, and constructively critical.
 
 1.  **Overall Assessment:** Write a high-level summary of how the QuantumDock project fits into the research landscape defined by the provided papers.
-2.  **Strengths:** Identify and list the key strengths of the QuantumDock project. How does its approach align with the positive trends in the research (e.g., hybrid methods)? How does it uniquely contribute (e.g., the AI interpretation layer)?
+2.  **Strengths:** Identify and list the key strengths of the QuantumDock project. How does its approach align with the positive trends in the research (e.g., hybrid methods)? How does it uniquely contribute (e.g., the AI interpretation layer, the explicit comparison between the quantum-informed model and the advanced ML model)?
 3.  **Weaknesses:** Identify and list the weaknesses and limitations of the QuantumDock project. Be critical and connect these weaknesses directly to the "Drawbacks" mentioned in the literature survey (e.g., reliance on simulation, scalability, real-world validation).
 4.  **Future Directions:** Based on the weaknesses, provide a list of concrete, actionable suggestions for future work on QuantumDock. What should be the next steps to move it from a simulation to a more robust, validated tool?
 5.  **Per-Paper Comparison:** For each of the four papers in the survey, provide a detailed analysis covering:
     -   **Alignment:** How does QuantumDock's approach align with the paper's goals or methods?
-    -   **Differentiation:** How is QuantumDock's approach different? Does it add a new component (like the final AI step)?
+    -   **Differentiation:** How is QuantumDock's approach different? Does it add a new component (like the final AI step and the explicit comparison to an advanced ML model)?
     -   **Addressing Drawbacks:** Does QuantumDock attempt to address any of the drawbacks listed for that paper? Or does it suffer from the same ones?
 
 Produce the output in the required JSON format.
@@ -122,7 +122,6 @@ const compareToLiteratureFlow = ai.defineFlow(
     outputSchema: ResearchComparisonOutputSchema,
   },
   async input => {
-    // Re-structure the input to match the prompt's expectations more simply
     const resultsForPrompt = input.map(item => ({
       moleculeSmiles: item.moleculeSmiles,
       proteinTarget: item.proteinTarget,
@@ -130,7 +129,7 @@ const compareToLiteratureFlow = ai.defineFlow(
       confidenceScore: item.confidenceScore,
       rationale: item.rationale,
       comparison: {
-        advancedModelScore: item.standardModelScore, // Keep original field name
+        advancedModelScore: item.standardModelScore,
         explanation: item.aiCommentary
       }
     }));
