@@ -172,6 +172,7 @@ export default function HistoryPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [selectedLoginRecord, setSelectedLoginRecord] = useState<WithId<LoginHistory> | null>(null);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   
@@ -188,16 +189,13 @@ export default function HistoryPage() {
   const { data: allHistory, isLoading, error } = useCollection<WithId<LoginHistory>>(historyQuery);
 
   useEffect(() => {
-    // Set the current time only on the client, after hydration
-    setCurrentTime(new Date());
-
+    setHydrated(true);
     // This timer updates the "active" session's duration every minute.
     const timer = setInterval(() => setCurrentTime(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
 
   const formattedHistory = useMemo(() => {
-    // Return null if allHistory is not yet loaded to prevent server/client mismatch
     if (!allHistory) return null;
     
     return allHistory.map((item) => {
@@ -212,7 +210,7 @@ export default function HistoryPage() {
       }
 
       let durationDisplay;
-      if (item.status === 'active' && loginDate && currentTime) {
+      if (item.status === 'active' && loginDate && hydrated) {
         // This part now only runs if currentTime is available (client-side after hydration)
         durationDisplay = calculateActiveDuration(loginDate);
       } else if (item.duration !== undefined) {
@@ -229,7 +227,7 @@ export default function HistoryPage() {
         calculatedDuration: durationDisplay,
       };
     });
-  }, [allHistory, currentTime]);
+  }, [allHistory, hydrated]);
 
   const handleLoginTimeClick = (record: WithId<LoginHistory> | null) => {
       if (!record) return;
@@ -277,7 +275,7 @@ export default function HistoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(isLoading || !formattedHistory) && !error && renderSkeleton()}
+              {(isLoading || !hydrated) && !error && renderSkeleton()}
               {error && (
                 <TableRow>
                     <TableCell colSpan={4} className="text-center text-destructive">
@@ -285,14 +283,14 @@ export default function HistoryPage() {
                     </TableCell>
                 </TableRow>
               )}
-              {!isLoading && !error && formattedHistory?.length === 0 && (
+              {hydrated && !isLoading && !error && formattedHistory?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center">
                     No login history found.
                   </TableCell>
                 </TableRow>
               )}
-              {!isLoading && !error &&
+              {hydrated && !isLoading && !error &&
                 formattedHistory?.map((item: any) => (
                   <TableRow key={item.id}>
                     <TableCell 
@@ -322,4 +320,3 @@ export default function HistoryPage() {
     </main>
   );
 }
-
