@@ -103,7 +103,7 @@ Here are the results from the latest simulation run:
 Based on all the information above, generate a comprehensive comparative analysis. Your tone should be professional, insightful, and constructively critical.
 
 1.  **Overall Assessment:** Write a high-level summary of how the QuantumDock project fits into the research landscape defined by the provided papers.
-2.  **Strengths:** Identify and list the key strengths of the QuantumDock project. How does its approach align with the positive trends in the research (e.g., hybrid methods)? How does it uniquely contribute (e.g., the AI interpretation layer, the explicit comparison between the quantum-informed model and the advanced ML model)?
+2.  **Strengths:** Identify and list the key strengths of the QuantumDock project. How does its approach align with the positive trends in the research (e.g., hybrid methods)? How does it uniquely contribute (e.g., the AI interpretation layer, the explicit comparison between our quantum-informed model and the advanced ML model)?
 3.  **Weaknesses:** Identify and list the weaknesses and limitations of the QuantumDock project. Be critical and connect these weaknesses directly to the "Drawbacks" mentioned in the literature survey (e.g., reliance on simulation, scalability, real-world validation).
 4.  **Future Directions:** Based on the weaknesses, provide a list of concrete, actionable suggestions for future work on QuantumDock. What should be the next steps to move it from a simulation to a more robust, validated tool?
 5.  **Per-Paper Comparison:** For each of the four papers in the survey, provide a detailed analysis covering:
@@ -130,7 +130,7 @@ const compareToLiteratureFlow = ai.defineFlow(
       confidenceScore: item.confidenceScore,
       rationale: item.rationale,
       comparison: {
-        standardModelScore: item.standardModelScore, // Keep original field name
+        standardModelScore: item.standardModelScore,
         explanation: item.aiCommentary,
       },
     }));
