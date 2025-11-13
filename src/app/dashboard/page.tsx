@@ -22,7 +22,6 @@ import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResultsDisplay } from '@/components/quantum-dock/results-display';
-import { ProjectSummary } from '@/components/quantum-dock/project-summary';
 
 type ProcessStep = 'idle' | 'classifying' | 'refining' | 'predicting' | 'done' | 'error';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -171,7 +170,7 @@ function DashboardPage() {
     });
 
     try {
-      const onProgress = (currentStep: 'refining' | 'predicting') => setStep(currentStep);
+      const onProgress = (currentStep: 'classifying' |'refining' | 'predicting') => setStep(currentStep);
       const finalResults = await runFullDockingProcess(data, user.uid, onProgress);
 
       setResults(finalResults);
@@ -379,7 +378,6 @@ function DashboardPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <ResultsDisplay results={results} onSave={handleSaveResults} saveState={saveState} />
-                    <ProjectSummary />
                 </CardContent>
               </Card>
             )}
