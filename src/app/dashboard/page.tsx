@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Beaker, Dna, FileText, Loader2, Play, Bot, Building } from 'lucide-react';
+import { Loader2, Play } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -131,8 +131,6 @@ function DashboardPage() {
     const [currentStep, setCurrentStep] = useState<string>('Not started');
     const [totalProgress, setTotalProgress] = useState(0);
 
-    const [apiKey, setApiKey] = useState('');
-
     const smilesParam = searchParams.get('smiles');
     const proteinsParam = searchParams.get('proteins');
     const diseasesParam = searchParams.get('diseases');
@@ -221,13 +219,7 @@ function DashboardPage() {
         <div className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6">
             <div className="grid gap-6">
                  <Card>
-                    <CardHeader>
-                        <CardTitle>Molecule Viewer</CardTitle>
-                        <CardDescription>
-                            Select molecules, protein targets, and get AI-driven suggestions based on diseases.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
                         <div className="md:col-span-1 flex flex-col gap-6">
                             {/* Molecules Section */}
                             <div className="space-y-2">
@@ -252,7 +244,7 @@ function DashboardPage() {
                                 </Button>
                             </div>
                             
-                            {/* Diseases Section */}
+                             {/* Diseases Section */}
                             <div className="space-y-2">
                                 <h3 className="font-semibold">Select Diseases</h3>
                                  <Card className="p-4">
@@ -303,11 +295,15 @@ function DashboardPage() {
                             </Button>
                         </div>
                         <div className="md:col-span-2">
-                            {/* Placeholder for future content, perhaps a 3D viewer or results summary */}
-                            <Card className="flex h-full items-center justify-center bg-muted/30 border-dashed">
-                                <div className="text-center text-muted-foreground">
-                                    <p>Simulation results will appear here.</p>
-                                </div>
+                            <Card className="h-full">
+                                <CardHeader>
+                                    <CardTitle>Visualisation</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex h-full items-center justify-center bg-muted/30 border-dashed -mt-6 rounded-b-lg">
+                                    <div className="text-center text-muted-foreground">
+                                        <p>Simulation results will appear here.</p>
+                                    </div>
+                                </CardContent>
                             </Card>
                         </div>
                     </CardContent>
@@ -333,7 +329,7 @@ function DashboardPage() {
                                 <CardContent>
                                     <div className="text-xs text-muted-foreground capitalize">{result.step}...</div>
                                     <Progress value={result.progress} className="mt-2 h-2" />
-                                </CardContent>
+                                 </CardContent>
                             </Card>
                         ))}
                     </div>
