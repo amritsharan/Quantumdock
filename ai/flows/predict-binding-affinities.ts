@@ -46,8 +46,8 @@ const PredictBindingAffinitiesOutputSchema = z.object({
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
     comparison: z.object({
-      standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated standard ML model (e.g., a GNN) for comparison.'),
-      explanation: z.string().describe('A brief explanation comparing the AI prediction to the standard model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+      standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated advanced ML model (e.g., a GNN) for comparison.'),
+      explanation: z.string().describe('A brief explanation comparing the AI prediction to the advanced model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
     }),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
@@ -72,12 +72,12 @@ You will be given:
 3.  A protein target's name.
 
 Your tasks are:
-1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity.
-2.  **Provide a Confidence Score:** Give a confidence score from 0.70 to 0.85 for your prediction. This value MUST be between 0.70 and 0.85, inclusive.
+1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
+2.  **Provide a Confidence Score:** Give a confidence score from 0.70 to 0.85 for your prediction. This value MUST be between 0.70 and 0.85, inclusive. This result must be deterministic.
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
-    - **standardModelScore:** Generate a *fictional* binding affinity score that a conventional ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
-    - **explanation:** Write a brief explanation for why your quantum-informed prediction might differ from the standard model's score. Mention sensitivity to quantum effects.
+    - **standardModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction.
+    - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the advanced model's score. Mention sensitivity to quantum effects.
 
 
 **Simulated Inputs:**

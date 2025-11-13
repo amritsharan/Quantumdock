@@ -108,7 +108,7 @@ Based on all the information above, generate a comprehensive comparative analysi
 4.  **Future Directions:** Based on the weaknesses, provide a list of concrete, actionable suggestions for future work on QuantumDock. What should be the next steps to move it from a simulation to a more robust, validated tool?
 5.  **Per-Paper Comparison:** For each of the four papers in the survey, provide a detailed analysis covering:
     -   **Alignment:** How does QuantumDock's approach align with the paper's goals or methods?
-    -   **Differentiation:** How is QuantumDock's approach different? Does it add a new component (like the final AI step and the explicit comparison to an advanced ML model)?
+    -   **Differentiation:** How is QuantumDock's approach different? Does it add a new component (like the final AI step and the explicit comparison between our quantum-informed model and the advanced ML model)?
     -   **Addressing Drawbacks:** Does QuantumDock attempt to address any of the drawbacks listed for that paper? Or does it suffer from the same ones?
 
 Produce the output in the required JSON format.
@@ -122,6 +122,7 @@ const compareToLiteratureFlow = ai.defineFlow(
     outputSchema: ResearchComparisonOutputSchema,
   },
   async input => {
+    // This is the data that is passed to the prompt. It must match what the prompt expects.
     const resultsForPrompt = input.map(item => ({
       moleculeSmiles: item.moleculeSmiles,
       proteinTarget: item.proteinTarget,
@@ -129,9 +130,9 @@ const compareToLiteratureFlow = ai.defineFlow(
       confidenceScore: item.confidenceScore,
       rationale: item.rationale,
       comparison: {
-        advancedModelScore: item.standardModelScore,
-        explanation: item.aiCommentary
-      }
+        standardModelScore: item.standardModelScore, // Keep original field name
+        explanation: item.aiCommentary,
+      },
     }));
     
     const resultsJson = JSON.stringify(resultsForPrompt, null, 2);
