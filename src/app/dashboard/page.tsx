@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, Save } from 'lucide-react';
+import { Loader2, Download, Save, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -128,8 +128,8 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 `${res.molecule.name} + ${res.protein.name}`,
                 res.prediction.bindingAffinity.toFixed(2),
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
-                res.prediction.comparison.standardModelScore.toFixed(2),
-                res.prediction.rationale,
+                res.prediction.comparison.gnnModelScore.toFixed(2),
+                res.prediction.comparison.explanation,
                 getAffinityLevel(res.prediction.bindingAffinity).level,
             ];
             mainTableRows.push(rowData);
@@ -142,7 +142,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 startY: lastY,
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
-                columnStyles: { 4: { cellWidth: 80 } } // Wrap text in rationale column
+                columnStyles: { 4: { cellWidth: 80 } } // Wrap text in explanation column
             });
             lastY = (doc as any).lastAutoTable.finalY + 15;
         } else {
@@ -176,7 +176,35 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] }
             });
+             lastY = (doc as any).lastAutoTable.finalY + 15;
         }
+        
+        doc.setFontSize(14);
+        doc.text("Performance Comparison", 14, lastY);
+        lastY += 10;
+
+        const timingTableColumn = ["Combination", "Quantum Model Time (s)", "GNN Model Time (s)"];
+        const timingTableRows: any[][] = [];
+
+        completedResults.forEach(res => {
+            const rowData = [
+                 `${res.molecule.name} + ${res.protein.name}`,
+                 res.prediction.timing.quantumModelTime.toFixed(2),
+                 res.prediction.timing.gnnModelTime.toFixed(2),
+            ];
+            timingTableRows.push(rowData);
+        });
+
+        if (timingTableRows.length > 0) {
+            (doc as any).autoTable({
+                head: [timingTableColumn],
+                body: timingTableRows,
+                startY: lastY,
+                theme: 'grid',
+                headStyles: { fillColor: [46, 82, 102] }
+            });
+        }
+
 
         doc.save(`QuantumDock_Results_${new Date().toISOString()}.pdf`);
     };
@@ -203,8 +231,8 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
-                new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.standardModelScore.toFixed(2))] }),
-                new DocxTableCell({ children: [new Paragraph(res.prediction.rationale)] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.gnnModelScore.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.explanation)] }),
                 new DocxTableCell({ children: [new Paragraph(getAffinityLevel(res.prediction.bindingAffinity).level)] }),
             ],
         }));
@@ -236,6 +264,27 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
             rows: [propertiesHeader, ...propertiesRows],
             width: { size: 100, type: WidthType.PERCENTAGE },
         });
+        
+        const timingHeader = new DocxTableRow({
+            children: [
+                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Quantum Model Time (s)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "GNN Model Time (s)", bold: true })] }),
+            ]
+        });
+
+        const timingRows = completedResults.map(res => new DocxTableRow({
+            children: [
+                new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.timing.quantumModelTime.toFixed(2))] }),
+                new DocxTableCell({ children: [new Paragraph(res.prediction.timing.gnnModelTime.toFixed(2))] }),
+            ]
+        }));
+        
+        const timingTable = new DocxTable({
+            rows: [timingHeader, ...timingRows],
+            width: { size: 100, type: WidthType.PERCENTAGE },
+        });
 
         const doc = new Document({
             sections: [{
@@ -243,11 +292,14 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                     new Paragraph({
                         children: [new TextRun({ text: "QuantumDock - Detailed Simulation Results", bold: true, size: 36 })],
                     }),
+                    new Paragraph({ children: [new TextRun({ text: "Molecular Properties", bold: true, size: 28 })] }),
+                    propertiesTable,
+                    new Paragraph({ text: "", spacing: { after: 200 } }),
                     new Paragraph({ children: [new TextRun({ text: "Binding Affinity Comparison", bold: true, size: 28 })] }),
                     mainTable,
                     new Paragraph({ text: "", spacing: { after: 200 } }), // Add some space
-                    new Paragraph({ children: [new TextRun({ text: "Molecular Properties", bold: true, size: 28 })] }),
-                    propertiesTable,
+                    new Paragraph({ children: [new TextRun({ text: "Performance Comparison", bold: true, size: 28 })] }),
+                    timingTable,
                 ],
             }],
         });
@@ -379,16 +431,32 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                 </div>
                                                 <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-left">{Math.round(result.prediction.confidenceScore * 100)}%</div>
-                                                <div className="col-span-11 sm:col-span-2 text-left">{result.prediction.comparison.standardModelScore.toFixed(2)}</div>
+                                                <div className="col-span-11 sm:col-span-2 text-left">{result.prediction.comparison.gnnModelScore.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-right">
                                                      <Badge variant="default" className={affinityInfo.className}>
                                                         {affinityInfo.level}
                                                     </Badge>
                                                 </div>
                                             </AccordionTrigger>
-                                            <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md">
-                                                <h4 className="font-semibold mb-1">Explanation</h4>
-                                                <p className="text-xs text-muted-foreground">{result.prediction.comparison.explanation}</p>
+                                            <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md space-y-4">
+                                                <div>
+                                                    <h4 className="font-semibold mb-1">Explanation</h4>
+                                                    <p className="text-xs text-muted-foreground">{result.prediction.comparison.explanation}</p>
+                                                </div>
+                                                <Separator />
+                                                <div>
+                                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="h-4 w-4" /> Performance Comparison</h4>
+                                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                                        <div>
+                                                            <div className="text-muted-foreground">Quantum Model Time</div>
+                                                            <div className="font-semibold">{result.prediction.timing.quantumModelTime.toFixed(2)}s</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-muted-foreground">GNN Model Time</div>
+                                                            <div className="font-semibold">{result.prediction.timing.gnnModelTime.toFixed(2)}s</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </AccordionContent>
                                         </AccordionItem>
                                     )

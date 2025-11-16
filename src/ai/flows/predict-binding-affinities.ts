@@ -48,8 +48,12 @@ const PredictBindingAffinitiesOutputSchema = z.object({
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
     comparison: z.object({
-      standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated Graph Neural Network (GNN) model for comparison.'),
+      gnnModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated Graph Neural Network (GNN) model for comparison.'),
       explanation: z.string().describe('A brief explanation comparing the AI prediction to the GNN model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+    }),
+    timing: z.object({
+      quantumModelTime: z.number().describe('Simulated docking time in seconds for the quantum-assisted model. This should generally be faster than the GNN model.'),
+      gnnModelTime: z.number().describe('Simulated docking time in seconds for the GNN model. This should generally be slower than the quantum model, especially for complex molecules.'),
     }),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
@@ -78,9 +82,11 @@ Your tasks are:
 2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction. This result must be deterministic.
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
-    - **standardModelScore:** Generate a *fictional* binding affinity score that a Graph Neural Network (GNN) model might predict. This should be plausible but slightly different from your own prediction. This result must be deterministic.
+    - **gnnModelScore:** Generate a *fictional* binding affinity score that a Graph Neural Network (GNN) model might predict. This should be plausible but slightly different from your own prediction. This result must be deterministic.
     - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the GNN's score. Mention sensitivity to quantum effects.
-
+5.  **Provide Timing:** Under a 'timing' object, provide the following:
+    - **quantumModelTime:** Generate a *fictional* docking time in seconds. This should be a relatively low number.
+    - **gnnModelTime:** Generate a *fictional* docking time in seconds for the GNN model. This value should be plausibly *slower* than the quantumModelTime, reflecting the quantum model's efficiency.
 
 **Simulated Inputs:**
 - Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
