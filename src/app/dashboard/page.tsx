@@ -255,13 +255,16 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                     <TableHead>Affinity Level</TableHead>
                                     <TableHead>Confidence</TableHead>
                                     <TableHead>CNN ML Model (nM)</TableHead>
+                                    <TableHead>Comb. MW (Da)</TableHead>
+                                    <TableHead>H-Donors</TableHead>
+                                    <TableHead>H-Acceptors</TableHead>
                                     <TableHead>AI Rationale</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {completedResults.length === 0 && erroredResults.length === 0 && (
                                      <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">
+                                        <TableCell colSpan={9} className="h-24 text-center">
                                             No results yet. Run a simulation to see the output.
                                         </TableCell>
                                     </TableRow>
@@ -282,6 +285,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                         </TableCell>
                                         <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
                                         <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
+                                        <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, {maximumFractionDigits: 2})}</TableCell>
+                                        <TableCell>{result.molecule.donors}</TableCell>
+                                        <TableCell>{result.molecule.acceptors}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">{result.prediction.rationale}</TableCell>
                                      </TableRow>
                                 )})}
@@ -291,7 +297,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                             <div>{result.molecule.name}</div>
                                             <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                         </TableCell>
-                                         <TableCell colSpan={5}>
+                                         <TableCell colSpan={8}>
                                             <Alert variant="destructive" className="bg-transparent border-0 p-0">
                                                 <AlertDescription>{result.error}</AlertDescription>
                                             </Alert>
