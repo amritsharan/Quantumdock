@@ -98,14 +98,19 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         if (chartData.length > 0) {
             const chartElement = (document.querySelector('[data-testid="chart-container"]') as HTMLElement);
             if (chartElement) {
+                // Temporarily make the chart visible for rendering if it's not
                 const canvas = chartElement.querySelector('canvas');
-                if (canvas) {
-                    const imgData = canvas.toDataURL('image/png');
+                 if (canvas) {
+                    const imgData = canvas.toDataURL('image/png', 1.0);
                     doc.setFontSize(14);
                     doc.text("Binding Affinity Comparison", 14, lastY);
                     lastY += 10;
-                    doc.addImage(imgData, 'PNG', 14, lastY, 260, 120);
-                    lastY += 130;
+                    // Adjust image size to fit landscape mode
+                    const imgProps = doc.getImageProperties(imgData);
+                    const pdfWidth = doc.internal.pageSize.getWidth() - 28;
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    doc.addImage(imgData, 'PNG', 14, lastY, pdfWidth, pdfHeight);
+                    lastY += pdfHeight + 10;
                 }
             }
         }
@@ -115,7 +120,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         lastY += 10;
 
 
-        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Level", "Confidence", "CNN ML Model (nM)", "Rationale"];
+        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Affinity Level", "Confidence", "CNN ML Model (nM)", "AI Rationale"];
         const mainTableRows: any[][] = [];
 
         completedResults.forEach(res => {
@@ -137,7 +142,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 startY: lastY,
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
-                columnStyles: { 5: { cellWidth: 'wrap' } }
+                columnStyles: { 5: { cellWidth: 80 } } // Wrap text in rationale column
             });
             lastY = (doc as any).lastAutoTable.finalY + 15;
         } else {
@@ -173,10 +178,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
             });
         }
 
-
         doc.save(`QuantumDock_Results_${new Date().toISOString()}.pdf`);
     };
-
+    
     const handleDownloadDocx = () => {
         if (completedResults.length === 0) {
             alert("No completed simulation data to export.");
@@ -187,13 +191,10 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
             children: [
                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Level", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Affinity Level", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "CNN ML Model (nM)", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Combined MW (Da)", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "H-Donors", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "H-Acceptors", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Rationale", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "AI Rationale", bold: true })] }),
             ],
         });
 
@@ -204,19 +205,36 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 new DocxTableCell({ children: [new Paragraph(getAffinityLevel(res.prediction.bindingAffinity).level)] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.standardModelScore.toFixed(2))] }),
-                new DocxTableCell({ children: [new Paragraph((res.molecule.molecularWeight + res.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 }))] }),
-                new DocxTableCell({ children: [new Paragraph(String(res.molecule.donors))] }),
-                new DocxTableCell({ children: [new Paragraph(String(res.molecule.acceptors))] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.rationale)] }),
             ],
         }));
 
-        const table = new DocxTable({
+        const mainTable = new DocxTable({
             rows: [tableHeader, ...tableRows],
-            width: {
-                size: 100,
-                type: WidthType.PERCENTAGE,
-            },
+            width: { size: 100, type: WidthType.PERCENTAGE },
+        });
+
+        const propertiesHeader = new DocxTableRow({
+            children: [
+                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Combined MW (Da)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "H-Donors", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "H-Acceptors", bold: true })] }),
+            ]
+        });
+
+         const propertiesRows = completedResults.map(res => new DocxTableRow({
+            children: [
+                new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
+                new DocxTableCell({ children: [new Paragraph((res.molecule.molecularWeight + res.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 }))] }),
+                new DocxTableCell({ children: [new Paragraph(String(res.molecule.donors))] }),
+                new DocxTableCell({ children: [new Paragraph(String(res.molecule.acceptors))] }),
+            ]
+        }));
+
+        const propertiesTable = new DocxTable({
+            rows: [propertiesHeader, ...propertiesRows],
+            width: { size: 100, type: WidthType.PERCENTAGE },
         });
 
         const doc = new Document({
@@ -225,7 +243,11 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                     new Paragraph({
                         children: [new TextRun({ text: "QuantumDock - Detailed Simulation Results", bold: true, size: 36 })],
                     }),
-                    table
+                    new Paragraph({ children: [new TextRun({ text: "Binding Affinity Comparison", bold: true, size: 28 })] }),
+                    mainTable,
+                    new Paragraph({ text: "", spacing: { after: 200 } }), // Add some space
+                    new Paragraph({ children: [new TextRun({ text: "Molecular Properties", bold: true, size: 28 })] }),
+                    propertiesTable,
                 ],
             }],
         });
@@ -236,127 +258,162 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                     <div>
-                        <CardTitle>{title}</CardTitle>
-                         <CardDescription>
-                            Lower binding affinity (nM) indicates a stronger, more favorable interaction.
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>{title}</CardTitle>
+                            <CardDescription>
+                                Lower binding affinity (nM) indicates a stronger, more favorable interaction.
+                            </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={completedResults.length === 0}>
+                                <Download className="mr-2 h-4 w-4" /> PDF
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={handleDownloadDocx} disabled={completedResults.length === 0}>
+                                <Download className="mr-2 h-4 w-4" /> DOCX
+                            </Button>
+                            <Button variant="default" size="sm" onClick={onSaveResults} disabled={completedResults.length === 0 || isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save Results
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                    {chartData.length > 0 && (
+                        <div data-testid="chart-container">
+                            <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
+                            <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                                <ResponsiveContainer>
+                                    <BarChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis
+                                            dataKey="name"
+                                            tickLine={false}
+                                            tickMargin={10}
+                                            axisLine={false}
+                                            angle={-45}
+                                            textAnchor="end"
+                                            height={60}
+                                            fontSize={10}
+                                        />
+                                        <YAxis
+                                            label={{ value: 'Binding Affinity (nM)', angle: -90, position: 'insideLeft' }}
+                                        />
+                                        <Tooltip
+                                            cursor={{ fill: 'hsl(var(--muted))' }}
+                                            content={<ChartTooltipContent />}
+                                        />
+                                        <Bar dataKey="bindingAffinity" fill="var(--color-bindingAffinity)" radius={4} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </ChartContainer>
+                        </div>
+                    )}
+
+                    <div>
+                        <CardTitle className="text-lg mb-4">Detailed Simulation Results</CardTitle>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Combination</TableHead>
+                                        <TableHead>Quantum Affinity (nM)</TableHead>
+                                        <TableHead>Affinity Level</TableHead>
+                                        <TableHead>Confidence</TableHead>
+                                        <TableHead>CNN ML Model (nM)</TableHead>
+                                        <TableHead>AI Rationale</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {completedResults.length === 0 && erroredResults.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center">
+                                                No results yet. Run a simulation to see the output.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {completedResults.map((result, index) => {
+                                        const affinityInfo = getAffinityLevel(result.prediction.bindingAffinity);
+                                        return (
+                                            <TableRow key={index}>
+                                                <TableCell className="font-medium">
+                                                    <div>{result.molecule.name}</div>
+                                                    <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                                </TableCell>
+                                                <TableCell className="font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="default" className={affinityInfo.className}>
+                                                        {affinityInfo.level}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
+                                                <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
+                                                <TableCell className="text-xs text-muted-foreground max-w-xs">{result.prediction.rationale}</TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                    {erroredResults.map((result, index) => (
+                                        <TableRow key={`error-${index}`}>
+                                            <TableCell className="font-medium">
+                                                <div>{result.molecule.name}</div>
+                                                <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                            </TableCell>
+                                            <TableCell colSpan={5}>
+                                                <Alert variant="destructive" className="bg-transparent border-0 p-0">
+                                                    <AlertDescription>{result.error}</AlertDescription>
+                                                </Alert>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {completedResults.length > 0 && (
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Molecular Properties</CardTitle>
+                        <CardDescription>
+                            Combined properties of the simulated molecule-protein pairs.
                         </CardDescription>
-                     </div>
-                     <div className="flex gap-2">
-                         <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={completedResults.length === 0}>
-                            <Download className="mr-2 h-4 w-4" /> PDF
-                         </Button>
-                         <Button variant="outline" size="sm" onClick={handleDownloadDocx} disabled={completedResults.length === 0}>
-                            <Download className="mr-2 h-4 w-4" /> DOCX
-                         </Button>
-                         <Button variant="default" size="sm" onClick={onSaveResults} disabled={completedResults.length === 0 || isSaving}>
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                             Save Results
-                         </Button>
-                     </div>
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-8">
-                {chartData.length > 0 && (
-                    <div data-testid="chart-container">
-                         <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
-                        <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                            <ResponsiveContainer>
-                                <BarChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis
-                                        dataKey="name"
-                                        tickLine={false}
-                                        tickMargin={10}
-                                        axisLine={false}
-                                        angle={-45}
-                                        textAnchor="end"
-                                        height={60}
-                                        fontSize={10}
-                                    />
-                                    <YAxis 
-                                        label={{ value: 'Binding Affinity (nM)', angle: -90, position: 'insideLeft' }}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: 'hsl(var(--muted))' }}
-                                        content={<ChartTooltipContent />}
-                                    />
-                                    <Bar dataKey="bindingAffinity" fill="var(--color-bindingAffinity)" radius={4} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    </div>
-                )}
-                
-                <div>
-                    <CardTitle className="text-lg mb-4">Detailed Simulation Results</CardTitle>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Combination</TableHead>
-                                    <TableHead>Quantum Affinity (nM)</TableHead>
-                                    <TableHead>Affinity Level</TableHead>
-                                    <TableHead>Confidence</TableHead>
-                                    <TableHead>CNN ML Model (nM)</TableHead>
-                                    <TableHead>Comb. MW (Da)</TableHead>
-                                    <TableHead>H-Donors</TableHead>
-                                    <TableHead>H-Acceptors</TableHead>
-                                    <TableHead>AI Rationale</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {completedResults.length === 0 && erroredResults.length === 0 && (
-                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center">
-                                            No results yet. Run a simulation to see the output.
-                                        </TableCell>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Combination</TableHead>
+                                        <TableHead>Comb. MW (Da)</TableHead>
+                                        <TableHead>H-Donors</TableHead>
+                                        <TableHead>H-Acceptors</TableHead>
                                     </TableRow>
-                                )}
-                                {completedResults.map((result, index) => {
-                                     const affinityInfo = getAffinityLevel(result.prediction.bindingAffinity);
-                                     return (
-                                     <TableRow key={index}>
-                                        <TableCell className="font-medium">
-                                            <div>{result.molecule.name}</div>
-                                            <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
-                                        </TableCell>
-                                        <TableCell className="font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="default" className={affinityInfo.className}>
-                                                {affinityInfo.level}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
-                                        <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
-                                        <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, {maximumFractionDigits: 2})}</TableCell>
-                                        <TableCell>{result.molecule.donors}</TableCell>
-                                        <TableCell>{result.molecule.acceptors}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">{result.prediction.rationale}</TableCell>
-                                     </TableRow>
-                                )})}
-                                {erroredResults.map((result, index) => (
-                                    <TableRow key={`error-${index}`}>
-                                        <TableCell className="font-medium">
-                                            <div>{result.molecule.name}</div>
-                                            <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
-                                        </TableCell>
-                                         <TableCell colSpan={8}>
-                                            <Alert variant="destructive" className="bg-transparent border-0 p-0">
-                                                <AlertDescription>{result.error}</AlertDescription>
-                                            </Alert>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+                                </TableHeader>
+                                <TableBody>
+                                     {completedResults.map((result, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="font-medium">
+                                                <div>{result.molecule.name}</div>
+                                                <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                            </TableCell>
+                                            <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, {maximumFractionDigits: 2})}</TableCell>
+                                            <TableCell>{result.molecule.donors}</TableCell>
+                                            <TableCell>{result.molecule.acceptors}</TableCell>
+                                        </TableRow>
+                                     ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
     );
 }
 
@@ -758,14 +815,14 @@ function DashboardPage() {
                     <CardHeader>
                         <CardTitle>Visualisation</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col min-h-[calc(100vh-14rem)] items-start justify-start bg-muted/30 border-dashed -mt-6 rounded-b-lg p-6">
+                    <CardContent className="flex flex-col items-start justify-start bg-muted/30 border-dashed -mt-6 rounded-b-lg p-6">
                          {isRunning ? (
                             <div className="w-full p-6 space-y-4">
                                 <div className="space-y-2">
                                     <p className="text-sm font-medium text-muted-foreground text-center">{currentStep}</p>
                                     <Progress value={totalProgress} />
                                 </div>
-                                <div className="h-[calc(100vh-28rem)]">
+                                <ScrollArea className="h-[calc(100vh-28rem)]">
                                 <div className="grid gap-4 md:grid-cols-2">
                                     {simulationResults.map((result, index) => (
                                         <Card key={index}>
@@ -792,7 +849,7 @@ function DashboardPage() {
                                         </Card>
                                     ))}
                                 </div>
-                                </div>
+                                </ScrollArea>
                             </div>
                         ) : completedSimulations.length > 0 ? (
                                 <div className="w-full">
@@ -853,8 +910,3 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
-
-    
-
-    
