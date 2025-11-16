@@ -120,17 +120,17 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         lastY += 10;
 
 
-        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Affinity Level", "Confidence", "CNN ML Model (nM)", "AI Rationale"];
+        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Confidence", "CNN ML Model (nM)", "Explanation", "Affinity Level"];
         const mainTableRows: any[][] = [];
 
         completedResults.forEach(res => {
             const rowData = [
                 `${res.molecule.name} + ${res.protein.name}`,
                 res.prediction.bindingAffinity.toFixed(2),
-                getAffinityLevel(res.prediction.bindingAffinity).level,
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
                 res.prediction.comparison.standardModelScore.toFixed(2),
-                res.prediction.rationale
+                res.prediction.rationale,
+                getAffinityLevel(res.prediction.bindingAffinity).level,
             ];
             mainTableRows.push(rowData);
         });
@@ -142,7 +142,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 startY: lastY,
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
-                columnStyles: { 5: { cellWidth: 80 } } // Wrap text in rationale column
+                columnStyles: { 4: { cellWidth: 80 } } // Wrap text in rationale column
             });
             lastY = (doc as any).lastAutoTable.finalY + 15;
         } else {
@@ -191,10 +191,10 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
             children: [
                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "Affinity Level", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "CNN ML Model (nM)", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "AI Rationale", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Explanation", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Affinity Level", bold: true })] }),
             ],
         });
 
@@ -202,10 +202,10 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
             children: [
                 new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
-                new DocxTableCell({ children: [new Paragraph(getAffinityLevel(res.prediction.bindingAffinity).level)] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.standardModelScore.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.rationale)] }),
+                new DocxTableCell({ children: [new Paragraph(getAffinityLevel(res.prediction.bindingAffinity).level)] }),
             ],
         }));
 
@@ -283,6 +283,44 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
+                     {completedResults.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Molecular Properties</CardTitle>
+                                <CardDescription>
+                                    Combined properties of the simulated molecule-protein pairs.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Combination</TableHead>
+                                                <TableHead>Comb. MW (Da)</TableHead>
+                                                <TableHead>H-Donors</TableHead>
+                                                <TableHead>H-Acceptors</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {completedResults.map((result, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium">
+                                                        <div>{result.molecule.name}</div>
+                                                        <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                                    </TableCell>
+                                                    <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                                                    <TableCell>{result.molecule.donors}</TableCell>
+                                                    <TableCell>{result.molecule.acceptors}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {chartData.length > 0 && (
                         <div data-testid="chart-container">
                             <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
@@ -313,106 +351,66 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                             </ChartContainer>
                         </div>
                     )}
-
+                    
                     <div>
                         <CardTitle className="text-lg mb-4">Detailed Simulation Results</CardTitle>
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Combination</TableHead>
-                                        <TableHead>Quantum Affinity (nM)</TableHead>
-                                        <TableHead>Affinity Level</TableHead>
-                                        <TableHead>Confidence</TableHead>
-                                        <TableHead>CNN ML Model (nM)</TableHead>
-                                        <TableHead>AI Rationale</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {completedResults.length === 0 && erroredResults.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
-                                                No results yet. Run a simulation to see the output.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                    {completedResults.map((result, index) => {
-                                        const affinityInfo = getAffinityLevel(result.prediction.bindingAffinity);
-                                        return (
-                                            <TableRow key={index}>
-                                                <TableCell className="font-medium">
-                                                    <div>{result.molecule.name}</div>
-                                                    <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
-                                                </TableCell>
-                                                <TableCell className="font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="default" className={affinityInfo.className}>
+                         {(completedResults.length === 0 && erroredResults.length === 0) ? (
+                            <div className="rounded-md border h-24 flex items-center justify-center text-sm text-muted-foreground">
+                                No results yet. Run a simulation to see the output.
+                            </div>
+                        ) : (
+                             <Accordion type="single" collapsible className="w-full">
+                                <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-2 font-medium text-muted-foreground text-sm border-b">
+                                    <div className="col-span-3">Combination</div>
+                                    <div className="col-span-2">Quantum Affinity (nM)</div>
+                                    <div className="col-span-2">Confidence</div>
+                                    <div className="col-span-2">CNN ML Model (nM)</div>
+                                    <div className="col-span-2 text-right">Affinity Level</div>
+                                    <div className="col-span-1"></div> {/* For accordion chevron */}
+                                </div>
+                                {completedResults.map((result, index) => {
+                                    const affinityInfo = getAffinityLevel(result.prediction.bindingAffinity);
+                                    return (
+                                        <AccordionItem value={`item-${index}`} key={index}>
+                                            <AccordionTrigger className="grid sm:grid-cols-12 gap-4 px-4 py-3 hover:bg-muted/50 hover:no-underline rounded-md">
+                                                <div className="col-span-11 sm:col-span-3 text-left">
+                                                     <div className="font-medium">{result.molecule.name}</div>
+                                                     <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                                </div>
+                                                <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</div>
+                                                <div className="col-span-11 sm:col-span-2 text-left">{Math.round(result.prediction.confidenceScore * 100)}%</div>
+                                                <div className="col-span-11 sm:col-span-2 text-left">{result.prediction.comparison.standardModelScore.toFixed(2)}</div>
+                                                <div className="col-span-11 sm:col-span-2 text-right">
+                                                     <Badge variant="default" className={affinityInfo.className}>
                                                         {affinityInfo.level}
                                                     </Badge>
-                                                </TableCell>
-                                                <TableCell>{Math.round(result.prediction.confidenceScore * 100)}%</TableCell>
-                                                <TableCell>{result.prediction.comparison.standardModelScore.toFixed(2)}</TableCell>
-                                                <TableCell className="text-xs text-muted-foreground max-w-xs">{result.prediction.rationale}</TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
-                                    {erroredResults.map((result, index) => (
-                                        <TableRow key={`error-${index}`}>
-                                            <TableCell className="font-medium">
-                                                <div>{result.molecule.name}</div>
-                                                <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
-                                            </TableCell>
-                                            <TableCell colSpan={5}>
-                                                <Alert variant="destructive" className="bg-transparent border-0 p-0">
-                                                    <AlertDescription>{result.error}</AlertDescription>
-                                                </Alert>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md">
+                                                <h4 className="font-semibold mb-1">Explanation</h4>
+                                                <p className="text-xs text-muted-foreground">{result.prediction.rationale}</p>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    )
+                                })}
+                                 {erroredResults.map((result, index) => (
+                                    <div key={`error-${index}`} className="grid sm:grid-cols-12 gap-4 px-4 py-3 border-b">
+                                        <div className="col-span-3 font-medium">
+                                            <div>{result.molecule.name}</div>
+                                            <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
+                                        </div>
+                                        <div className="col-span-9">
+                                            <Alert variant="destructive" className="bg-transparent border-0 p-0">
+                                                <AlertDescription>{result.error}</AlertDescription>
+                                            </Alert>
+                                        </div>
+                                    </div>
+                                ))}
+                             </Accordion>
+                        )}
                     </div>
                 </CardContent>
             </Card>
-
-            {completedResults.length > 0 && (
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Molecular Properties</CardTitle>
-                        <CardDescription>
-                            Combined properties of the simulated molecule-protein pairs.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Combination</TableHead>
-                                        <TableHead>Comb. MW (Da)</TableHead>
-                                        <TableHead>H-Donors</TableHead>
-                                        <TableHead>H-Acceptors</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                     {completedResults.map((result, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell className="font-medium">
-                                                <div>{result.molecule.name}</div>
-                                                <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
-                                            </TableCell>
-                                            <TableCell>{(result.molecule.molecularWeight + result.protein.molecularWeight).toLocaleString(undefined, {maximumFractionDigits: 2})}</TableCell>
-                                            <TableCell>{result.molecule.donors}</TableCell>
-                                            <TableCell>{result.molecule.acceptors}</TableCell>
-                                        </TableRow>
-                                     ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
         </div>
     );
 }
