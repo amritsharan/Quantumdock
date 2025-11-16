@@ -48,8 +48,8 @@ const PredictBindingAffinitiesOutputSchema = z.object({
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
     comparison: z.object({
-      standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated advanced ML model (e.g., a GNN) for comparison.'),
-      explanation: z.string().describe('A brief explanation comparing the AI prediction to the advanced model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+      standardModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated Graph Neural Network (GNN) model for comparison.'),
+      explanation: z.string().describe('A brief explanation comparing the AI prediction to the GNN model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
     }),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
@@ -78,8 +78,8 @@ Your tasks are:
 2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction. This result must be deterministic.
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
-    - **standardModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction. This result must be deterministic.
-    - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the advanced model's score. Mention sensitivity to quantum effects.
+    - **standardModelScore:** Generate a *fictional* binding affinity score that a Graph Neural Network (GNN) model might predict. This should be plausible but slightly different from your own prediction. This result must be deterministic.
+    - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the GNN's score. Mention sensitivity to quantum effects.
 
 
 **Simulated Inputs:**

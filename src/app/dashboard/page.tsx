@@ -120,7 +120,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         lastY += 10;
 
 
-        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Confidence", "CNN ML Model (nM)", "Explanation", "Affinity Level"];
+        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Confidence", "GNN Model (nM)", "Explanation", "Affinity Level"];
         const mainTableRows: any[][] = [];
 
         completedResults.forEach(res => {
@@ -192,7 +192,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
-                new DocxTableCell({ children: [new Paragraph({ text: "CNN ML Model (nM)", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "GNN Model (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Explanation", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Affinity Level", bold: true })] }),
             ],
@@ -284,6 +284,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 </CardHeader>
                 <CardContent className="space-y-8">
                      {completedResults.length > 0 && (
+                        <>
                         <Card>
                             <CardHeader>
                                 <CardTitle>Molecular Properties</CardTitle>
@@ -319,9 +320,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                 </div>
                             </CardContent>
                         </Card>
-                    )}
-
-                    {chartData.length > 0 && (
+                        
                         <div data-testid="chart-container">
                             <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
                             <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -350,6 +349,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                 </ResponsiveContainer>
                             </ChartContainer>
                         </div>
+                        </>
                     )}
                     
                     <div>
@@ -364,7 +364,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                     <div className="col-span-3">Combination</div>
                                     <div className="col-span-2">Quantum Affinity (nM)</div>
                                     <div className="col-span-2">Confidence</div>
-                                    <div className="col-span-2">CNN ML Model (nM)</div>
+                                    <div className="col-span-2">GNN Model (nM)</div>
                                     <div className="col-span-2 text-right">Affinity Level</div>
                                     <div className="col-span-1"></div> {/* For accordion chevron */}
                                 </div>
@@ -388,7 +388,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                             </AccordionTrigger>
                                             <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md">
                                                 <h4 className="font-semibold mb-1">Explanation</h4>
-                                                <p className="text-xs text-muted-foreground">{result.prediction.rationale}</p>
+                                                <p className="text-xs text-muted-foreground">{result.prediction.comparison.explanation}</p>
                                             </AccordionContent>
                                         </AccordionItem>
                                     )
