@@ -149,12 +149,12 @@ export default function SignInPage() {
     return (
         <Card className="w-full max-w-sm">
             <CardHeader className="text-center">
-                <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="mb-4 flex flex-col items-center gap-4">
                     <Skeleton className="h-14 w-14 rounded-full" />
-                    <Skeleton className="h-8 w-40" />
+                    <Skeleton className="mx-auto h-8 w-40" />
                 </div>
-                <Skeleton className="h-7 w-24 mx-auto" />
-                <Skeleton className="h-5 w-64 mx-auto" />
+                <Skeleton className="mx-auto h-7 w-24" />
+                <Skeleton className="mx-auto h-5 w-64" />
             </CardHeader>
             <CardContent className="grid gap-4">
                 <div className="grid gap-2">
@@ -166,7 +166,7 @@ export default function SignInPage() {
                     <Skeleton className="h-10 w-full" />
                 </div>
                 <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-5 w-48 mx-auto" />
+                <Skeleton className="mx-auto h-5 w-48" />
             </CardContent>
         </Card>
     );
@@ -176,7 +176,7 @@ export default function SignInPage() {
     <>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-            <div className="flex flex-col items-center gap-4 mb-4">
+            <div className="mb-4 flex flex-col items-center gap-4">
                 <QuantumDockLogo className="h-14 w-14 text-primary" />
                 <h1 className="text-3xl font-semibold tracking-tight">QuantumDock</h1>
             </div>

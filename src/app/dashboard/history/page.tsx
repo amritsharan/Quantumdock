@@ -130,12 +130,12 @@ function DailyActivityDialog({ loginRecord, isOpen, onOpenChange }: { loginRecor
                 </DialogHeader>
                 <ScrollArea className="h-[60vh] pr-4">
                     {isLoading && (
-                        <div className="flex items-center justify-center h-full">
+                        <div className="flex h-full items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     )}
                     {!isLoading && (!simulations || simulations.length === 0) && (
-                         <div className="flex items-center justify-center h-full">
+                         <div className="flex h-full items-center justify-center">
                             <p className="text-muted-foreground">No simulations found for this session.</p>
                         </div>
                     )}
@@ -191,6 +191,7 @@ export default function HistoryPage() {
   useEffect(() => {
     setHydrated(true);
     // This timer updates the "active" session's duration every minute.
+    setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
@@ -210,7 +211,7 @@ export default function HistoryPage() {
       }
 
       let durationDisplay;
-      if (item.status === 'active' && loginDate && hydrated) {
+      if (item.status === 'active' && loginDate && hydrated && currentTime) {
         // This part now only runs if currentTime is available (client-side after hydration)
         durationDisplay = calculateActiveDuration(loginDate);
       } else if (item.duration !== undefined) {
@@ -227,7 +228,7 @@ export default function HistoryPage() {
         calculatedDuration: durationDisplay,
       };
     });
-  }, [allHistory, hydrated]);
+  }, [allHistory, hydrated, currentTime]);
 
   const handleLoginTimeClick = (record: WithId<LoginHistory> | null) => {
       if (!record) return;
