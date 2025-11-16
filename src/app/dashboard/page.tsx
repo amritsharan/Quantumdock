@@ -58,7 +58,7 @@ const simpleHash = (str: string): number => {
     return hash;
 };
 
-const getAffinityLevel = (affinity: number): { level: 'Low' | 'Moderate' | 'High', className: string } => {
+const getAffinityLevel = (affinity: number): { level: 'High' | 'Moderate' | 'Low', className: string } => {
     if (affinity < 10) return { level: 'High', className: 'bg-green-500 hover:bg-green-500/80' };
     if (affinity <= 100) return { level: 'Moderate', className: 'bg-yellow-500 hover:bg-yellow-500/80' };
     return { level: 'Low', className: 'bg-red-500 hover:bg-red-500/80' };
@@ -89,12 +89,34 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
     const handleDownloadPdf = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         const docTitle = "QuantumDock - Detailed Simulation Results";
-        
+
         doc.setFontSize(18);
         doc.text(docTitle, 14, 22);
 
-        const tableColumn = ["Combination", "Quantum Affinity (nM)", "Level", "Confidence", "CNN ML Model (nM)", "Comb. MW (Da)", "H-Donors", "H-Acceptors", "Rationale"];
-        const tableRows: any[][] = [];
+        let lastY = 30;
+
+        if (chartData.length > 0) {
+            const chartElement = (document.querySelector('[data-testid="chart-container"]') as HTMLElement);
+            if (chartElement) {
+                const canvas = chartElement.querySelector('canvas');
+                if (canvas) {
+                    const imgData = canvas.toDataURL('image/png');
+                    doc.setFontSize(14);
+                    doc.text("Binding Affinity Comparison", 14, lastY);
+                    lastY += 10;
+                    doc.addImage(imgData, 'PNG', 14, lastY, 260, 120);
+                    lastY += 130;
+                }
+            }
+        }
+        
+        doc.setFontSize(14);
+        doc.text("Detailed Simulation Results", 14, lastY);
+        lastY += 10;
+
+
+        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Level", "Confidence", "CNN ML Model (nM)", "Rationale"];
+        const mainTableRows: any[][] = [];
 
         completedResults.forEach(res => {
             const rowData = [
@@ -103,29 +125,54 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 getAffinityLevel(res.prediction.bindingAffinity).level,
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
                 res.prediction.comparison.standardModelScore.toFixed(2),
-                (res.molecule.molecularWeight + res.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 }),
-                res.molecule.donors,
-                res.molecule.acceptors,
                 res.prediction.rationale
             ];
-            tableRows.push(rowData);
+            mainTableRows.push(rowData);
         });
 
-        if (tableRows.length > 0) {
+        if (mainTableRows.length > 0) {
             (doc as any).autoTable({
-                head: [tableColumn],
-                body: tableRows,
-                startY: 30,
+                head: [mainTableColumn],
+                body: mainTableRows,
+                startY: lastY,
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
-                columnStyles: {
-                    8: { cellWidth: 'wrap' }
-                }
+                columnStyles: { 5: { cellWidth: 'wrap' } }
             });
+            lastY = (doc as any).lastAutoTable.finalY + 15;
         } else {
              doc.setFontSize(12);
-             doc.text("No completed simulation data to export.", 14, 40);
+             doc.text("No completed simulation data to export.", 14, lastY);
+             lastY += 10;
         }
+        
+        doc.setFontSize(14);
+        doc.text("Molecular Properties", 14, lastY);
+        lastY += 10;
+        
+        const propertiesTableColumn = ["Combination", "Comb. MW (Da)", "H-Donors", "H-Acceptors"];
+        const propertiesTableRows: any[][] = [];
+
+        completedResults.forEach(res => {
+            const rowData = [
+                 `${res.molecule.name} + ${res.protein.name}`,
+                 (res.molecule.molecularWeight + res.protein.molecularWeight).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                 res.molecule.donors,
+                 res.molecule.acceptors
+            ];
+            propertiesTableRows.push(rowData);
+        });
+        
+         if (propertiesTableRows.length > 0) {
+            (doc as any).autoTable({
+                head: [propertiesTableColumn],
+                body: propertiesTableRows,
+                startY: lastY,
+                theme: 'striped',
+                headStyles: { fillColor: [46, 82, 102] }
+            });
+        }
+
 
         doc.save(`QuantumDock_Results_${new Date().toISOString()}.pdf`);
     };
@@ -214,7 +261,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
             </CardHeader>
             <CardContent className="space-y-8">
                 {chartData.length > 0 && (
-                    <div>
+                    <div data-testid="chart-container">
                          <CardTitle className="text-lg mb-4">Binding Affinity Comparison</CardTitle>
                         <ChartContainer config={chartConfig} className="h-[250px] w-full">
                             <ResponsiveContainer>
@@ -718,7 +765,7 @@ function DashboardPage() {
                                     <p className="text-sm font-medium text-muted-foreground text-center">{currentStep}</p>
                                     <Progress value={totalProgress} />
                                 </div>
-                                <ScrollArea className="h-[calc(100vh-28rem)]">
+                                <div className="h-[calc(100vh-28rem)]">
                                 <div className="grid gap-4 md:grid-cols-2">
                                     {simulationResults.map((result, index) => (
                                         <Card key={index}>
@@ -745,7 +792,7 @@ function DashboardPage() {
                                         </Card>
                                     ))}
                                 </div>
-                                </ScrollArea>
+                                </div>
                             </div>
                         ) : completedSimulations.length > 0 ? (
                                 <div className="w-full">
@@ -807,5 +854,7 @@ export default function Dashboard() {
     )
 }
 
+
+    
 
     
