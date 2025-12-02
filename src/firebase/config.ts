@@ -1,5 +1,4 @@
 
-
 // This configuration is now loaded from environment variables.
 // This is the standard and secure way to handle configuration for different environments (development, production).
 // See the .env.example file for a template of the required variables.
