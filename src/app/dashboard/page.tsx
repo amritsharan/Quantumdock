@@ -584,9 +584,10 @@ function DashboardPage() {
 
             let prediction;
             let success = false;
-            let retries = 3; // Number of retries
+            let attempt = 0;
+            const maxRetries = 3;
             
-            while(retries > 0 && !success) {
+            while(attempt < maxRetries && !success) {
                 try {
                     // Step 1: Simulate Quantum Refinement
                     updateResult({ status: 'simulating', step: 'refining', progress: 25 });
@@ -610,8 +611,11 @@ function DashboardPage() {
                     updateResult({ status: 'analyzing', step: 'predicting', progress: 75 });
                     setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
                     
-                    // Add a delay here to avoid hitting API rate limits
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Add a delay here to avoid hitting API rate limits, especially on the first attempt
+                    if (attempt === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
 
                     prediction = await predictBindingAffinities({
                         quantumRefinedEnergy: refinedEnergy,
@@ -664,6 +668,7 @@ function DashboardPage() {
                     }]);
 
                 } catch (error: any) {
+                     attempt++;
                      const isRetryableError = error.message && (
                         error.message.includes('429') || 
                         error.message.includes('Too Many Requests') ||
@@ -671,11 +676,10 @@ function DashboardPage() {
                         error.message.includes('Service Unavailable')
                     );
 
-                    if (isRetryableError && retries > 0) {
-                        retries--;
-                        const delay = 5000; // Wait 5 seconds before retrying
+                    if (isRetryableError && attempt < maxRetries) {
+                        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
                         const retryMessage = error.message.includes('429') ? 'Rate limit hit' : 'Service unavailable';
-                        setCurrentStep(`[${i+1}/${totalSims}] ${retryMessage}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
+                        setCurrentStep(`[${i+1}/${totalSims}] ${retryMessage}. Retrying in ${delay / 1000}s... (${maxRetries - attempt} retries left)`);
                         await new Promise(resolve => setTimeout(resolve, delay));
                     } else {
                         // Non-retryable error or retries exhausted
@@ -695,7 +699,8 @@ function DashboardPage() {
                             refinedEnergy: null,
                             prediction: null,
                         }]);
-                        retries = 0; // Stop retrying for this combination
+                        // This break will exit the while loop for the current combination
+                        break;
                     }
                 }
             }
