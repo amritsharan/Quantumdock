@@ -611,10 +611,8 @@ function DashboardPage() {
                     updateResult({ status: 'analyzing', step: 'predicting', progress: 75 });
                     setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
                     
-                    // Add a delay here to avoid hitting API rate limits, especially on the first attempt
-                    if (attempt === 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
+                    // Add a proactive delay here to avoid hitting API rate limits.
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
 
                     prediction = await predictBindingAffinities({
