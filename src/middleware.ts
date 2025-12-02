@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // If the user is at the root path, redirect them to the sign-in page.
+  if (request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/sign-in', request.url));
+  }
+
   const response = NextResponse.next();
 
   // Allow all origins to frame this page
