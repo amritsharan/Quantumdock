@@ -443,7 +443,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                             </AccordionTrigger>
                                             <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md space-y-4">
                                                 <div>
-                                                    <h4 className="font-semibold mb-1">AI vs. GNN Model</h4>
+                                                    <h4 className="font-semibold mb-1">Current model vs GNN model</h4>
                                                     <div className="grid grid-cols-2 gap-4 text-xs">
                                                          <div>
                                                             <div className="text-muted-foreground">GNN Model Affinity</div>
@@ -991,5 +991,6 @@ export default function Dashboard() {
         </Suspense>
     )
 }
+
 
     
