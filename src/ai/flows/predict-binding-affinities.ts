@@ -76,6 +76,7 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
+  model: 'googleai/gemini-1.5-flash-latest',
   prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
@@ -112,7 +113,7 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
     outputSchema: PredictBindingAffinitiesOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input, { model: 'googleai/gemini-1.5-flash-latest' });
+    const {output} = await prompt(input);
     return output!;
   }
 );
