@@ -86,7 +86,10 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: { schema: PredictBindingAffinitiesInputSchema },
   output: { schema: PredictBindingAffinitiesOutputSchema },
-
+  model: 'vertexai/gemini-1.5-pro',
+  output: {
+    format: 'json'
+  },
   prompt: `
 You are an expert computational chemist specializing in quantum-assisted drug discovery.
 Analyze the provided inputs and return a deterministic JSON prediction.
@@ -122,16 +125,7 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
     outputSchema: PredictBindingAffinitiesOutputSchema,
   },
   async (input) => {
-    const llmResponse = await ai.generate({
-      prompt: prompt,
-      input: input,
-      model: 'vertexai/gemini-1.5-pro',
-      output: {
-        format: 'json',
-        schema: PredictBindingAffinitiesOutputSchema,
-      },
-    });
-
-    return llmResponse.output!;
+    const { output } = await prompt(input);
+    return output!;
   }
 );
