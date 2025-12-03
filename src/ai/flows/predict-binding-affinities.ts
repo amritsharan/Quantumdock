@@ -13,6 +13,11 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const PredictBindingAffinitiesInputSchema = z.object({
+  classicalDockingScore: z
+    .number()
+    .describe(
+      'The docking score from a classical model (e.g., AutoDock Vina), typically in kcal/mol. More negative is better.'
+    ),
   quantumRefinedEnergy: z
     .number()
     .describe(
@@ -68,18 +73,19 @@ export async function predictBindingAffinities(
 
 const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-pro',
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
   prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
-1.  A simulated quantum-refined binding energy (in kcal/mol). This represents the final energy state of the molecule-protein complex after quantum refinement.
-2.  A molecule's SMILES string.
-3.  A protein target's name.
+1.  A classical docking score (e.g., from AutoDock Vina) in kcal/mol.
+2.  A simulated quantum-refined binding energy (in kcal/mol). This represents the final energy state of the molecule-protein complex after quantum refinement.
+3.  A molecule's SMILES string.
+4.  A protein target's name.
 
 Your tasks are:
-1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
+1.  **Predict Binding Affinity:** Based on all inputs, predict the binding affinity in nM. A lower (more negative) classical and quantum-refined energy should generally correlate with a lower (stronger) binding affinity. The quantum energy is a more precise measure. This result must be deterministic.
 2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction. This result must be deterministic.
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
@@ -90,6 +96,7 @@ Your tasks are:
     - **gnnModelTime:** Generate a *fictional* docking time in seconds for the GNN model. This value should be plausibly *slower* than the quantumModelTime, reflecting the quantum model's efficiency.
 
 **Simulated Inputs:**
+- Classical Docking Score: {{{classicalDockingScore}}} kcal/mol
 - Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
 - Molecule SMILES: {{{moleculeSmiles}}}
 - Protein Target: {{{proteinTargetName}}}

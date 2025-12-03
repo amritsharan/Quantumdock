@@ -42,6 +42,7 @@ type Result = {
     status: SimulationStatus;
     step: SimulationStep;
     progress: number;
+    classicalScore: number | null;
     refinedEnergy: number | null;
     prediction: any | null;
     error?: string;
@@ -120,12 +121,13 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         lastY += 10;
 
 
-        const mainTableColumn = ["Combination", "Refined Energy (kcal/mol)", "Quantum Affinity (nM)", "Confidence", "GNN Model (nM)", "Explanation", "Affinity Level"];
+        const mainTableColumn = ["Combination", "Classical Score (kcal/mol)", "Refined Energy (kcal/mol)", "Quantum Affinity (nM)", "Confidence", "GNN Model (nM)", "Explanation", "Affinity Level"];
         const mainTableRows: any[][] = [];
 
         completedResults.forEach(res => {
             const rowData = [
                 `${res.molecule.name} + ${res.protein.name}`,
+                res.classicalScore?.toFixed(2) ?? 'N/A',
                 res.refinedEnergy?.toFixed(2) ?? 'N/A',
                 res.prediction.bindingAffinity.toFixed(2),
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
@@ -143,7 +145,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 startY: lastY,
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
-                columnStyles: { 5: { cellWidth: 70 } } // Wrap text in explanation column
+                columnStyles: { 6: { cellWidth: 70 } } // Wrap text in explanation column
             });
             lastY = (doc as any).lastAutoTable.finalY + 15;
         } else {
@@ -219,6 +221,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         const tableHeader = new DocxTableRow({
             children: [
                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Classical Score (kcal/mol)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Refined Energy (kcal/mol)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
@@ -231,6 +234,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         const tableRows = completedResults.map(res => new DocxTableRow({
             children: [
                 new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
+                new DocxTableCell({ children: [new Paragraph(res.classicalScore?.toFixed(2) ?? 'N/A')] }),
                 new DocxTableCell({ children: [new Paragraph(res.refinedEnergy?.toFixed(2) ?? 'N/A')] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
@@ -417,9 +421,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                              <Accordion type="single" collapsible className="w-full">
                                 <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-2 font-medium text-muted-foreground text-sm border-b">
                                     <div className="col-span-3">Combination</div>
-                                    <div className="col-span-2">Refined Energy (kcal/mol)</div>
+                                    <div className="col-span-2">Classical Score</div>
+                                    <div className="col-span-2">Refined Energy</div>
                                     <div className="col-span-2">Quantum Affinity (nM)</div>
-                                    <div className="col-span-2">Confidence</div>
                                     <div className="col-span-2 text-right">Affinity Level</div>
                                     <div className="col-span-1"></div> {/* For accordion chevron */}
                                 </div>
@@ -432,9 +436,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                      <div className="font-medium">{result.molecule.name}</div>
                                                      <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                                 </div>
+                                                <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.classicalScore?.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.refinedEnergy?.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</div>
-                                                <div className="col-span-11 sm:col-span-2 text-left">{Math.round(result.prediction.confidenceScore * 100)}%</div>
                                                 <div className="col-span-11 sm:col-span-2 text-right">
                                                      <Badge variant="default" className={affinityInfo.className}>
                                                         {affinityInfo.level}
@@ -582,6 +586,7 @@ function DashboardPage() {
             status: 'preparing',
             step: 'preparing',
             progress: 0,
+            classicalScore: null,
             refinedEnergy: null,
             prediction: null,
         }));
@@ -593,7 +598,31 @@ function DashboardPage() {
             const updateResult = (update: Partial<Result>) => {
                 setSimulationResults(prev => prev.map((r, idx) => idx === i ? { ...r, ...update } : r));
             };
+            
+            const seed = simpleHash(`${molecule.smiles}${protein.name}`);
+            const pseudoRandom = () => {
+                let state = seed;
+                return () => {
+                    let x = Math.sin(state++) * 10000;
+                    return x - Math.floor(x);
+                };
+            };
+            const random = pseudoRandom();
 
+            // Step 1: Simulate Classical Docking
+            updateResult({ status: 'simulating', step: 'docking', progress: 25 });
+            setCurrentStep(`[${i+1}/${totalSims}] Classical docking for ${molecule.name} + ${protein.name}`);
+            await new Promise(resolve => setTimeout(resolve, 500 + random() * 250)); // Simulate async work
+            const classicalScore = -10.0 + (random() * 4.0 - 2.0);
+            updateResult({ classicalScore, progress: 50 });
+
+            // Step 2: Simulate Quantum Refinement
+            updateResult({ status: 'simulating', step: 'refining', progress: 75 });
+            setCurrentStep(`[${i+1}/${totalSims}] Refining energy for ${molecule.name} + ${protein.name}`);
+            await new Promise(resolve => setTimeout(resolve, 1000 + random() * 500)); // Simulate async work
+            const refinedEnergy = classicalScore - (random() * 2.0); // Refined energy is slightly better than classical
+            updateResult({ refinedEnergy, progress: 85 });
+            
             let prediction;
             let success = false;
             let attempt = 0;
@@ -601,33 +630,14 @@ function DashboardPage() {
             
             while(attempt < maxRetries && !success) {
                 try {
-                    // Step 1: Simulate Quantum Refinement
-                    updateResult({ status: 'simulating', step: 'refining', progress: 25 });
-                    setCurrentStep(`[${i+1}/${totalSims}] Refining energy for ${molecule.name} + ${protein.name}`);
-                    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Simulate async work
-                    
-                    const seed = simpleHash(`${molecule.smiles}${protein.name}`);
-                    const pseudoRandom = () => {
-                        let state = seed;
-                        return () => {
-                            let x = Math.sin(state++) * 10000;
-                            return x - Math.floor(x);
-                        };
-                    };
-                    const random = pseudoRandom();
-                    const refinedEnergy = -12.0 + (random() * 6.0 - 3.0);
-                    
-                    updateResult({ refinedEnergy, progress: 50 });
-
-                    // Step 2: AI-powered Prediction
-                    updateResult({ status: 'analyzing', step: 'predicting', progress: 75 });
+                    // Step 3: AI-powered Prediction
+                    updateResult({ status: 'analyzing', step: 'predicting', progress: 90 });
                     setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
-                    
-                    // Add a proactive delay here to avoid hitting API rate limits.
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Proactive delay
                     
 
                     prediction = await predictBindingAffinities({
+                        classicalDockingScore: classicalScore,
                         quantumRefinedEnergy: refinedEnergy,
                         moleculeSmiles: molecule.smiles,
                         proteinTargetName: protein.name,
@@ -673,6 +683,7 @@ function DashboardPage() {
                         status: 'complete',
                         step: 'done',
                         progress: 100,
+                        classicalScore,
                         refinedEnergy,
                         prediction,
                     }]);
@@ -706,6 +717,7 @@ function DashboardPage() {
                             step: 'done',
                             progress: 100,
                             error: errorMessage,
+                            classicalScore: null,
                             refinedEnergy: null,
                             prediction: null,
                         }]);
@@ -741,7 +753,7 @@ function DashboardPage() {
                 .map(r => ({
                     moleculeId: r.molecule.smiles, // Using SMILES as a proxy for ID
                     targetProteinId: r.protein.name,
-                    dockingScore: -1, // Placeholder as we don't have a classical score
+                    dockingScore: r.classicalScore, 
                     refinedEnergy: r.refinedEnergy,
                     pose: 'N/A', // Placeholder
                     bindingAffinity: r.prediction.bindingAffinity,
@@ -991,6 +1003,3 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
-
-    
