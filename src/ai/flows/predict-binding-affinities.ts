@@ -88,7 +88,7 @@ Your tasks are:
     - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the GNN's score. Mention sensitivity to quantum effects.
 5.  **Provide Timing:** Under a 'timing' object, provide the following:
     - **quantumModelTime:** Generate a *fictional* docking time in seconds. This should be a relatively low number.
-    - **gnnModelTime:** Generate a *fictional* docking time in seconds for the GNN model. This value should be plausibly *slower* than the quantumModelTime, reflecting the quantum model's efficiency.
+    - **gnnModelTime:** Generate a *ftional* docking time in seconds for the GNN model. This value should be plausibly *slower* than the quantumModelTime, reflecting the quantum model's efficiency.
 
 **Simulated Inputs:**
 - Classical Docking Score: {{classicalDockingScore}} kcal/mol
