@@ -3,129 +3,119 @@
 
 /**
  * @fileOverview Predicts binding affinities based on quantum-refined energies.
+ *
+ * - predictBindingAffinities - A function that predicts binding affinities.
+ * - PredictBindingAffinitiesInput - The input type for the predictBindingAffinities function.
+ * - PredictBindingAffinitiesOutput - The return type for the predictBindingAffinities function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import {ai} from '@/ai/genkit';
+import {z} from 'genkit';
 
-// -----------------------
-// INPUT SCHEMA
-// -----------------------
 const PredictBindingAffinitiesInputSchema = z.object({
   classicalDockingScore: z
     .number()
     .describe(
       'The docking score from a classical model (e.g., AutoDock Vina), typically in kcal/mol. More negative is better.'
     ),
-
   quantumRefinedEnergy: z
     .number()
     .describe(
-      'A simulated quantum-refined binding energy (in kcal/mol).'
+      'A simulated quantum-refined binding energy (in kcal/mol). In a real scenario, this would come from a VQE or QAOA calculation.'
     ),
-
   moleculeSmiles: z
     .string()
     .describe('The SMILES string representation of the molecule.'),
-
   proteinTargetName: z
     .string()
-    .describe('The protein target the molecule is binding to.'),
+    .describe('The name of the protein target the molecule is binding to.'),
 });
-
 export type PredictBindingAffinitiesInput = z.infer<
   typeof PredictBindingAffinitiesInputSchema
 >;
 
-// -----------------------
-// OUTPUT SCHEMA
-// -----------------------
 const PredictBindingAffinitiesOutputSchema = z.object({
-  bindingAffinity: z.number().describe('Predicted binding affinity.'),
-
+  bindingAffinity: z
+    .number()
+    .describe(
+      'The predicted binding affinity (in nM or pM), with lower values indicating higher affinity.'
+    ),
   confidenceScore: z
     .number()
     .min(0)
     .max(1)
-    .describe('Confidence score for prediction.'),
-
+    .describe(
+      'A confidence score (from 0.0 to 1.0) indicating the reliability of the prediction.'
+    ),
   rationale: z
     .string()
-    .describe('Scientific rationale behind the prediction.'),
-
-  comparison: z.object({
-    gnnModelScore: z.number().describe('Fictional GNN model score.'),
-    explanation: z
-      .string()
-      .describe('Why the quantum model differs from the GNN model.'),
-  }),
-
-  timing: z.object({
-    quantumModelTime: z.number().describe('Simulated quantum model docking time.'),
-    gnnModelTime: z.number().describe('Simulated GNN model docking time.'),
-  }),
+    .describe(
+      'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
+    ),
+    comparison: z.object({
+      gnnModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated advanced ML model (e.g., a GNN) for comparison.'),
+      explanation: z.string().describe('A brief explanation comparing the AI prediction to the advanced model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
+    }),
+    timing: z.object({
+      quantumModelTime: z.number().describe('Simulated quantum model docking time.'),
+      gnnModelTime: z.number().describe('Simulated GNN model docking time.'),
+    }),
 });
-
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
 >;
 
-// -----------------------
-// EXPORT FUNCTION
-// -----------------------
 export async function predictBindingAffinities(
   input: PredictBindingAffinitiesInput
 ): Promise<PredictBindingAffinitiesOutput> {
   return predictBindingAffinitiesFlow(input);
 }
 
-// -----------------------
-// PROMPT
-// -----------------------
 const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
-  input: { schema: PredictBindingAffinitiesInputSchema },
-  output: { schema: PredictBindingAffinitiesOutputSchema },
+  input: {schema: PredictBindingAffinitiesInputSchema},
+  output: {schema: PredictBindingAffinitiesOutputSchema},
   model: 'gemini-pro',
   output: {
     format: 'json'
   },
-  prompt: `
-You are an expert computational chemist specializing in quantum-assisted drug discovery.
-Analyze the provided inputs and return a deterministic JSON prediction.
+  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
-Inputs:
-- Classical Docking Score: {{classicalDockingScore}} kcal/mol
-- Quantum-Refined Energy: {{quantumRefinedEnergy}} kcal/mol
-- Molecule SMILES: {{moleculeSmiles}}
-- Protein Target: {{proteinTargetName}}
+You will be given:
+1.  A simulated quantum-refined binding energy (in kcal/mol). This represents the final energy state of the molecule-protein complex after quantum refinement.
+2.  A molecule's SMILES string.
+3.  A protein target's name.
 
-Tasks:
-1. Predict deterministic binding affinity (nM).
-2. Provide deterministic confidence score (0–1).
-3. Provide reasoning.
-4. Provide a comparison object:
-   - gnnModelScore (fictional)
-   - explanation
-5. Provide timing object:
-   - quantumModelTime
-   - gnnModelTime
+Your tasks are:
+1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
+2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction. This result must be deterministic.
+3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
+4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
+    - **gnnModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction. This result must be deterministic.
+    - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the advanced model's score. Mention sensitivity to quantum effects.
+5. **Provide Timing:** Under a 'timing' object, provide the following:
+   - **quantumModelTime:** A simulated time in seconds for this quantum process.
+   - **gnnModelTime:** A simulated time in seconds for the GNN model process.
 
-Return valid JSON only.
-  `,
+
+**Simulated Inputs:**
+- Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
+- Classical Docking Score: {{{classicalDockingScore}}} kcal/mol
+- Molecule SMILES: {{{moleculeSmiles}}}
+- Protein Target: {{{proteinTargetName}}}
+
+Please provide the output in the required JSON format.
+`,
 });
 
-// -----------------------
-// FLOW
-// -----------------------
 const predictBindingAffinitiesFlow = ai.defineFlow(
   {
     name: 'predictBindingAffinitiesFlow',
     inputSchema: PredictBindingAffinitiesInputSchema,
     outputSchema: PredictBindingAffinitiesOutputSchema,
   },
-  async (input) => {
-    const { output } = await prompt(input);
+  async input => {
+    const {output} = await prompt(input);
     return output!;
   }
 );
