@@ -71,7 +71,6 @@ export async function predictBindingAffinities(
   return predictBindingAffinitiesFlow(input);
 }
 
-
 const promptTemplate = `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
@@ -108,7 +107,7 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: 'googleai/gemini-1.5-flash-latest',
+        model: 'googleai/gemini-1.5-flash',
         prompt: promptTemplate,
         input,
         output: {
