@@ -76,9 +76,6 @@ const prompt = ai.definePrompt({
   input: {schema: PredictBindingAffinitiesInputSchema},
   output: {schema: PredictBindingAffinitiesOutputSchema},
   model: 'gemini-pro',
-  output: {
-    format: 'json'
-  },
   prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
