@@ -18,6 +18,11 @@ const PredictBindingAffinitiesInputSchema = z.object({
     .describe(
       'The docking score from a classical model (e.g., AutoDock Vina), typically in kcal/mol. More negative is better.'
     ),
+  quantumRefinedEnergy: z
+    .number()
+    .describe(
+      'A simulated quantum-refined binding energy (in kcal/mol). In a real scenario, this would come from a VQE or QAOA calculation.'
+    ),
   moleculeSmiles: z
     .string()
     .describe('The SMILES string representation of the molecule.'),
@@ -70,11 +75,12 @@ const promptTemplate = `You are an expert computational chemist specializing in 
 
 You will be given:
 1.  A classical docking score (e.g., from AutoDock Vina) in kcal/mol.
-2.  A molecule's SMILES string.
-3.  A protein target's name.
+2.  A simulated quantum-refined binding energy (in kcal/mol).
+3.  A molecule's SMILES string.
+4.  A protein target's name.
 
 Your tasks are:
-1.  **Predict Binding Affinity:** Based on all inputs, predict the binding affinity in nM. A lower (more negative) classical score should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
+1.  **Predict Binding Affinity:** Based on all inputs, predict the binding affinity in nM. A lower (more negative) classical score and refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
 2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction. This result must be deterministic.
 3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
 4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
@@ -86,6 +92,7 @@ Your tasks are:
 
 **Simulated Inputs:**
 - Classical Docking Score: {{classicalDockingScore}} kcal/mol
+- Quantum-Refined Binding Energy: {{quantumRefinedEnergy}} kcal/mol
 - Molecule SMILES: {{moleculeSmiles}}
 - Protein Target: {{proteinTargetName}}
 
@@ -100,7 +107,7 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: 'googleai/gemini-pro',
+        model: 'gemini-pro',
         prompt: promptTemplate,
         input,
         output: {
