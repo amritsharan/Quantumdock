@@ -110,14 +110,15 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
     outputSchema: PredictBindingAffinitiesOutputSchema,
   },
   async (input) => {
-    const {output} = await ai.generate({
-        model: 'gemini-1.5-pro',
-        prompt: (await prompt.render({input})).prompt,
-        output: {
-            format: 'json',
-            schema: PredictBindingAffinitiesOutputSchema,
-        },
+    const llmResponse = await ai.generate({
+      prompt: (await prompt.render({input})).prompt,
+      model: 'gemini-1.5-pro',
+      output: {
+        format: 'json',
+        schema: PredictBindingAffinitiesOutputSchema,
+      },
     });
-    return output;
+
+    return llmResponse.output!;
   }
 );
