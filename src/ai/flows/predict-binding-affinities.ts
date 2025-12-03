@@ -72,12 +72,7 @@ export async function predictBindingAffinities(
 }
 
 
-const prompt = ai.definePrompt({
-  name: 'predictBindingAffinitiesPrompt',
-  input: {schema: PredictBindingAffinitiesInputSchema},
-  output: {schema: PredictBindingAffinitiesOutputSchema},
-  model: 'googleai/gemini-1.5-flash-latest',
-  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
+const promptTemplate = `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
 1.  A classical docking score (e.g., from AutoDock Vina) in kcal/mol.
@@ -97,13 +92,12 @@ Your tasks are:
     - **gnnModelTime:** Generate a *fictional* docking time in seconds for the GNN model. This value should be plausibly *slower* than the quantumModelTime, reflecting the quantum model's efficiency.
 
 **Simulated Inputs:**
-- Classical Docking Score: {{{classicalDockingScore}}} kcal/mol
-- Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
-- Molecule SMILES: {{{moleculeSmiles}}}
-- Protein Target: {{{proteinTargetName}}}
+- Classical Docking Score: {{classicalDockingScore}} kcal/mol
+- Quantum-Refined Binding Energy: {{quantumRefinedEnergy}} kcal/mol
+- Molecule SMILES: {{moleculeSmiles}}
+- Protein Target: {{proteinTargetName}}
 
-Please provide the output in the required JSON format.`,
-});
+Please provide the output in the required JSON format.`;
 
 
 const predictBindingAffinitiesFlow = ai.defineFlow(
@@ -112,8 +106,15 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
     inputSchema: PredictBindingAffinitiesInputSchema,
     outputSchema: PredictBindingAffinitiesOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input) => {
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-1.5-flash-latest',
+        prompt: promptTemplate,
+        input,
+        output: {
+            schema: PredictBindingAffinitiesOutputSchema,
+        },
+    });
     return output!;
   }
 );
