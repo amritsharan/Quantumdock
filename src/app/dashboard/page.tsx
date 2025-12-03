@@ -120,12 +120,13 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         lastY += 10;
 
 
-        const mainTableColumn = ["Combination", "Quantum Affinity (nM)", "Confidence", "GNN Model (nM)", "Explanation", "Affinity Level"];
+        const mainTableColumn = ["Combination", "Refined Energy (kcal/mol)", "Quantum Affinity (nM)", "Confidence", "GNN Model (nM)", "Explanation", "Affinity Level"];
         const mainTableRows: any[][] = [];
 
         completedResults.forEach(res => {
             const rowData = [
                 `${res.molecule.name} + ${res.protein.name}`,
+                res.refinedEnergy?.toFixed(2) ?? 'N/A',
                 res.prediction.bindingAffinity.toFixed(2),
                 `${Math.round(res.prediction.confidenceScore * 100)}%`,
                 res.prediction.comparison.gnnModelScore.toFixed(2),
@@ -142,7 +143,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                 startY: lastY,
                 theme: 'striped',
                 headStyles: { fillColor: [46, 82, 102] },
-                columnStyles: { 4: { cellWidth: 80 } } // Wrap text in explanation column
+                columnStyles: { 5: { cellWidth: 70 } } // Wrap text in explanation column
             });
             lastY = (doc as any).lastAutoTable.finalY + 15;
         } else {
@@ -218,6 +219,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         const tableHeader = new DocxTableRow({
             children: [
                 new DocxTableCell({ children: [new Paragraph({ text: "Combination", bold: true })] }),
+                new DocxTableCell({ children: [new Paragraph({ text: "Refined Energy (kcal/mol)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Quantum Affinity (nM)", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "Confidence", bold: true })] }),
                 new DocxTableCell({ children: [new Paragraph({ text: "GNN Model (nM)", bold: true })] }),
@@ -229,6 +231,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         const tableRows = completedResults.map(res => new DocxTableRow({
             children: [
                 new DocxTableCell({ children: [new Paragraph(`${res.molecule.name} + ${res.protein.name}`)] }),
+                new DocxTableCell({ children: [new Paragraph(res.refinedEnergy?.toFixed(2) ?? 'N/A')] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.bindingAffinity.toFixed(2))] }),
                 new DocxTableCell({ children: [new Paragraph(`${Math.round(res.prediction.confidenceScore * 100)}%`)] }),
                 new DocxTableCell({ children: [new Paragraph(res.prediction.comparison.gnnModelScore.toFixed(2))] }),
@@ -414,9 +417,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                              <Accordion type="single" collapsible className="w-full">
                                 <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-2 font-medium text-muted-foreground text-sm border-b">
                                     <div className="col-span-3">Combination</div>
+                                    <div className="col-span-2">Refined Energy (kcal/mol)</div>
                                     <div className="col-span-2">Quantum Affinity (nM)</div>
                                     <div className="col-span-2">Confidence</div>
-                                    <div className="col-span-2">GNN Model (nM)</div>
                                     <div className="col-span-2 text-right">Affinity Level</div>
                                     <div className="col-span-1"></div> {/* For accordion chevron */}
                                 </div>
@@ -429,9 +432,9 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                      <div className="font-medium">{result.molecule.name}</div>
                                                      <div className="text-xs text-muted-foreground">+ {result.protein.name}</div>
                                                 </div>
+                                                <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.refinedEnergy?.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-left font-semibold">{result.prediction.bindingAffinity.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-left">{Math.round(result.prediction.confidenceScore * 100)}%</div>
-                                                <div className="col-span-11 sm:col-span-2 text-left">{result.prediction.comparison.gnnModelScore.toFixed(2)}</div>
                                                 <div className="col-span-11 sm:col-span-2 text-right">
                                                      <Badge variant="default" className={affinityInfo.className}>
                                                         {affinityInfo.level}
@@ -440,8 +443,17 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                             </AccordionTrigger>
                                             <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md space-y-4">
                                                 <div>
-                                                    <h4 className="font-semibold mb-1">Explanation</h4>
-                                                    <p className="text-xs text-muted-foreground">{result.prediction.comparison.explanation}</p>
+                                                    <h4 className="font-semibold mb-1">AI vs. GNN Model</h4>
+                                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                                         <div>
+                                                            <div className="text-muted-foreground">GNN Model Affinity</div>
+                                                            <div className="font-semibold">{result.prediction.comparison.gnnModelScore.toFixed(2)} nM</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-muted-foreground">Explanation</div>
+                                                            <p className="text-xs text-muted-foreground">{result.prediction.comparison.explanation}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                                 <Separator />
                                                 <div>
