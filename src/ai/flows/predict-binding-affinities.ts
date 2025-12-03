@@ -65,12 +65,6 @@ export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
 >;
 
-export async function predictBindingAffinities(
-  input: PredictBindingAffinitiesInput
-): Promise<PredictBindingAffinitiesOutput> {
-  return predictBindingAffinitiesFlow(input);
-}
-
 const promptTemplate = `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
@@ -97,6 +91,13 @@ Your tasks are:
 - Protein Target: {{proteinTargetName}}
 
 Please provide the output in the required JSON format.`;
+
+
+export async function predictBindingAffinities(
+  input: PredictBindingAffinitiesInput
+): Promise<PredictBindingAffinitiesOutput> {
+  return predictBindingAffinitiesFlow(input);
+}
 
 
 const predictBindingAffinitiesFlow = ai.defineFlow(
