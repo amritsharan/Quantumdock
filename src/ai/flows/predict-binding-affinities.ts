@@ -71,12 +71,16 @@ export async function predictBindingAffinities(
   return predictBindingAffinitiesFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'predictBindingAffinitiesPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
-  input: {schema: PredictBindingAffinitiesInputSchema},
-  output: {schema: PredictBindingAffinitiesOutputSchema},
-  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
+const predictBindingAffinitiesFlow = ai.defineFlow(
+  {
+    name: 'predictBindingAffinitiesFlow',
+    inputSchema: PredictBindingAffinitiesInputSchema,
+    outputSchema: PredictBindingAffinitiesOutputSchema,
+  },
+  async input => {
+    const llmResponse = await ai.generate({
+      model: 'googleai/gemini-1.5-flash-latest',
+      prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
 1.  A classical docking score (e.g., from AutoDock Vina) in kcal/mol.
@@ -96,23 +100,19 @@ Your tasks are:
     - **gnnModelTime:** Generate a *fictional* docking time in seconds for the GNN model. This value should be plausibly *slower* than the quantumModelTime, reflecting the quantum model's efficiency.
 
 **Simulated Inputs:**
-- Classical Docking Score: {{{classicalDockingScore}}} kcal/mol
-- Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
-- Molecule SMILES: {{{moleculeSmiles}}}
-- Protein Target: {{{proteinTargetName}}}
+- Classical Docking Score: ${input.classicalDockingScore} kcal/mol
+- Quantum-Refined Binding Energy: ${input.quantumRefinedEnergy} kcal/mol
+- Molecule SMILES: ${input.moleculeSmiles}
+- Protein Target: ${input.proteinTargetName}
 
-Please provide the output in the required JSON format.
-`,
-});
+Please provide the output in the required JSON format.`,
+      output: {
+        schema: PredictBindingAffinitiesOutputSchema,
+      },
+    });
 
-const predictBindingAffinitiesFlow = ai.defineFlow(
-  {
-    name: 'predictBindingAffinitiesFlow',
-    inputSchema: PredictBindingAffinitiesInputSchema,
-    outputSchema: PredictBindingAffinitiesOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+    return llmResponse.output()!;
   }
 );
+
+    
