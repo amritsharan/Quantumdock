@@ -86,7 +86,7 @@ const prompt = ai.definePrompt({
   name: 'predictBindingAffinitiesPrompt',
   input: { schema: PredictBindingAffinitiesInputSchema },
   output: { schema: PredictBindingAffinitiesOutputSchema },
-  model: 'vertexai/gemini-1.5-pro',
+  model: 'gemini-pro',
   output: {
     format: 'json'
   },
