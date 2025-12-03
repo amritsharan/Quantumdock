@@ -65,7 +65,18 @@ export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
 >;
 
-const promptTemplate = `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
+export async function predictBindingAffinities(
+  input: PredictBindingAffinitiesInput
+): Promise<PredictBindingAffinitiesOutput> {
+  return predictBindingAffinitiesFlow(input);
+}
+
+const prompt = ai.definePrompt({
+  name: 'predictBindingAffinitiesPrompt',
+  model: 'gemini-pro',
+  input: {schema: PredictBindingAffinitiesInputSchema},
+  output: {schema: PredictBindingAffinitiesOutputSchema},
+  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
 
 You will be given:
 1.  A classical docking score (e.g., from AutoDock Vina) in kcal/mol.
@@ -90,15 +101,8 @@ Your tasks are:
 - Molecule SMILES: {{moleculeSmiles}}
 - Protein Target: {{proteinTargetName}}
 
-Please provide the output in the required JSON format.`;
-
-
-export async function predictBindingAffinities(
-  input: PredictBindingAffinitiesInput
-): Promise<PredictBindingAffinitiesOutput> {
-  return predictBindingAffinitiesFlow(input);
-}
-
+Please provide the output in the required JSON format.`,
+});
 
 const predictBindingAffinitiesFlow = ai.defineFlow(
   {
@@ -107,14 +111,7 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
     outputSchema: PredictBindingAffinitiesOutputSchema,
   },
   async (input) => {
-    const { output } = await ai.generate({
-        model: 'gemini-1.5-pro-latest',
-        prompt: promptTemplate,
-        input,
-        output: {
-            schema: PredictBindingAffinitiesOutputSchema,
-        },
-    });
+    const {output} = await prompt(input);
     return output!;
   }
 );
