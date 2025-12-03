@@ -108,7 +108,7 @@ const predictBindingAffinitiesFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-pro-latest',
         prompt: promptTemplate,
         input,
         output: {
