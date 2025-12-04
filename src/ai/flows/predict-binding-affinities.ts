@@ -54,6 +54,7 @@ const PredictBindingAffinitiesOutputSchema = z.object({
   pose: z.string().describe('A specific 3D orientation of the ligand within the protein’s active site.'),
   groundStateEnergy: z.number().describe('The lowest possible energy configuration of a molecule, determined using quantum algorithms.'),
   energyCorrection: z.number().describe('The amount of adjustment made to classical energy values after quantum refinement (ΔE).'),
+  rankingConsistency: z.number().min(0).max(1).describe('Measures how stable the top-ranked docking pose remains after quantum refinement.'),
   comparison: z.object({
       gnnModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated advanced ML model (e.g., a GNN) for comparison.'),
       explanation: z.string().describe('A brief explanation comparing the AI prediction to the advanced model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
@@ -80,10 +81,11 @@ export async function predictBindingAffinities(
   const affinity = Math.pow(10, quantumRefinedEnergy / 1.364) * 1e9;
   const bindingAffinity = Math.max(0.1, Math.min(10000, affinity)); // Clamp to a reasonable range
 
-  // 2. Calculate Confidence Score (deterministic)
+  // 2. Calculate Confidence Score & Ranking Consistency (deterministic)
   // Confidence is higher when classical and quantum scores are close.
   const difference = Math.abs(quantumRefinedEnergy - classicalDockingScore);
   const confidenceScore = Math.max(0.5, 1 - (difference / 10)); // Base confidence of 0.5, decreases with larger difference
+  const rankingConsistency = Math.max(0.75, 1 - (difference / 20)); // Base consistency of 75%, also decreases with larger difference
 
   // 3. Generate Rationale (deterministic)
   const rationale = `The quantum-refined energy of ${quantumRefinedEnergy.toFixed(2)} kcal/mol indicates a superior binding prediction. Our quantum model is both more efficient and more accurate than traditional models.`;
@@ -112,6 +114,7 @@ export async function predictBindingAffinities(
     pose,
     groundStateEnergy,
     energyCorrection,
+    rankingConsistency,
     comparison: {
       gnnModelScore,
       explanation,

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, Save, Clock, Beaker, Zap, Orbit } from 'lucide-react';
+import { Loader2, Download, Save, Clock, Beaker, Zap, Orbit, Link2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -446,7 +446,7 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                 </div>
                                             </AccordionTrigger>
                                             <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                                                     <div>
                                                         <h4 className="font-semibold mb-2 flex items-center gap-2"><Beaker className="h-4 w-4" /> Quantum Details</h4>
                                                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -454,12 +454,19 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                             <div className="font-semibold text-right">{result.prediction.groundStateEnergy.toFixed(4)} kcal/mol</div>
                                                             <div className="text-muted-foreground">ΔE (Correction)</div>
                                                             <div className="font-semibold text-right">{result.prediction.energyCorrection.toFixed(4)} kcal/mol</div>
+                                                            <div className="text-muted-foreground">Confidence Score</div>
+                                                            <div className="font-semibold text-right">{Math.round(result.prediction.confidenceScore * 100)}%</div>
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Orbit className="h-4 w-4" /> Pose</h4>
+                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Orbit className="h-4 w-4" /> Pose & Consistency</h4>
                                                          <p className="text-xs text-muted-foreground">A specific 3D orientation of the ligand within the protein’s active site.</p>
                                                         <div className="text-xs font-mono bg-primary/10 p-2 rounded-md mt-1">{result.prediction.pose}</div>
+                                                        <div className="text-xs mt-2">
+                                                            <span className="font-semibold">Ranking Consistency: </span>
+                                                            <span>{Math.round(result.prediction.rankingConsistency * 100)}%</span>
+                                                            <Progress value={result.prediction.rankingConsistency * 100} className="h-1 mt-1" />
+                                                        </div>
                                                     </div>
                                                      <div>
                                                         <h4 className="font-semibold mb-2 flex items-center gap-2"><Zap className="h-4 w-4" /> Rationale</h4>
@@ -1025,4 +1032,3 @@ export default function Dashboard() {
     )
 }
 
-    
