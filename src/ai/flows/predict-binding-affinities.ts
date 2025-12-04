@@ -51,14 +51,17 @@ const PredictBindingAffinitiesOutputSchema = z.object({
     .describe(
       'A brief rationale explaining the prediction, including any relevant chemical properties or interactions considered.'
     ),
-    comparison: z.object({
+  pose: z.string().describe('A specific 3D orientation of the ligand within the protein’s active site.'),
+  groundStateEnergy: z.number().describe('The lowest possible energy configuration of a molecule, determined using quantum algorithms.'),
+  energyCorrection: z.number().describe('The amount of adjustment made to classical energy values after quantum refinement (ΔE).'),
+  comparison: z.object({
       gnnModelScore: z.number().describe('A fictional binding affinity score (in nM) from a simulated advanced ML model (e.g., a GNN) for comparison.'),
       explanation: z.string().describe('A brief explanation comparing the AI prediction to the advanced model score, explaining potential reasons for any discrepancies (e.g., sensitivity to quantum effects).'),
-    }),
-    timing: z.object({
+  }),
+  timing: z.object({
       quantumModelTime: z.number().describe('Simulated quantum model docking time.'),
       gnnModelTime: z.number().describe('Simulated GNN model docking time.'),
-    }),
+  }),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
@@ -97,10 +100,18 @@ export async function predictBindingAffinities(
   const quantumModelTime = Math.max(0.3, baseQuantumTime); // Ensure a minimum time
   const gnnModelTime = Math.max(quantumModelTime + 0.5, baseGnnTime); // Ensure GNN is always slower
 
+  // 6. Generate new fields
+  const pose = `[${(Math.random() * 10).toFixed(4)}, ${(Math.random() * 10).toFixed(4)}, ${(Math.random() * 10).toFixed(4)}]`;
+  const groundStateEnergy = quantumRefinedEnergy - Math.random() * 0.5; // Slightly lower than refined
+  const energyCorrection = quantumRefinedEnergy - classicalDockingScore;
+
   return {
     bindingAffinity,
     confidenceScore,
     rationale,
+    pose,
+    groundStateEnergy,
+    energyCorrection,
     comparison: {
       gnnModelScore,
       explanation,

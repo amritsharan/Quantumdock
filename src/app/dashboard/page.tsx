@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { molecules as allMolecules, type Molecule } from '@/lib/molecules';
 import { proteins as allProteins, type Protein } from '@/lib/proteins';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, Save, Clock } from 'lucide-react';
+import { Loader2, Download, Save, Clock, Beaker, Zap, Orbit } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
@@ -446,6 +446,27 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
                                                 </div>
                                             </AccordionTrigger>
                                             <AccordionContent className="px-4 py-2 bg-muted/30 rounded-b-md space-y-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Beaker className="h-4 w-4" /> Quantum Details</h4>
+                                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                                            <div className="text-muted-foreground">Ground-State Energy</div>
+                                                            <div className="font-semibold text-right">{result.prediction.groundStateEnergy.toFixed(4)} kcal/mol</div>
+                                                            <div className="text-muted-foreground">ΔE (Correction)</div>
+                                                            <div className="font-semibold text-right">{result.prediction.energyCorrection.toFixed(4)} kcal/mol</div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Orbit className="h-4 w-4" /> Pose</h4>
+                                                         <p className="text-xs text-muted-foreground">A specific 3D orientation of the ligand within the protein’s active site.</p>
+                                                        <div className="text-xs font-mono bg-primary/10 p-2 rounded-md mt-1">{result.prediction.pose}</div>
+                                                    </div>
+                                                     <div>
+                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Zap className="h-4 w-4" /> Rationale</h4>
+                                                        <p className="text-xs text-muted-foreground">{result.prediction.rationale}</p>
+                                                    </div>
+                                                </div>
+                                                <Separator />
                                                 <div>
                                                     <h4 className="font-semibold mb-1">Current model vs GNN model</h4>
                                                     <div className="grid grid-cols-2 gap-4 text-xs">
@@ -755,7 +776,7 @@ function DashboardPage() {
                     targetProteinId: r.protein.name,
                     dockingScore: r.classicalScore, 
                     refinedEnergy: r.refinedEnergy,
-                    pose: 'N/A', // Placeholder
+                    pose: r.prediction.pose,
                     bindingAffinity: r.prediction.bindingAffinity,
                     userId: user.uid,
                 }));
