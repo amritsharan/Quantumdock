@@ -28,6 +28,7 @@ const PredictBindingAffinitiesInputSchema = z.object({
   proteinTargetName: z
     .string()
     .describe('The name of the protein target the molecule is binding to.'),
+  diseases: z.array(z.string()).optional().describe('An optional list of diseases to consider for impact analysis.'),
 });
 export type PredictBindingAffinitiesInput = z.infer<
   typeof PredictBindingAffinitiesInputSchema
@@ -63,6 +64,7 @@ const PredictBindingAffinitiesOutputSchema = z.object({
       quantumModelTime: z.number().describe('Simulated quantum model docking time.'),
       gnnModelTime: z.number().describe('Simulated GNN model docking time.'),
   }),
+  diseaseImpact: z.string().optional().describe('A statement on the potential therapeutic impact for the selected disease.'),
 });
 export type PredictBindingAffinitiesOutput = z.infer<
   typeof PredictBindingAffinitiesOutputSchema
@@ -74,7 +76,7 @@ export async function predictBindingAffinities(
   // This is a deterministic simulation that replaces the AI call.
   // It generates plausible results based on the input scores.
   
-  const { quantumRefinedEnergy, classicalDockingScore, moleculeSmiles, proteinTargetName } = input;
+  const { quantumRefinedEnergy, classicalDockingScore, moleculeSmiles, proteinTargetName, diseases } = input;
 
   // 1. Calculate Binding Affinity (deterministic)
   // This is a simplified stand-in for a real model's prediction. Lower energy = lower (better) affinity.
@@ -107,6 +109,23 @@ export async function predictBindingAffinities(
   const groundStateEnergy = quantumRefinedEnergy - Math.random() * 0.5; // Slightly lower than refined
   const energyCorrection = quantumRefinedEnergy - classicalDockingScore;
 
+  // 7. Generate Disease Impact Statement
+  let diseaseImpact: string | undefined = undefined;
+  if (diseases && diseases.length > 0) {
+      const targetDisease = diseases[0]; // Use the first selected disease for the statement
+      let impactLevel = 'low';
+      if (bindingAffinity < 10) impactLevel = 'high';
+      else if (bindingAffinity < 100) impactLevel = 'moderate';
+
+      const statements = {
+          high: `This strong binding affinity suggests a high potential to effectively modulate the '${proteinTargetName}' target, which could lead to a significant therapeutic effect for ${targetDisease}.`,
+          moderate: `This moderate binding affinity indicates a promising interaction with '${proteinTargetName}'. Further optimization could lead to a clinically relevant therapeutic agent for ${targetDisease}.`,
+          low: `The observed binding affinity is low. While it suggests some interaction with '${proteinTargetName}', substantial chemical modification would be needed to achieve a therapeutic benefit for ${targetDisease}.`
+      };
+      diseaseImpact = statements[impactLevel as keyof typeof statements];
+  }
+
+
   return {
     bindingAffinity,
     confidenceScore,
@@ -122,6 +141,7 @@ export async function predictBindingAffinities(
     timing: {
       quantumModelTime,
       gnnModelTime,
-    }
+    },
+    diseaseImpact,
   };
 }
