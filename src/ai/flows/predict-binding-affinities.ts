@@ -9,7 +9,6 @@
  * - PredictBindingAffinitiesOutput - The return type for the predictBindingAffinities function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const PredictBindingAffinitiesInputSchema = z.object({
