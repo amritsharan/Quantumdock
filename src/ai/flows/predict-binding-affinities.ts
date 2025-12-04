@@ -68,51 +68,44 @@ export type PredictBindingAffinitiesOutput = z.infer<
 export async function predictBindingAffinities(
   input: PredictBindingAffinitiesInput
 ): Promise<PredictBindingAffinitiesOutput> {
-  return predictBindingAffinitiesFlow(input);
+  // This is a deterministic simulation that replaces the AI call.
+  // It generates plausible results based on the input scores.
+  
+  const { quantumRefinedEnergy, classicalDockingScore, moleculeSmiles, proteinTargetName } = input;
+
+  // 1. Calculate Binding Affinity (deterministic)
+  // A simple formula to convert energy (kcal/mol) to affinity (nM).
+  // This is a simplified stand-in for a real model's prediction.
+  const affinity = Math.pow(10, quantumRefinedEnergy / 1.364) * 1e9;
+  const bindingAffinity = Math.max(0.1, Math.min(10000, affinity)); // Clamp to a reasonable range
+
+  // 2. Calculate Confidence Score (deterministic)
+  // Confidence is higher when classical and quantum scores are close.
+  const difference = Math.abs(quantumRefinedEnergy - classicalDockingScore);
+  const confidenceScore = Math.max(0.5, 1 - (difference / 10)); // Base confidence of 0.5, decreases with larger difference
+
+  // 3. Generate Rationale (deterministic)
+  const rationale = `The quantum-refined energy of ${quantumRefinedEnergy.toFixed(2)} kcal/mol suggests a ${bindingAffinity < 50 ? 'strong' : 'moderate'} interaction. The proximity to the classical score of ${classicalDockingScore.toFixed(2)} kcal/mol provides a confidence level of ${Math.round(confidenceScore * 100)}%.`;
+
+  // 4. Generate Comparison Data (deterministic)
+  const gnnModelScore = bindingAffinity * 1.2 + 5; // Fictional GNN score is slightly worse
+  const explanation = "The quantum-refined model captures subtle electronic effects not fully represented in the GNN, leading to a more accurate prediction of binding strength.";
+
+  // 5. Generate Timing (deterministic)
+  const quantumModelTime = 2.5 + (moleculeSmiles.length % 10) * 0.1;
+  const gnnModelTime = 0.8 + (proteinTargetName.length % 10) * 0.05;
+
+  return {
+    bindingAffinity,
+    confidenceScore,
+    rationale,
+    comparison: {
+      gnnModelScore,
+      explanation,
+    },
+    timing: {
+      quantumModelTime,
+      gnnModelTime,
+    }
+  };
 }
-
-const prompt = ai.definePrompt({
-  name: 'predictBindingAffinitiesPrompt',
-  input: {schema: PredictBindingAffinitiesInputSchema},
-  output: {schema: PredictBindingAffinitiesOutputSchema},
-  model: 'gemini-1.5-pro-preview-0409',
-  prompt: `You are an expert computational chemist specializing in quantum-assisted drug discovery. Your task is to analyze simulated docking results and provide a comprehensive, scientific prediction. Your results must be deterministic based on the inputs.
-
-You will be given:
-1.  A simulated quantum-refined binding energy (in kcal/mol). This represents the final energy state of the molecule-protein complex after quantum refinement.
-2.  A molecule's SMILES string.
-3.  A protein target's name.
-
-Your tasks are:
-1.  **Predict Binding Affinity:** Based on the inputs, predict the binding affinity in nM. A lower (more negative) quantum-refined energy should generally correlate with a lower (stronger) binding affinity. This result must be deterministic.
-2.  **Provide a Confidence Score:** Give a confidence score from 0.0 to 1.0 for your prediction. This result must be deterministic.
-3.  **Generate Rationale:** Explain your reasoning for the prediction in a scientifically rigorous manner.
-4.  **Provide Comparison:** Under a 'comparison' object, provide the following:
-    - **gnnModelScore:** Generate a *fictional* binding affinity score that a conventional, advanced ML model (like a Graph Neural Network) might predict. This should be plausible but slightly different from your own prediction. This result must be deterministic.
-    - **explanation:** Write a brief explanation for why our quantum-informed prediction might differ from the advanced model's score. Mention sensitivity to quantum effects.
-5. **Provide Timing:** Under a 'timing' object, provide the following:
-   - **quantumModelTime:** A simulated time in seconds for this quantum process.
-   - **gnnModelTime:** A simulated time in seconds for the GNN model process.
-
-
-**Simulated Inputs:**
-- Quantum-Refined Binding Energy: {{{quantumRefinedEnergy}}} kcal/mol
-- Classical Docking Score: {{{classicalDockingScore}}} kcal/mol
-- Molecule SMILES: {{{moleculeSmiles}}}
-- Protein Target: {{{proteinTargetName}}}
-
-Please provide the output in the required JSON format.
-`,
-});
-
-const predictBindingAffinitiesFlow = ai.defineFlow(
-  {
-    name: 'predictBindingAffinitiesFlow',
-    inputSchema: PredictBindingAffinitiesInputSchema,
-    outputSchema: PredictBindingAffinitiesOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
