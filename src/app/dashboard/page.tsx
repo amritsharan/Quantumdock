@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -18,11 +18,12 @@ import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { predictBindingAffinities } from '@/ai/flows/predict-binding-affinities';
 import { useUser, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import {
+  useCreateDockingSimulation,
+  useCreateDockingResult,
+} from '@/dataconnect/hooks';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
@@ -97,16 +98,14 @@ function SimulationResultsDisplay({ results, title, onSaveResults, isSaving }: {
         let lastY = 30;
 
         if (chartData.length > 0) {
-            const chartElement = (document.querySelector('[data-testid="chart-container"]') as HTMLElement);
-            if (chartElement) {
-                // Temporarily make the chart visible for rendering if it's not
-                const canvas = chartElement.querySelector('canvas');
-                 if (canvas) {
+             const chartContainer = document.querySelector('[data-testid="chart-container"]');
+            if (chartContainer) {
+                const canvas = chartContainer.querySelector('canvas');
+                if (canvas) {
                     const imgData = canvas.toDataURL('image/png', 1.0);
                     doc.setFontSize(14);
                     doc.text("Binding Affinity Comparison", 14, lastY);
                     lastY += 10;
-                    // Adjust image size to fit landscape mode
                     const imgProps = doc.getImageProperties(imgData);
                     const pdfWidth = doc.internal.pageSize.getWidth() - 28;
                     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -541,6 +540,10 @@ function DashboardPage() {
     const { toast } = useToast();
     const { user } = useUser();
     const firestore = useFirestore();
+    const activeLoginHistoryId = useRef<string | null>(null);
+
+    const { mutate: createDockingSimulation } = useCreateDockingSimulation();
+    const { mutate: createDockingResult } = useCreateDockingResult();
 
     const [selectedMolecules, setSelectedMolecules] = useState<Molecule[]>([]);
     const [selectedProteins, setSelectedProteins] = useState<Protein[]>([]);
@@ -608,6 +611,22 @@ function DashboardPage() {
             });
             return;
         }
+        
+         // Fetch the active session ID
+        try {
+            const historyQuery = query(collection(firestore, 'users', user.uid, 'loginHistory'), where('status', '==', 'active'), orderBy('loginTime', 'desc'), limit(1));
+            const querySnapshot = await getDocs(historyQuery);
+            if (!querySnapshot.empty) {
+                activeLoginHistoryId.current = querySnapshot.docs[0].id;
+            } else {
+                 toast({ variant: 'destructive', title: 'Session Error', description: 'No active login session found. Please re-login.' });
+                 return;
+            }
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Session Error', description: 'Could not retrieve login session.' });
+            return;
+        }
+
 
         setIsRunning(true);
         setSimulationResults([]);
@@ -661,110 +680,59 @@ function DashboardPage() {
             updateResult({ refinedEnergy, progress: 85 });
             
             let prediction;
-            let success = false;
-            let attempt = 0;
-            const maxRetries = 3;
-            
-            while(attempt < maxRetries && !success) {
-                try {
-                    // Step 3: AI-powered Prediction
-                    updateResult({ status: 'analyzing', step: 'predicting', progress: 90 });
-                    setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // Proactive delay
-                    
+            try {
+                // Step 3: AI-powered Prediction
+                updateResult({ status: 'analyzing', step: 'predicting', progress: 90 });
+                setCurrentStep(`[${i+1}/${totalSims}] Predicting affinity for ${molecule.name} + ${protein.name}`);
 
-                    prediction = await predictBindingAffinities({
-                        classicalDockingScore: classicalScore,
-                        quantumRefinedEnergy: refinedEnergy,
+                prediction = await predictBindingAffinities({
+                    classicalDockingScore: classicalScore,
+                    quantumRefinedEnergy: refinedEnergy,
+                    moleculeSmiles: molecule.smiles,
+                    proteinTargetName: protein.name,
+                    diseases: selectedDiseases,
+                });
+
+                updateResult({ prediction, status: 'complete', step: 'done', progress: 100 });
+                
+                // Log to Firestore using Data Connect
+                if (activeLoginHistoryId.current) {
+                    createDockingSimulation({
+                        loginHistoryId: activeLoginHistoryId.current,
                         moleculeSmiles: molecule.smiles,
-                        proteinTargetName: protein.name,
-                        diseases: selectedDiseases,
+                        proteinTarget: protein.name,
+                        bindingAffinity: prediction.bindingAffinity,
                     });
-                    
-                    success = true; // Mark as successful if no error was thrown
-                    
-                    updateResult({ prediction, status: 'complete', step: 'done', progress: 100 });
-                    
-                    // Log to Firestore
-                     if (user && firestore) {
-                        try {
-                            const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
-                            const q = query(historyCollectionRef, where('status', '==', 'active'), orderBy('loginTime', 'desc'), limit(1));
-                            const querySnapshot = await getDocs(q);
-
-                            if (!querySnapshot.empty) {
-                                const activeSessionRef = querySnapshot.docs[0].ref;
-                                const simulationsCollectionRef = collection(activeSessionRef, 'dockingSimulations');
-                                await addDoc(simulationsCollectionRef, {
-                                    userId: user.uid,
-                                    timestamp: serverTimestamp(),
-                                    moleculeSmiles: molecule.smiles,
-                                    proteinTarget: protein.name,
-                                    bindingAffinity: prediction.bindingAffinity,
-                                });
-                            }
-                        } catch (e: any) {
-                             // A permission error here is not critical to the UI flow,
-                             // so we'll just toast it instead of throwing a global error.
-                             toast({
-                                variant: "destructive",
-                                title: "Could not save simulation history",
-                                description: "Please check your Firestore security rules.",
-                             });
-                        }
-                    }
-
-                     // Move to completed
-                     setCompletedSimulations(prev => [...prev, {
-                        molecule,
-                        protein,
-                        status: 'complete',
-                        step: 'done',
-                        progress: 100,
-                        classicalScore,
-                        refinedEnergy,
-                        prediction,
-                    }]);
-
-                } catch (error: any) {
-                     attempt++;
-                     const isRetryableError = error.message && (
-                        error.message.includes('429') || 
-                        error.message.includes('Too Many Requests') ||
-                        error.message.includes('503') ||
-                        error.message.includes('Service Unavailable')
-                    );
-
-                    if (isRetryableError && attempt < maxRetries) {
-                        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
-                        const retryMessage = error.message.includes('429') ? 'Rate limit hit' : 'Service unavailable';
-                        setCurrentStep(`[${i+1}/${totalSims}] ${retryMessage}. Retrying in ${delay / 1000}s... (${maxRetries - attempt} retries left)`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        // Non-retryable error or retries exhausted
-                        console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
-                        const errorMessage = isRetryableError 
-                            ? "API is overloaded. Please wait and try again later."
-                            : error.message || 'An unexpected error occurred during AI prediction.';
-
-                        updateResult({ status: 'error', error: errorMessage, progress: 100 });
-                        setCompletedSimulations(prev => [...prev, {
-                            molecule,
-                            protein,
-                            status: 'error',
-                            step: 'done',
-                            progress: 100,
-                            error: errorMessage,
-                            classicalScore: null,
-                            refinedEnergy: null,
-                            prediction: null,
-                        }]);
-                        // This break will exit the while loop for the current combination
-                        break;
-                    }
                 }
-            }
 
+                 // Move to completed
+                 setCompletedSimulations(prev => [...prev, {
+                    molecule,
+                    protein,
+                    status: 'complete',
+                    step: 'done',
+                    progress: 100,
+                    classicalScore,
+                    refinedEnergy,
+                    prediction,
+                }]);
+
+            } catch (error: any) {
+                console.error(`Simulation failed for ${molecule.name} + ${protein.name}:`, error);
+                const errorMessage = error.message || 'An unexpected error occurred during prediction.';
+                updateResult({ status: 'error', error: errorMessage, progress: 100 });
+                setCompletedSimulations(prev => [...prev, {
+                    molecule,
+                    protein,
+                    status: 'error',
+                    step: 'done',
+                    progress: 100,
+                    error: errorMessage,
+                    classicalScore: null,
+                    refinedEnergy: null,
+                    prediction: null,
+                }]);
+            }
 
             completedSims++;
             setTotalProgress(Math.round((completedSims / totalSims) * 100));
@@ -775,60 +743,50 @@ function DashboardPage() {
     };
 
     const handleSaveResults = async () => {
-        if (!user || !firestore || completedSimulations.length === 0) {
+        const resultsToSave = completedSimulations
+            .filter(r => r.status === 'complete' && r.prediction)
+            .map(r => ({
+                moleculeId: r.molecule.smiles, // Using SMILES as a proxy for ID
+                targetProteinId: r.protein.name,
+                dockingScore: r.classicalScore!,
+                refinedEnergy: r.refinedEnergy!,
+                pose: r.prediction.pose,
+                bindingAffinity: r.prediction.bindingAffinity,
+            }));
+            
+        if (resultsToSave.length === 0) {
             toast({
                 variant: 'destructive',
                 title: 'Cannot Save Results',
-                description: 'There are no completed simulation results to save, or user is not logged in.',
+                description: 'There are no completed simulation results to save.',
             });
             return;
         }
 
         setIsSaving(true);
-        try {
-            const resultsToSave = completedSimulations
-                .filter(r => r.status === 'complete' && r.prediction)
-                .map(r => ({
-                    moleculeId: r.molecule.smiles, // Using SMILES as a proxy for ID
-                    targetProteinId: r.protein.name,
-                    dockingScore: r.classicalScore, 
-                    refinedEnergy: r.refinedEnergy,
-                    pose: r.prediction.pose,
-                    bindingAffinity: r.prediction.bindingAffinity,
-                    userId: user.uid,
-                }));
-
-            if (resultsToSave.length > 0) {
-                const dockingResultRef = collection(firestore, 'users', user.uid, 'dockingResults');
-                for (const result of resultsToSave) {
-                     await addDoc(dockingResultRef, {
-                        ...result,
-                        createdAt: serverTimestamp(),
-                     });
+        let savedCount = 0;
+        
+        for (const result of resultsToSave) {
+            createDockingResult(result, {
+                onSuccess: () => {
+                    savedCount++;
+                    if (savedCount === resultsToSave.length) {
+                         toast({
+                            title: 'Results Saved',
+                            description: `Successfully saved ${savedCount} docking results.`,
+                        });
+                        setIsSaving(false);
+                    }
+                },
+                onError: (error) => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Save Failed',
+                        description: `Could not save some docking results. Error: ${error.message}`,
+                    });
+                    setIsSaving(false); // Stop on first error
                 }
-            }
-
-            toast({
-                title: 'Results Saved',
-                description: `Successfully saved ${resultsToSave.length} docking results to your profile.`,
             });
-
-        } catch (error: any) {
-            errorEmitter.emit(
-                'permission-error',
-                new FirestorePermissionError({
-                    path: `users/${user.uid}/dockingResults`,
-                    operation: 'create',
-                    requestResourceData: { results: '...' }
-                })
-            );
-            toast({
-                variant: 'destructive',
-                title: 'Save Failed',
-                description: 'Could not save docking results. You may not have the required permissions.',
-            });
-        } finally {
-            setIsSaving(false);
         }
     };
 
@@ -1041,6 +999,3 @@ export default function Dashboard() {
         </Suspense>
     )
 }
-
-
-    

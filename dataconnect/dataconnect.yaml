@@ -11,3 +11,11 @@ schema:
         # schemaValidation: "STRICT"     # STRICT mode makes Postgres schema match Data Connect exactly.
         # schemaValidation: "COMPATIBLE" # COMPATIBLE mode makes Postgres schema compatible with Data Connect.
 connectorDirs: ["./example"]
+iam:
+  # This section grants IAM roles to the service account for the App Hosting backend.
+  # The service account needs to be able to invoke the Data Connect service.
+  # Note: The service account email is a placeholder that will be replaced by the actual service account email during deployment.
+  serviceAccount: "{{.AHP_SA_EMAIL}}"
+  bindings:
+    - role: "roles/dataconnect.user"
+      members: ["serviceAccount:{{.AHP_SA_EMAIL}}"]

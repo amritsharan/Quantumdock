@@ -3,9 +3,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { QuantumDockLogo } from '@/components/quantum-dock/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useUser, useFirestore } from '@/firebase';
+import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, serverTimestamp, limit, orderBy, Timestamp, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
+import {
+  useUpdateLoginHistory,
+  useCreateLoginHistory,
+} from '@/dataconnect/hooks';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  limit,
+  orderBy,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,18 +33,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Toaster } from '@/components/ui/toaster';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardLayout({
   children,
@@ -41,118 +48,90 @@ export default function DashboardLayout({
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const [showSignOutError, setShowSignOutError] = useState(false);
-  const [signOutError, setSignOutError] = useState('');
-  const hasHandledLogin = useRef(false);
+  const activeLoginHistoryIdRef = useRef<string | null>(null);
+
+  const { mutate: createLoginHistory } = useCreateLoginHistory();
+  const { mutate: updateLoginHistory } = useUpdateLoginHistory();
 
   useEffect(() => {
-    if (user && firestore && !isUserLoading && !hasHandledLogin.current) {
-        hasHandledLogin.current = true; // Mark as handled to prevent re-running
-        
-        const handleNewLogin = async () => {
-            if (!firestore || !user) return;
-            
-            // 1. Create user document if it doesn't exist
-            const userDocRef = doc(firestore, 'users', user.uid);
-            try {
-                const userDoc = await getDoc(userDocRef);
-                if (!userDoc.exists()) {
-                   await setDoc(userDocRef, {
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                        createdAt: serverTimestamp(),
-                    }, { merge: true });
-                }
-            } catch (error: any) {
-                 errorEmitter.emit(
-                    'permission-error',
-                    new FirestorePermissionError({
-                      path: userDocRef.path,
-                      operation: 'create', // or 'update' depending on logic
-                      requestResourceData: {
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                      }
-                    })
-                  )
-            }
+    if (user && firestore && !isUserLoading) {
+      const handleNewLogin = async () => {
+        if (!firestore || !user) return;
 
-            // 2. Create the new active session
-            try {
-                const newSessionData = {
-                  userId: user.uid,
-                  loginTime: serverTimestamp(),
-                  status: 'active',
-                };
-                const historyCollectionRef = collection(firestore, 'users', user.uid, 'loginHistory');
-                await addDoc(historyCollectionRef, newSessionData);
-            } catch (error: any) {
-                 errorEmitter.emit(
-                    'permission-error',
-                    new FirestorePermissionError({
-                      path: `users/${user.uid}/loginHistory`,
-                      operation: 'create',
-                      requestResourceData: { status: 'active' }
-                    })
-                  )
-            }
-        };
+        const userDocRef = doc(firestore, 'users', user.uid);
+        try {
+          const userDoc = await getDoc(userDocRef);
+          if (!userDoc.exists()) {
+            await setDoc(
+              userDocRef,
+              {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                createdAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
+          }
+        } catch (error: any) {
+          errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'write',
+              requestResourceData: {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+              },
+            })
+          );
+        }
 
-        handleNewLogin();
+        // Check for an existing active session only once
+        if (activeLoginHistoryIdRef.current === null) {
+          const historyQuery = query(
+            collection(firestore, 'users', user.uid, 'loginHistory'),
+            where('status', '==', 'active'),
+            orderBy('loginTime', 'desc'),
+            limit(1)
+          );
+
+          const querySnapshot = await getDocs(historyQuery);
+          if (querySnapshot.empty) {
+            // No active session, create a new one
+            createLoginHistory(
+              { status: 'active' },
+              {
+                onSuccess: (data) => {
+                  activeLoginHistoryIdRef.current = data.loginHistoryId;
+                },
+                onError: (error) => {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Session Error',
+                    description: 'Could not create a new login session.',
+                  });
+                },
+              }
+            );
+          } else {
+            // Active session found, store its ID
+            activeLoginHistoryIdRef.current = querySnapshot.docs[0].id;
+          }
+        }
+      };
+
+      handleNewLogin();
     }
-  }, [user, firestore, isUserLoading]);
-
+  }, [user, firestore, isUserLoading, createLoginHistory, toast]);
 
   const handleSignOut = async () => {
-    if (!user || !firestore) {
-        if (auth) await signOut(auth); 
-        router.push('/sign-in');
-        return;
-    }
-  
-    try {
-      const historyQuery = query(
-        collection(firestore, 'users', user.uid, 'loginHistory'),
-        where('status', '==', 'active'),
-        orderBy('loginTime', 'desc'),
-        limit(1)
-      );
-
-      const querySnapshot = await getDocs(historyQuery);
-      if (!querySnapshot.empty) {
-        const activeSessionDocRef = querySnapshot.docs[0].ref;
-        const activeSessionData = querySnapshot.docs[0].data();
-        const loginTimeData = activeSessionData.loginTime as Timestamp | undefined;
-        
-        let duration = 0;
-        // Safely check if loginTimeData is a valid Timestamp with a toDate method
-        if (loginTimeData && typeof loginTimeData.toDate === 'function') {
-            const loginTime = loginTimeData.toDate();
-            const logoutTime = new Date();
-            const calculatedDuration = Math.round((logoutTime.getTime() - loginTime.getTime()) / (1000 * 60));
-            duration = calculatedDuration > 0 ? calculatedDuration : 0;
-        }
-        
-        const updateData = {
-          status: 'inactive',
-          logoutTime: serverTimestamp(),
-          duration: duration,
-        };
-        
-        await updateDoc(activeSessionDocRef, updateData);
-      }
-    } catch (error: any) {
-        // Emit a contextual error instead of showing an alert
-        errorEmitter.emit(
-          'permission-error',
-          new FirestorePermissionError({
-            path: (error as any)?.path || `users/${user.uid}/loginHistory`,
-            operation: 'update',
-          })
-        );
-        // We will still proceed to sign the user out.
+    if (activeLoginHistoryIdRef.current) {
+      updateLoginHistory({
+        loginHistoryId: activeLoginHistoryIdRef.current,
+        status: 'inactive',
+      });
     }
 
     try {
@@ -163,6 +142,7 @@ export default function DashboardLayout({
         title: 'Signed Out',
         description: 'You have been successfully signed out.',
       });
+      activeLoginHistoryIdRef.current = null; // Reset on sign out
       router.push('/sign-in');
     } catch (error) {
       toast({
@@ -178,50 +158,45 @@ export default function DashboardLayout({
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur md:px-6">
         <div className="flex items-center gap-2">
           <QuantumDockLogo className="h-8 w-8 text-primary" />
-          <Link href="/dashboard" className="text-2xl font-semibold text-foreground">QuantumDock</Link>
+          <Link
+            href="/dashboard"
+            className="text-2xl font-semibold text-foreground"
+          >
+            QuantumDock
+          </Link>
         </div>
         <div className="flex items-center gap-4">
-          {!isUserLoading &&
-            (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Avatar className="h-9 w-9 cursor-pointer">
-                    <AvatarImage src={user?.photoURL || undefined} alt="User avatar" />
-                    <AvatarFallback>
-                      {user?.email ? user.email.charAt(0).toUpperCase() : 'A'}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/history">Login History</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+          {isUserLoading ? (
+            <Skeleton className="h-9 w-9 rounded-full" />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="h-9 w-9 cursor-pointer">
+                  <AvatarImage
+                    src={user?.photoURL || undefined}
+                    alt="User avatar"
+                  />
+                  <AvatarFallback>
+                    {user?.email ? user.email.charAt(0).toUpperCase() : 'A'}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/history">Login History</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </header>
       {children}
       <Toaster />
-
-      <AlertDialog open={showSignOutError} onOpenChange={setShowSignOutError}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Session Update Error</AlertDialogTitle>
-            <AlertDialogDescription>
-              Could not update your session history, but you will be signed out. This might be due to a permissions issue.
-              <br /><br />
-              <strong className='text-destructive'>Error details:</strong> {signOutError}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowSignOutError(false)}>Close</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
